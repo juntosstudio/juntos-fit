@@ -182,3 +182,34 @@
     border-right-color: var(--border);
   }
 }
+
+.checkin-review {
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.checkin-review section {
+  margin-block: 2rem;
+}
+
+.checkin-review dl {
+  margin: 0;
+}
+
+.review-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.review-item dt {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.review-item dd {
+  margin: 0;
+}

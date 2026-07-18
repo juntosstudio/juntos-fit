@@ -1,80 +1,102 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
+import { useState } from 'react'
+import { useAuth } from './hooks/useAuth'
+import { useDashboard } from './hooks/useDashboard'
+import { DailyCheckInPage } from './pages/DailyCheckInPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { LoginPage } from './pages/LoginPage'
 import './App.css'
 
+const PAGE_DASHBOARD = 'dashboard'
+const PAGE_DAILY_CHECK_IN = 'daily-check-in'
+const PAGE_HISTORY = 'history'
+
 function App() {
-  const [session, setSession] = useState(null)
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const [currentPage, setCurrentPage] = useState(PAGE_DASHBOARD)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+  const {
+    user,
+    checkingSession,
+    submitting,
+    error: authError,
+    clearError,
+    signIn,
+    signOut,
+  } = useAuth()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function handleLogin(event) {
-    event.preventDefault()
-    setMessage('')
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    })
-
-    setMessage(
-      error ? error.message : 'Check your email for your magic login link.',
-    )
-  }
+  const {
+    dashboard,
+    loading: loadingDashboard,
+    error: dashboardError,
+    refreshDashboard,
+  } = useDashboard(user?.id)
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
+    // Return to the dashboard before ending the session.
+    setCurrentPage(PAGE_DASHBOARD)
+
+    await signOut()
   }
 
-  if (!session) {
+  if (checkingSession) {
     return (
       <main className="container">
         <h1>Fitness Coach</h1>
-        <p>Sign in with your email.</p>
+        <p>Loading...</p>
+      </main>
+    )
+  }
 
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
+  if (!user) {
+    return (
+      <LoginPage
+        submitting={submitting}
+        error={authError}
+        onSignIn={signIn}
+        onClearError={clearError}
+      />
+    )
+  }
 
-          <button type="submit">Send Magic Link</button>
-        </form>
+  if (currentPage === PAGE_DAILY_CHECK_IN) {
+    return (
+      <DailyCheckInPage
+        plan={dashboard?.plan}
+        target={dashboard?.target}
+        cardioCompleted={dashboard?.cardioCompleted ?? 0}
+        onSaved={refreshDashboard}
+        onBack={() => setCurrentPage(PAGE_DASHBOARD)}
+      />
+    )
+  }
 
-        {message && <p>{message}</p>}
+  if (currentPage === PAGE_HISTORY) {
+    return (
+      <main className="container">
+        <button
+          type="button"
+          onClick={() => setCurrentPage(PAGE_DASHBOARD)}
+        >
+          Back to Dashboard
+        </button>
+
+        <h1>History</h1>
+        <p>Daily check-in history will appear here.</p>
       </main>
     )
   }
 
   return (
-    <main className="container">
-      <button type="button" onClick={handleSignOut}>
-        Sign Out
-      </button>
-
-      <h1>Daily Check-In</h1>
-      <p>Signed in as {session.user.email}</p>
-
-      <p>Next: weight, meal plan, hunger, workout, and notes.</p>
-    </main>
+    <DashboardPage
+      dashboard={dashboard}
+      loading={loadingDashboard}
+      error={dashboardError}
+      signingOut={submitting}
+      onOpenDailyCheckIn={() =>
+        setCurrentPage(PAGE_DAILY_CHECK_IN)
+      }
+      onOpenHistory={() => setCurrentPage(PAGE_HISTORY)}
+      onSignOut={handleSignOut}
+    />
   )
 }
 
