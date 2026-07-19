@@ -96,6 +96,8 @@ export function DailyCheckInPage({
   onSaved,
   onBack,
 }) {
+  console.log('Daily Check-In target:', target)
+
   const {
     today,
     firstCheckInDate,

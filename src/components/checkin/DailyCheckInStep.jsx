@@ -274,6 +274,7 @@ export function DailyCheckInStep({
           onChange={(value) =>
             setField('hunger_score', value)
           }
+          reversed
         />
       </fieldset>
     )

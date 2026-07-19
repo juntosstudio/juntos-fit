@@ -31,12 +31,30 @@ export function AnswerSlider({
   value,
   labels,
   onChange,
+  reversed = false,
 }) {
   const answered = value !== ''
-  const sliderValue = answered ? Number(value) : 3
+  const storedValue = answered ? Number(value) : 3
+
+  // Reverse the displayed position without reversing the track direction.
+  const sliderValue =
+    answered && reversed
+      ? 6 - storedValue
+      : storedValue
+
   const selectedLabel = answered
-    ? labels[sliderValue]
+    ? labels[storedValue]
     : ''
+
+  function handleChange(event) {
+    const displayedValue = Number(event.target.value)
+
+    const nextValue = reversed
+      ? 6 - displayedValue
+      : displayedValue
+
+    onChange(String(nextValue))
+  }
 
   return (
     <div className="slider-answer">
@@ -61,14 +79,17 @@ export function AnswerSlider({
         aria-valuetext={
           selectedLabel || 'Not answered'
         }
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={handleChange}
       />
 
       <div className="slider-endpoints">
-        <span>{labels[1]}</span>
-        <span>{labels[5]}</span>
+        <span>
+          {reversed ? labels[5] : labels[1]}
+        </span>
+
+        <span>
+          {reversed ? labels[1] : labels[5]}
+        </span>
       </div>
     </div>
   )
