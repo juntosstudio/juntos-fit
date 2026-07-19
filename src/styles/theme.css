@@ -21,16 +21,8 @@
     --color-error-soft: #fbeaea;
 
     /* Interaction */
-    /* teal
-    --color-interaction: #72f0f7;
-    --color-interaction-rgb: 114 240 247;  */
-
     --color-interaction: #ff9a3d;
     --color-interaction-rgb: 255 154 61; 
-    
-   /* yellow
-    --color-interaction: #ffd447;
-    --color-interaction-rgb: 255 212 71; */
 
     /* Shape */
     --radius-sm: 0.5rem;

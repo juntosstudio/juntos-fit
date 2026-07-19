@@ -33,17 +33,21 @@ export function LoginPage({
 
   return (
     <main className="container">
-      <h1>Fitness Coach</h1>
+      <h1>Juntos Coach</h1>
       <p>Sign in to continue.</p>
 
       <form onSubmit={handleSubmit}>
         <label>
           Email
           <input
+            id="login-email"
+            name="username"
             type="email"
             value={email}
             onChange={handleEmailChange}
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck="false"
             required
           />
         </label>
@@ -51,6 +55,8 @@ export function LoginPage({
         <label>
           Password
           <input
+            id="login-password"
+            name="password"
             type="password"
             value={password}
             onChange={handlePasswordChange}
