@@ -33,44 +33,58 @@ export function LoginPage({
 
   return (
     <main className="container">
-      <h1>Juntos Coach</h1>
-      <p>Sign in to continue.</p>
+<header className="login-header">
+  <h1>Juntos Coach</h1>
+  <p></p>
+  <p>Sign in to continue.</p>
+</header>
 
-      <form onSubmit={handleSubmit}>
-        <label>
-          Email
-          <input
-            id="login-email"
-            name="username"
-            type="email"
-            value={email}
-            onChange={handleEmailChange}
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck="false"
-            required
-          />
-        </label>
+<form className="login-form" onSubmit={handleSubmit}>
+  <div className="login-row">
+    <label htmlFor="login-email" className="login-label">
+      Email:
+    </label>
 
-        <label>
-          Password
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            value={password}
-            onChange={handlePasswordChange}
-            autoComplete="current-password"
-            required
-          />
-        </label>
+    <input
+      id="login-email"
+      name="username"
+      type="email"
+      value={email}
+      onChange={handleEmailChange}
+      autoComplete="username"
+      autoCapitalize="none"
+      spellCheck="false"
+      required
+    />
+  </div>
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Signing In...' : 'Sign In'}
-        </button>
-      </form>
+  <div className="login-row">
+    <label
+      htmlFor="login-password"
+      className="login-label"
+    >
+      Password:
+    </label>
 
-      {error && <p role="alert">{error}</p>}
+    <input
+      id="login-password"
+      name="password"
+      type="password"
+      value={password}
+      onChange={handlePasswordChange}
+      autoComplete="current-password"
+      required
+    />
+  </div>
+
+  <div className="login-actions">
+    <button type="submit" disabled={submitting}>
+      {submitting ? 'Signing In...' : 'Sign In'}
+    </button>
+  </div>
+</form>
+
+{error && <p role="alert">{error}</p>}
     </main>
   )
 }
