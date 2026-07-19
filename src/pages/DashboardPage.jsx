@@ -21,7 +21,7 @@ export function DashboardPage({
 
   return (
     <main className="container">
-      <h1>Fitness Coach</h1>
+      <h1>Juntos Coach</h1>
 
       {error && <p role="alert">{error}</p>}
 

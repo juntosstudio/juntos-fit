@@ -354,6 +354,7 @@ fieldset textarea {
 .checkin-review h2 {
   margin: 0 0 1rem;
   font-size: 1.15rem;
+  text-align: center;
 }
 
 .checkin-review dl {

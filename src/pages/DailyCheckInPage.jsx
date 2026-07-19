@@ -282,6 +282,7 @@ export function DailyCheckInPage({
        <DailyCheckInReview
           form={form}
           target={target}
+          today={today}
         />
 
         {(error || successMessage) && (

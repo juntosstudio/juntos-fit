@@ -1,3 +1,6 @@
+import { addDays } from '../../utils/dates'
+import { formatDateWithOrdinal } from '../../utils/formatters'
+
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow the plan',
   2: 'Significantly off plan',
@@ -51,7 +54,7 @@ function ReviewItem({ label, value }) {
 }
 
 // Shows meaningful answers instead of raw database values.
-export function DailyCheckInReview({ form, target }) {
+export function DailyCheckInReview({ form, target, today, }) {
   const mealPlanScore = Number(form.meal_plan_score)
   const waterGoal = target?.daily_water_goal_oz ?? 0
 
@@ -70,10 +73,12 @@ export function DailyCheckInReview({ form, target }) {
       ? `${waterGoal} / ${waterGoal} oz — Goal met`
       : `Goal not met — ${waterGoal} oz target`
 
+  const reviewDate = addDays(today, -1)
+
   return (
     <div className="checkin-review">
       <section>
-        <h2>This Morning</h2>
+        <h2>This Morning, {formatDateWithOrdinal(today)} </h2>
 
         <dl>
           <ReviewItem
@@ -84,7 +89,7 @@ export function DailyCheckInReview({ form, target }) {
       </section>
 
       <section>
-        <h2>Yesterday</h2>
+        <h2>Yesterday,  {formatDateWithOrdinal(reviewDate)} </h2>
 
         <dl>
           <ReviewItem
