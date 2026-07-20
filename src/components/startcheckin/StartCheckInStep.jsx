@@ -1,7 +1,3 @@
-import {
-  useEffect,
-  useRef,
-} from 'react'
 import { ChoiceButtons } from '../checkin/QuestionControls'
 import {
   SIDE_OPTIONS,
@@ -87,7 +83,6 @@ function MeasurementField({
   tip = '',
   optional = false,
   disabled = false,
-  autoFocus = false,
 }) {
   const suffix = getMeasurementUnit(
     field,
@@ -98,30 +93,6 @@ function MeasurementField({
     ['invalid', 'warning'].includes(
       validation?.status,
     )
-  const inputRef = useRef(null)
-
-  useEffect(() => {
-    if (
-      !autoFocus ||
-      disabled ||
-      !inputRef.current
-    ) {
-      return
-    }
-
-    const frame = requestAnimationFrame(() => {
-      inputRef.current?.focus({
-        preventScroll: true,
-      })
-
-      if (inputRef.current?.value) {
-        inputRef.current.select()
-      }
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [autoFocus, disabled, field])
-
   return (
     <label className="start-measurement-field">
       <span>{label}</span>
@@ -135,7 +106,6 @@ function MeasurementField({
       <div className="number-answer">
         <input
           id={`start-measurement-${field}`}
-          ref={inputRef}
           data-measurement-field={field}
           className={`interaction-field ${getFieldClass(
             value,
@@ -321,7 +291,6 @@ export function StartCheckInStep({
           tip="Use the same scale and similar conditions for future check-ins."
           setField={setField}
           disabled={inputsDisabled}
-          autoFocus
         />
       </fieldset>
     )
@@ -386,7 +355,6 @@ export function StartCheckInStep({
             form.body_fat_unavailable
           }
           setField={setField}
-          autoFocus={!form.body_fat_unavailable}
         />
 
         <label className="body-fat-unavailable">
@@ -433,7 +401,6 @@ export function StartCheckInStep({
           tip={measurement.tip}
           setField={setField}
           disabled={inputsDisabled}
-          autoFocus
         />
       </fieldset>
     )
@@ -523,7 +490,6 @@ export function StartCheckInStep({
             }
             setField={setField}
             disabled={inputsDisabled}
-            autoFocus
           />
 
           <MeasurementField

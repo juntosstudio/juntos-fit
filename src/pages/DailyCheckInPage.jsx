@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { DailyCheckInStep } from '../components/checkin/DailyCheckInStep'
 import { DailyCheckInReview } from '../components/checkin/DailyCheckInReview'
 import { useDailyCheckIn } from '../hooks/useDailyCheckIn'
+import { useWizardFocus } from '../hooks/useWizardFocus'
 import {
   DAILY_CHECKIN_STEP_IDS as STEP,
   getDailyCheckInSteps,
@@ -133,6 +134,16 @@ export function DailyCheckInPage({
   const activeStep =
     steps[safeStepIndex] ?? STEP.WEIGHT
 
+  const {
+    markForwardNavigation,
+    markBackNavigation,
+  } = useWizardFocus({
+    stepKey: `${activeStep}:${form.weight_status ?? ''}`,
+    rootId: 'daily-checkin-wizard-step',
+    reviewing,
+    disabled: Boolean(completionType),
+  })
+
   const previewAvailable =
     import.meta.env.DEV && !planHasStarted
 
@@ -156,6 +167,8 @@ export function DailyCheckInPage({
 
     const nextStep = steps[safeStepIndex + 1]
 
+    markForwardNavigation()
+
     if (!nextStep) {
       setReviewing(true)
       return
@@ -165,6 +178,8 @@ export function DailyCheckInPage({
   }
 
   function goBack() {
+    markBackNavigation()
+
     if (reviewing) {
       setReviewing(false)
       setCurrentStep(steps.at(-1) ?? STEP.WEIGHT)
@@ -187,6 +202,7 @@ export function DailyCheckInPage({
     )
 
     if (firstInvalidStep) {
+      markForwardNavigation()
       setReviewing(false)
       setCurrentStep(firstInvalidStep)
       return
@@ -203,6 +219,7 @@ export function DailyCheckInPage({
   }
 
   function startPreview() {
+    markForwardNavigation()
     setPreviewing(true)
     setCurrentStep(STEP.WEIGHT)
     setReviewing(false)
@@ -405,13 +422,15 @@ export function DailyCheckInPage({
           Question {safeStepIndex + 1} of {steps.length}
         </p>
 
-        <DailyCheckInStep
-          step={activeStep}
+        <div id="daily-checkin-wizard-step">
+          <DailyCheckInStep
+            step={activeStep}
           form={form}
           setField={setField}
           target={target}
-          cardioCompleted={cardioCompleted}
-        />
+            cardioCompleted={cardioCompleted}
+          />
+        </div>
 
         <div className="wizard-actions">
           <button

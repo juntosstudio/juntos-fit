@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CreatePlanStep } from '../components/plan/CreatePlanStep'
 import { CreatePlanReview } from '../components/plan/CreatePlanReview'
 import { useCreatePlan } from '../hooks/useCreatePlan'
+import { useWizardFocus } from '../hooks/useWizardFocus'
 import {
   CREATE_PLAN_STEPS,
   validateCreatePlanStep,
@@ -31,6 +32,16 @@ export function CreatePlanPage({
 
   const activeStep =
     CREATE_PLAN_STEPS[stepIndex]
+
+  const {
+    markForwardNavigation,
+    markBackNavigation,
+  } = useWizardFocus({
+    stepKey: activeStep,
+    rootId: 'create-plan-wizard-step',
+    reviewing,
+    disabled: Boolean(createdPlanId),
+  })
   const stepError = validateCreatePlanStep(
     activeStep,
     form,
@@ -44,6 +55,8 @@ export function CreatePlanPage({
 
     const nextIndex = stepIndex + 1
 
+    markForwardNavigation()
+
     if (
       nextIndex >= CREATE_PLAN_STEPS.length
     ) {
@@ -55,6 +68,8 @@ export function CreatePlanPage({
   }
 
   function goBack() {
+    markBackNavigation()
+
     if (reviewing) {
       setReviewing(false)
       setStepIndex(
@@ -85,6 +100,7 @@ export function CreatePlanPage({
         )
 
       if (invalidIndex >= 0) {
+        markForwardNavigation()
         setReviewing(false)
         setStepIndex(invalidIndex)
       }
@@ -134,12 +150,14 @@ export function CreatePlanPage({
         {reviewing ? (
           <CreatePlanReview form={form} />
         ) : (
-          <CreatePlanStep
-            step={activeStep}
-            form={form}
-            today={today}
-            setField={setField}
-          />
+          <div id="create-plan-wizard-step">
+            <CreatePlanStep
+              step={activeStep}
+              form={form}
+              today={today}
+              setField={setField}
+            />
+          </div>
         )}
 
         {error && <p role="alert">{error}</p>}

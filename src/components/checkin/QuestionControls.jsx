@@ -1,5 +1,3 @@
-import { useEffect, useRef } from 'react'
-
 // Displays one set of selectable answers.
 export function ChoiceButtons({
   name,
@@ -95,7 +93,7 @@ export function AnswerSlider({
   )
 }
 
-// Focuses a text box whenever its question appears.
+// Displays a text answer; the shared wizard controller owns focus.
 export function FocusedTextarea({
   focusKey,
   value,
@@ -104,7 +102,6 @@ export function FocusedTextarea({
   rows = 6,
   optional = false,
 }) {
-  const textareaRef = useRef(null)
   const hasAnswer = String(value ?? '').trim().length > 0
 
   const interactionState = hasAnswer
@@ -112,10 +109,6 @@ export function FocusedTextarea({
     : optional
       ? 'is-optional'
       : 'needs-answer'
-
-  useEffect(() => {
-    textareaRef.current?.focus()
-  }, [focusKey])
 
   return (
     <div>
@@ -126,7 +119,6 @@ export function FocusedTextarea({
       )}
 
       <textarea
-        ref={textareaRef}
         className={`interaction-field ${interactionState}`}
         rows={rows}
         value={value}

@@ -5,6 +5,7 @@ import {
 import { StartCheckInStep } from '../components/startcheckin/StartCheckInStep'
 import { StartCheckInReview } from '../components/startcheckin/StartCheckInReview'
 import { useStartCheckIn } from '../hooks/useStartCheckIn'
+import { useWizardFocus } from '../hooks/useWizardFocus'
 import {
   getStartCheckInSteps,
   START_CHECKIN_STEP_IDS as STEP,
@@ -121,6 +122,20 @@ export function StartCheckInPage({
     currentIndex >= 0 ? currentIndex : 0
   const activeStep =
     steps[safeIndex] ?? STEP.TIPS
+
+  const {
+    markForwardNavigation,
+    markBackNavigation,
+    focusField,
+  } = useWizardFocus({
+    stepKey: activeStep,
+    rootId: 'start-checkin-wizard-step',
+    reviewing,
+    disabled: Boolean(
+      completionType ||
+      warningConfirmation,
+    ),
+  })
 
   const validationByField = useMemo(() => {
     const side =
@@ -298,6 +313,8 @@ export function StartCheckInPage({
 
     clearMessages()
 
+    markForwardNavigation()
+
     if (!nextStep) {
       setReviewing(true)
       return
@@ -326,19 +343,6 @@ export function StartCheckInPage({
     advanceFromCurrentStep()
   }
 
-  function focusMeasurementField(field) {
-    requestAnimationFrame(() => {
-      const input = document.getElementById(
-        `start-measurement-${field}`,
-      )
-
-      input?.focus({
-        preventScroll: false,
-      })
-      input?.select()
-    })
-  }
-
   function editWarningValue() {
     const field =
       warningConfirmation?.warnings?.[0]?.field
@@ -346,7 +350,13 @@ export function StartCheckInPage({
     setWarningConfirmation(null)
 
     if (field) {
-      focusMeasurementField(field)
+      focusField(
+        `start-measurement-${field}`,
+        {
+          selectAll: true,
+          preventScroll: false,
+        },
+      )
     }
   }
 
@@ -366,6 +376,7 @@ export function StartCheckInPage({
 
   function goBack() {
     clearMessages()
+    markBackNavigation()
 
     if (reviewing) {
       setReviewing(false)
@@ -398,6 +409,7 @@ export function StartCheckInPage({
     )
 
     if (invalidStep) {
+      markForwardNavigation()
       setReviewing(false)
       setCurrentStep(invalidStep)
       touchStepFields(invalidStep)
@@ -417,6 +429,7 @@ export function StartCheckInPage({
   }
 
   function startPreview() {
+    markForwardNavigation()
     setPreviewing(true)
     setCurrentStep(STEP.TIPS)
     setReviewing(false)
@@ -681,8 +694,9 @@ export function StartCheckInPage({
           Question {safeIndex + 1} of {steps.length}
         </p>
 
-        <StartCheckInStep
-          step={activeStep}
+        <div id="start-checkin-wizard-step">
+          <StartCheckInStep
+            step={activeStep}
           plan={plan}
           form={form}
           photos={photos}
@@ -696,8 +710,9 @@ export function StartCheckInPage({
           uploadingPose={uploadingPose}
           previewing={previewing}
           readOnly={isReadOnly}
-          sideLocked={isCompleted}
-        />
+            sideLocked={isCompleted}
+          />
+        </div>
 
         <div className="wizard-actions">
           <button
