@@ -26,9 +26,11 @@ export function CreatePlanPage({
   } = useCreatePlan(userId, onSaved)
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [reviewing, setReviewing] = useState(false)
+  const [reviewing, setReviewing] =
+    useState(false)
 
-  const activeStep = CREATE_PLAN_STEPS[stepIndex]
+  const activeStep =
+    CREATE_PLAN_STEPS[stepIndex]
   const stepError = validateCreatePlanStep(
     activeStep,
     form,
@@ -42,7 +44,9 @@ export function CreatePlanPage({
 
     const nextIndex = stepIndex + 1
 
-    if (nextIndex >= CREATE_PLAN_STEPS.length) {
+    if (
+      nextIndex >= CREATE_PLAN_STEPS.length
+    ) {
       setReviewing(true)
       return
     }
@@ -154,9 +158,10 @@ export function CreatePlanPage({
 
           <button
             type="button"
-           disabled={
-            saving ||
-              (!reviewing && Boolean(stepError)) ||
+            disabled={
+              saving ||
+              (!reviewing &&
+                Boolean(stepError)) ||
               (reviewing && previewOnly)
             }
             onClick={

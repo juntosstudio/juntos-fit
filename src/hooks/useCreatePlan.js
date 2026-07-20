@@ -5,6 +5,7 @@ import {
   getDateKeyWeekday,
   validateCreatePlan,
 } from '../utils/createPlanFlow'
+import { getBrowserTimeZone } from '../utils/timeZone'
 import {
   getErrorMessage,
   logDevelopmentError,
@@ -12,6 +13,8 @@ import {
 
 const EMPTY_FORM = {
   goal: '',
+  unit_system: 'imperial',
+  body_fat_source: '',
   start_date: '',
   program_length_weeks: '8',
   checkin_day: '',
@@ -22,15 +25,23 @@ const EMPTY_FORM = {
   weekly_workout_target: '',
   weekly_cardio_target_minutes: '',
   daily_water_goal_oz: '',
+  measurement_frequency_weeks: '1',
+  photo_frequency_weeks: '4',
+  time_zone: getBrowserTimeZone(),
 }
 
 // Owns the Create Plan form, validation, and save.
-export function useCreatePlan(userId, onSaved) {
+export function useCreatePlan(
+  userId,
+  onSaved,
+) {
   const [form, setForm] = useState({
     ...EMPTY_FORM,
   })
-  const [checkinDayTouched, setCheckinDayTouched] =
-    useState(false)
+  const [
+    checkinDayTouched,
+    setCheckinDayTouched,
+  ] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [createdPlanId, setCreatedPlanId] =
@@ -93,7 +104,6 @@ export function useCreatePlan(userId, onSaved) {
       )
 
       setCreatedPlanId(planId)
-
       await onSaved?.()
 
       return {

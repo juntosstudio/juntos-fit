@@ -75,6 +75,7 @@ export function DashboardPage({
   error,
   signingOut,
   onCreatePlan,
+  onOpenStartCheckIn,
   onOpenDailyCheckIn,
   onOpenHistory,
   onSignOut,
@@ -97,10 +98,21 @@ export function DashboardPage({
   const weekly =
     dashboard?.weekAtAGlance ?? null
 
-  // Daily check-ins begin the morning after the plan start date.
-  // Start Check-In completion will become an additional gate once built.
+  const startCheckIn =
+    dashboard?.startCheckIn ?? null
+
+  const startCheckInAvailable =
+    Boolean(plan) && today >= plan.start_date
+
+  const startCheckInCompleted =
+    startCheckIn?.status === 'completed'
+
+  // Daily check-ins begin the morning after the plan starts,
+  // but only after the Start Check-In is complete.
   const canCheckIn =
-    Boolean(plan) && today > plan.start_date
+    Boolean(plan) &&
+    today > plan.start_date &&
+    startCheckInCompleted
 
   const hasCheckedInToday =
     dashboard?.todayCheckIn?.checkin_date ===
@@ -113,6 +125,14 @@ export function DashboardPage({
   const checkInLabel = hasCheckedInToday
     ? 'View Today’s Check-In ✓'
     : 'Daily Check-In'
+
+  const startCheckInState = startCheckInCompleted
+    ? 'is-complete'
+    : 'is-due'
+
+  const startCheckInLabel = startCheckInCompleted
+    ? 'View Start Check-In ✓'
+    : 'Complete Start Check-In'
 
   const streakDays = Number(
     dashboard?.streakDays ?? 0,
@@ -154,7 +174,7 @@ export function DashboardPage({
           {canCheckIn && (
             <section
               className="dashboard-check-in"
-              aria-label="Today’s check-in"
+              aria-label="Today’s daily check-in"
             >
               <button
                 type="button"
@@ -162,6 +182,21 @@ export function DashboardPage({
                 onClick={onOpenDailyCheckIn}
               >
                 {checkInLabel}
+              </button>
+            </section>
+          )}
+
+          {startCheckInAvailable && (
+            <section
+              className="dashboard-check-in"
+              aria-label="Start Check-In"
+            >
+              <button
+                type="button"
+                className={`daily-check-in-button ${startCheckInState}`}
+                onClick={onOpenStartCheckIn}
+              >
+                {startCheckInLabel}
               </button>
             </section>
           )}
@@ -212,7 +247,7 @@ export function DashboardPage({
             )}
           </section>
 
-          {today > plan.start_date && (
+          {canCheckIn && (
             <section
               className="week-at-a-glance"
               aria-labelledby="week-at-a-glance-heading"

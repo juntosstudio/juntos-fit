@@ -1,5 +1,9 @@
+import { UNIT_SYSTEM_OPTIONS } from './measurementUnits'
+
 export const CREATE_PLAN_STEP_IDS = {
   GOAL: 'goal',
+  UNIT_SYSTEM: 'unit-system',
+  BODY_FAT_SOURCE: 'body-fat-source',
   START_DATE: 'start-date',
   LENGTH: 'length',
   CHECKIN_DAY: 'checkin-day',
@@ -9,6 +13,8 @@ export const CREATE_PLAN_STEP_IDS = {
 
 export const CREATE_PLAN_STEPS = [
   CREATE_PLAN_STEP_IDS.GOAL,
+  CREATE_PLAN_STEP_IDS.UNIT_SYSTEM,
+  CREATE_PLAN_STEP_IDS.BODY_FAT_SOURCE,
   CREATE_PLAN_STEP_IDS.START_DATE,
   CREATE_PLAN_STEP_IDS.LENGTH,
   CREATE_PLAN_STEP_IDS.CHECKIN_DAY,
@@ -17,17 +23,28 @@ export const CREATE_PLAN_STEPS = [
 ]
 
 export const GOAL_OPTIONS = [
-  {
-    value: 'fat_loss',
-    label: 'Fat Loss',
-  },
-  {
-    value: 'maintenance',
-    label: 'Maintain',
-  },
+  { value: 'fat_loss', label: 'Fat Loss' },
+  { value: 'maintenance', label: 'Maintain' },
   {
     value: 'muscle_gain',
     label: 'Build Muscle',
+  },
+]
+
+export { UNIT_SYSTEM_OPTIONS }
+
+export const BODY_FAT_SOURCE_OPTIONS = [
+  {
+    value: 'scale',
+    label: 'Use My Scale',
+  },
+  {
+    value: 'juntos_estimate',
+    label: 'Have Juntos Fit Estimate It',
+  },
+  {
+    value: 'none',
+    label: 'Do Not Track Body Fat',
   },
 ]
 
@@ -46,10 +63,16 @@ export function getDateKeyWeekday(dateKey) {
     return null
   }
 
-  return new Date(`${dateKey}T00:00:00Z`).getUTCDay()
+  return new Date(
+    `${dateKey}T00:00:00Z`,
+  ).getUTCDay()
 }
 
-function hasWholeNumber(value, minimum, maximum) {
+function hasWholeNumber(
+  value,
+  minimum,
+  maximum,
+) {
   if (value === '') {
     return false
   }
@@ -63,7 +86,6 @@ function hasWholeNumber(value, minimum, maximum) {
   )
 }
 
-// Returns an error message for one Create Plan step.
 export function validateCreatePlanStep(
   step,
   form,
@@ -75,16 +97,39 @@ export function validateCreatePlanStep(
       : 'Choose your coaching goal.'
   }
 
-  if (step === CREATE_PLAN_STEP_IDS.START_DATE) {
+  if (
+    step === CREATE_PLAN_STEP_IDS.UNIT_SYSTEM
+  ) {
+    return ['imperial', 'metric'].includes(
+      form.unit_system,
+    )
+      ? ''
+      : 'Choose your measurement units.'
+  }
+
+  if (
+    step ===
+    CREATE_PLAN_STEP_IDS.BODY_FAT_SOURCE
+  ) {
+    return [
+      'scale',
+      'juntos_estimate',
+      'none',
+    ].includes(form.body_fat_source)
+      ? ''
+      : 'Choose how body fat will be tracked.'
+  }
+
+  if (
+    step === CREATE_PLAN_STEP_IDS.START_DATE
+  ) {
     if (!form.start_date) {
       return 'Choose your plan start date.'
     }
 
-    if (form.start_date < today) {
-      return 'Your plan start date cannot be in the past.'
-    }
-
-    return ''
+    return form.start_date < today
+      ? 'Your plan start date cannot be in the past.'
+      : ''
   }
 
   if (step === CREATE_PLAN_STEP_IDS.LENGTH) {
@@ -97,13 +142,22 @@ export function validateCreatePlanStep(
       : 'Program length must be between 1 and 52 weeks.'
   }
 
-  if (step === CREATE_PLAN_STEP_IDS.CHECKIN_DAY) {
-    return hasWholeNumber(form.checkin_day, 0, 6)
+  if (
+    step ===
+    CREATE_PLAN_STEP_IDS.CHECKIN_DAY
+  ) {
+    return hasWholeNumber(
+      form.checkin_day,
+      0,
+      6,
+    )
       ? ''
       : 'Choose your weekly check-in day.'
   }
 
-  if (step === CREATE_PLAN_STEP_IDS.NUTRITION) {
+  if (
+    step === CREATE_PLAN_STEP_IDS.NUTRITION
+  ) {
     if (
       !hasWholeNumber(
         form.calorie_target,
@@ -120,19 +174,17 @@ export function validateCreatePlanStep(
       form.fat_grams,
     ]
 
-    if (
-      macroFields.some(
-        (value) =>
-          !hasWholeNumber(value, 0, 1000),
-      )
-    ) {
-      return 'Enter valid protein, carbohydrate, and fat targets.'
-    }
-
-    return ''
+    return macroFields.some(
+      (value) =>
+        !hasWholeNumber(value, 0, 1000),
+    )
+      ? 'Enter valid protein, carbohydrate, and fat targets.'
+      : ''
   }
 
-  if (step === CREATE_PLAN_STEP_IDS.ACTIVITY) {
+  if (
+    step === CREATE_PLAN_STEP_IDS.ACTIVITY
+  ) {
     if (
       !hasWholeNumber(
         form.weekly_workout_target,
@@ -153,23 +205,22 @@ export function validateCreatePlanStep(
       return 'Weekly cardio must be between 0 and 3,000 minutes.'
     }
 
-    if (
-      !hasWholeNumber(
-        form.daily_water_goal_oz,
-        1,
-        500,
-      )
-    ) {
-      return 'Daily water must be between 1 and 500 ounces.'
-    }
-
-    return ''
+    return hasWholeNumber(
+      form.daily_water_goal_oz,
+      1,
+      500,
+    )
+      ? ''
+      : 'Daily water must be between 1 and 500 ounces.'
   }
 
   return ''
 }
 
-export function validateCreatePlan(form, today) {
+export function validateCreatePlan(
+  form,
+  today,
+) {
   for (const step of CREATE_PLAN_STEPS) {
     const error = validateCreatePlanStep(
       step,
@@ -178,15 +229,9 @@ export function validateCreatePlan(form, today) {
     )
 
     if (error) {
-      return {
-        error,
-        step,
-      }
+      return { error, step }
     }
   }
 
-  return {
-    error: '',
-    step: null,
-  }
+  return { error: '', step: null }
 }

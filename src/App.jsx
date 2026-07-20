@@ -5,12 +5,14 @@ import { CreatePlanPage } from './pages/CreatePlanPage'
 import { DailyCheckInPage } from './pages/DailyCheckInPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
+import { StartCheckInPage } from './pages/StartCheckInPage'
 import { getTodayDateKey } from './utils/dates'
 import './App.css'
 
 const PAGE_DASHBOARD = 'dashboard'
 const PAGE_CREATE_PLAN = 'create-plan'
 const PAGE_DAILY_CHECK_IN = 'daily-check-in'
+const PAGE_START_CHECK_IN = 'start-check-in'
 const PAGE_HISTORY = 'history'
 
 function App() {
@@ -159,6 +161,17 @@ function App() {
     )
   }
 
+  if (currentPage === PAGE_START_CHECK_IN) {
+    return (
+      <StartCheckInPage
+        key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        plan={dashboard?.plan}
+        onSaved={refreshDashboard}
+        onBack={returnToDashboard}
+      />
+    )
+  }
+
   if (currentPage === PAGE_HISTORY) {
     return (
       <main className="container">
@@ -189,6 +202,9 @@ function App() {
       }
       onOpenDailyCheckIn={() =>
         setCurrentPage(PAGE_DAILY_CHECK_IN)
+      }
+      onOpenStartCheckIn={() =>
+        setCurrentPage(PAGE_START_CHECK_IN)
       }
       onOpenHistory={() =>
         setCurrentPage(PAGE_HISTORY)

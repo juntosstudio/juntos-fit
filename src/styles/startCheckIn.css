@@ -1,0 +1,338 @@
+/* Start Check-In measurements, photos, and review. */
+
+.measurement-tips {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-background);
+}
+
+.measurement-tips p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.start-measurement-field {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-background);
+}
+
+.start-measurement-field > span {
+  font-weight: 700;
+}
+
+.measurement-tip {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.start-measurement-field input {
+  width: 100%;
+}
+
+.start-side-measurements {
+  display: grid;
+  gap: 1rem;
+}
+
+.start-choice-group.needs-answer
+  .choice-list label {
+  border: 2px solid
+    rgb(var(--color-interaction-rgb) / 72%);
+  animation:
+    interaction-breathe
+    1.8s ease-in-out infinite;
+}
+
+.start-choice-group.has-answer
+  .choice-list label {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  animation: none;
+}
+
+.start-choice-group.has-answer
+  .choice-list label:has(input:checked) {
+  border-color: var(--color-interaction);
+  background: var(--color-accent-soft);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 70%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 28%);
+}
+
+.body-fat-unavailable {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.body-fat-unavailable input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--color-primary);
+}
+
+.body-fat-estimate {
+  display: grid;
+  gap: 0.35rem;
+  border: 2px solid var(--color-interaction);
+  border-radius: var(--radius-lg);
+  padding: 1.4rem;
+  background: var(--color-accent-soft);
+  text-align: center;
+  box-shadow:
+    0 0 0 2px
+      rgb(var(--color-interaction-rgb) / 14%);
+}
+
+.body-fat-estimate strong {
+  color: var(--color-primary-dark);
+  font-size: 2rem;
+}
+
+.body-fat-estimate span,
+.locked-side-value {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.locked-side-value {
+  border: 2px solid var(--color-interaction);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: var(--color-accent-soft);
+  text-align: center;
+}
+
+.start-photo-card {
+  display: grid;
+  gap: 0.8rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.8rem;
+  background: var(--color-background);
+  cursor: pointer;
+  text-align: center;
+}
+
+.start-photo-card.needs-answer {
+  border-color: var(--color-interaction);
+  animation:
+    interaction-breathe
+    1.8s ease-in-out infinite;
+}
+
+.start-photo-card.has-answer {
+  border-color: var(--color-interaction);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 70%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 28%);
+}
+
+.start-photo-card img {
+  width: 100%;
+  max-height: 28rem;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  background: var(--color-surface);
+}
+
+.start-photo-placeholder {
+  display: grid;
+  min-height: 14rem;
+  place-items: center;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.start-photo-action {
+  color: var(--color-primary);
+  font-weight: 750;
+}
+
+.start-save-progress {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.start-save-progress button {
+  min-height: auto;
+  border: 0;
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.start-save-progress button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--color-primary-dark);
+}
+
+.start-review-photo-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.start-review-photo-grid figure {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.start-review-photo-grid img,
+.start-review-photo-missing {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-background);
+}
+
+.start-review-photo-missing {
+  display: grid;
+  place-items: center;
+  padding: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.start-review-photo-grid figcaption {
+  margin-top: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+@media (min-width: 40rem) {
+  .start-side-measurements {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-choice-group.needs-answer
+    .choice-list label,
+  .start-photo-card.needs-answer {
+    border-color: var(--color-interaction);
+    box-shadow:
+      0 0 4px
+        rgb(var(--color-interaction-rgb) / 65%),
+      0 0 10px
+        rgb(var(--color-interaction-rgb) / 32%);
+    animation: none;
+  }
+}
+
+
+/* Final measurement states and Start Check-In spacing. */
+
+.start-checkin-page {
+  --start-danger: #b42318;
+  --start-danger-soft: #fef3f2;
+  --start-warning: #b76e00;
+  --start-warning-soft: #fff7e8;
+}
+
+.start-checkin-page fieldset {
+  display: flow-root;
+  margin-top: 0.85rem;
+  padding-top: 1.35rem;
+}
+
+.start-checkin-page fieldset > legend {
+  float: left;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 1.15rem;
+  padding: 0;
+  background: transparent;
+  line-height: 1.25;
+}
+
+.start-checkin-page fieldset > :not(legend) {
+  clear: both;
+}
+
+.start-measurement-field
+  .interaction-field.is-invalid {
+  border-color: var(--start-danger);
+  background: var(--start-danger-soft);
+  box-shadow:
+    0 0 0 2px
+      rgb(180 35 24 / 14%);
+  animation: none;
+}
+
+.start-measurement-field
+  .interaction-field.is-warning {
+  border-color: var(--start-warning);
+  background: var(--start-warning-soft);
+  box-shadow:
+    0 0 0 2px
+      rgb(183 110 0 / 14%);
+  animation: none;
+}
+
+.measurement-feedback {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.measurement-feedback.invalid {
+  color: var(--start-danger);
+  font-weight: 700;
+}
+
+.measurement-feedback.warning {
+  color: var(--start-warning);
+  font-weight: 650;
+}
+
+.measurement-warning-dialog {
+  max-width: 31rem;
+  text-align: left;
+}
+
+.measurement-warning-dialog h2 {
+  color: var(--start-warning);
+}
+
+.measurement-warning-dialog
+  .wizard-actions {
+  margin-top: 1.25rem;
+}
+
+.start-lock-notice {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-weight: 650;
+}

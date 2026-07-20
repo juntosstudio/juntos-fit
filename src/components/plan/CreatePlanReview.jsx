@@ -1,5 +1,12 @@
-import { formatDate, formatGoal } from '../../utils/formatters'
-import { WEEKDAY_OPTIONS } from '../../utils/createPlanFlow'
+import {
+  formatDate,
+  formatGoal,
+} from '../../utils/formatters'
+import {
+  BODY_FAT_SOURCE_OPTIONS,
+  UNIT_SYSTEM_OPTIONS,
+  WEEKDAY_OPTIONS,
+} from '../../utils/createPlanFlow'
 
 function ReviewItem({ label, value }) {
   return (
@@ -10,10 +17,11 @@ function ReviewItem({ label, value }) {
   )
 }
 
-function getWeekdayName(value) {
+function getOptionLabel(options, value) {
   return (
-    WEEKDAY_OPTIONS.find(
+    options.find(
       (option) =>
+        option.value === value ||
         option.value === Number(value),
     )?.label ?? 'Not set'
   )
@@ -33,6 +41,22 @@ export function CreatePlanReview({ form }) {
           />
 
           <ReviewItem
+            label="Measurement units"
+            value={getOptionLabel(
+              UNIT_SYSTEM_OPTIONS,
+              form.unit_system,
+            )}
+          />
+
+          <ReviewItem
+            label="Body fat"
+            value={getOptionLabel(
+              BODY_FAT_SOURCE_OPTIONS,
+              form.body_fat_source,
+            )}
+          />
+
+          <ReviewItem
             label="Start date"
             value={formatDate(form.start_date)}
           />
@@ -44,9 +68,20 @@ export function CreatePlanReview({ form }) {
 
           <ReviewItem
             label="Weekly check-in"
-            value={getWeekdayName(
+            value={getOptionLabel(
+              WEEKDAY_OPTIONS,
               form.checkin_day,
             )}
+          />
+
+          <ReviewItem
+            label="Measurements"
+            value="Every week"
+          />
+
+          <ReviewItem
+            label="Progress photos"
+            value="Every 4 weeks"
           />
         </dl>
       </section>

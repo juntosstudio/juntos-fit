@@ -1,19 +1,43 @@
 import { ChoiceButtons } from '../checkin/QuestionControls'
 import {
+  BODY_FAT_SOURCE_OPTIONS,
   CREATE_PLAN_STEP_IDS as STEP,
   GOAL_OPTIONS,
+  UNIT_SYSTEM_OPTIONS,
   WEEKDAY_OPTIONS,
 } from '../../utils/createPlanFlow'
 
 function fieldState(value) {
-  const isUnanswered =
+  const unanswered =
     value === '' ||
     value === null ||
     value === undefined
 
-  return isUnanswered
+  return unanswered
     ? 'needs-answer'
     : 'has-answer'
+}
+
+function ChoiceGroup({
+  name,
+  value,
+  options,
+  onChange,
+}) {
+  return (
+    <div
+      className={`create-plan-choice-group ${fieldState(
+        value,
+      )}`}
+    >
+      <ChoiceButtons
+        name={name}
+        value={value}
+        options={options}
+        onChange={onChange}
+      />
+    </div>
+  )
 }
 
 function NumberField({
@@ -64,20 +88,64 @@ export function CreatePlanStep({
       <fieldset>
         <legend>What is your primary goal?</legend>
 
-        <div
-          className={`create-plan-choice-group ${fieldState(
-            form.goal,
-          )}`}
-        >
-          <ChoiceButtons
-            name="plan-goal"
-            value={form.goal}
-            options={GOAL_OPTIONS}
-            onChange={(value) =>
-              setField('goal', value)
-            }
-          />
-        </div>
+        <ChoiceGroup
+          name="plan-goal"
+          value={form.goal}
+          options={GOAL_OPTIONS}
+          onChange={(value) =>
+            setField('goal', value)
+          }
+        />
+      </fieldset>
+    )
+  }
+
+  if (step === STEP.UNIT_SYSTEM) {
+    return (
+      <fieldset>
+        <legend>
+          Which measurement units do you use?
+        </legend>
+
+        <p className="question-helper">
+          Juntos Fit will use this preference
+          throughout the app. You can change the
+          display preference later without losing
+          history.
+        </p>
+
+        <ChoiceGroup
+          name="unit-system"
+          value={form.unit_system}
+          options={UNIT_SYSTEM_OPTIONS}
+          onChange={(value) =>
+            setField('unit_system', value)
+          }
+        />
+      </fieldset>
+    )
+  }
+
+  if (step === STEP.BODY_FAT_SOURCE) {
+    return (
+      <fieldset>
+        <legend>
+          How should body fat be tracked?
+        </legend>
+
+        <p className="question-helper">
+          Use one method for the entire plan so your
+          progress stays comparable.
+        </p>
+
+        <ChoiceGroup
+          name="body-fat-source"
+          value={form.body_fat_source}
+          options={BODY_FAT_SOURCE_OPTIONS}
+          onChange={(value) =>
+            setField('body_fat_source', value)
+          }
+        />
       </fieldset>
     )
   }
@@ -153,20 +221,14 @@ export function CreatePlanStep({
           starts. You may choose another day.
         </p>
 
-        <div
-          className={`create-plan-choice-group ${fieldState(
-            form.checkin_day,
-          )}`}
-        >
-          <ChoiceButtons
-            name="weekly-checkin-day"
-            value={form.checkin_day}
-            options={WEEKDAY_OPTIONS}
-            onChange={(value) =>
-              setField('checkin_day', value)
-            }
-          />
-        </div>
+        <ChoiceGroup
+          name="weekly-checkin-day"
+          value={form.checkin_day}
+          options={WEEKDAY_OPTIONS}
+          onChange={(value) =>
+            setField('checkin_day', value)
+          }
+        />
       </fieldset>
     )
   }

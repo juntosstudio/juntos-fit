@@ -12,6 +12,11 @@ const PLAN_FIELDS = `
   checkin_day,
   program_length_weeks,
   goal,
+  measurement_side,
+  body_fat_source,
+  time_zone,
+  measurement_frequency_weeks,
+  photo_frequency_weeks,
   status,
   end_date
 `
@@ -27,6 +32,15 @@ const TARGET_FIELDS = `
   weekly_cardio_target_minutes,
   weekly_workout_target,
   daily_water_goal_oz
+`
+
+const START_CHECKIN_FIELDS = `
+  id,
+  coaching_plan_id,
+  checkin_date,
+  status,
+  completed_at,
+  updated_at
 `
 
 const WEEKLY_CHECKIN_FIELDS = `
@@ -95,6 +109,22 @@ async function loadCurrentTarget(
   }
 
   return upcomingTarget
+}
+
+// Loads the plan's draft or completed Start Check-In.
+async function loadStartCheckIn(coachingPlanId) {
+  const { data: startCheckIn, error } =
+    await supabase
+      .from('start_checkins')
+      .select(START_CHECKIN_FIELDS)
+      .eq('coaching_plan_id', coachingPlanId)
+      .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return startCheckIn
 }
 
 // Loads today's saved daily check-in, when one exists.
@@ -268,7 +298,7 @@ export async function loadDashboardData(userId) {
   const { data: profile, error: profileError } =
     await supabase
       .from('profiles')
-      .select('id, display_name')
+      .select('id, display_name, unit_system, time_zone')
       .eq('id', userId)
       .single()
 
@@ -295,6 +325,7 @@ export async function loadDashboardData(userId) {
       profile,
       plan: null,
       target: null,
+      startCheckIn: null,
       todayCheckIn: null,
       cardioCompleted: 0,
       cardioWeekStart: null,
@@ -314,11 +345,14 @@ export async function loadDashboardData(userId) {
 
   const [
     target,
+    startCheckIn,
     todayCheckIn,
     weeklyCheckIns,
     checkInDates,
   ] = await Promise.all([
     loadCurrentTarget(plan.id, today),
+
+    loadStartCheckIn(plan.id),
 
     loadTodayCheckIn(plan.id, today),
 
@@ -351,6 +385,7 @@ export async function loadDashboardData(userId) {
     profile,
     plan,
     target,
+    startCheckIn,
     todayCheckIn,
 
     cardioCompleted:
