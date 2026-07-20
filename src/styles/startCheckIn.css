@@ -237,7 +237,10 @@
 @media (prefers-reduced-motion: reduce) {
   .start-choice-group.needs-answer
     .choice-list label,
-  .start-photo-card.needs-answer {
+  .start-photo-card.needs-answer,
+  .start-checkin-page
+    .start-measurement-field
+    .interaction-field.needs-answer {
     border-color: var(--color-interaction);
     box-shadow:
       0 0 4px
@@ -277,6 +280,46 @@
 .start-checkin-page fieldset > :not(legend) {
   clear: both;
 }
+
+.start-checkin-page
+  .start-measurement-field
+  .interaction-field.needs-answer {
+  border: 2px solid
+    rgb(var(--color-interaction-rgb) / 78%);
+  background:
+    rgb(var(--color-interaction-rgb) / 4%);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 55%),
+    0 0 10px
+      rgb(var(--color-interaction-rgb) / 22%);
+  animation:
+    interaction-breathe
+    1.8s ease-in-out infinite;
+}
+
+.start-checkin-page
+  .start-measurement-field
+  .interaction-field.has-answer {
+  border: 2px solid var(--color-interaction);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 62%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 24%);
+  animation: none;
+}
+
+.start-checkin-page
+  .start-measurement-field
+  .interaction-field.is-optional {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  animation: none;
+}
+
 
 .start-measurement-field
   .interaction-field.is-invalid {

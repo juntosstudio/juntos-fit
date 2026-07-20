@@ -1,11 +1,14 @@
-# Start Check-In Heading Fix
+# Start Check-In Mobile Glow Fix
 
 Extract this ZIP into:
 
 `C:\FitnessCoach\App`
 
-Allow Windows to replace:
+Replace:
 
 `src\styles\startCheckIn.css`
 
-Then refresh the running app. No database migration is needed.
+No database migration is needed.
+
+Test locally first. Then run your normal build/push command so
+Cloudflare receives the updated CSS.
