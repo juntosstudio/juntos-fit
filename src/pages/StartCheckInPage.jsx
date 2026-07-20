@@ -326,6 +326,30 @@ export function StartCheckInPage({
     advanceFromCurrentStep()
   }
 
+  function focusMeasurementField(field) {
+    requestAnimationFrame(() => {
+      const input = document.getElementById(
+        `start-measurement-${field}`,
+      )
+
+      input?.focus({
+        preventScroll: false,
+      })
+      input?.select()
+    })
+  }
+
+  function editWarningValue() {
+    const field =
+      warningConfirmation?.warnings?.[0]?.field
+
+    setWarningConfirmation(null)
+
+    if (field) {
+      focusMeasurementField(field)
+    }
+  }
+
   function confirmWarnings() {
     const keys =
       warningConfirmation?.warnings.map(
@@ -457,9 +481,7 @@ export function StartCheckInPage({
           <div className="wizard-actions">
             <button
               type="button"
-              onClick={() =>
-                setWarningConfirmation(null)
-              }
+              onClick={editWarningValue}
             >
               Edit Value
             </button>
