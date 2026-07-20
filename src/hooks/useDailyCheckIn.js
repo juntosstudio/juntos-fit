@@ -82,6 +82,9 @@ export function useDailyCheckIn(plan, onSaved) {
   })
   const [existingCheckIn, setExistingCheckIn] =
     useState(null)
+  const [savedForm, setSavedForm] = useState({
+    ...EMPTY_FORM,
+  });
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -101,8 +104,11 @@ export function useDailyCheckIn(plan, onSaved) {
 
   const loadCheckIn = useCallback(async () => {
     if (!plan?.id || !planHasStarted) {
-      setForm({ ...EMPTY_FORM })
-      setExistingCheckIn(null)
+  const emptyForm = { ...EMPTY_FORM };
+
+      setForm(emptyForm);
+      setSavedForm(emptyForm);
+      setExistingCheckIn(null);
       setLoading(false)
       return
     }
@@ -114,8 +120,11 @@ export function useDailyCheckIn(plan, onSaved) {
       const checkin =
         await loadTodayDailyCheckIn(plan.id)
 
-      setExistingCheckIn(checkin)
-      setForm(mapCheckInToForm(checkin))
+      const loadedForm = mapCheckInToForm(checkin);
+
+      setExistingCheckIn(checkin);
+      setForm(loadedForm);
+      setSavedForm(loadedForm);
     } catch (loadError) {
       logDevelopmentError(
         'useDailyCheckIn.loadCheckIn',
@@ -337,9 +346,13 @@ export function useDailyCheckIn(plan, onSaved) {
         questions_for_coach: optionalText(form.questions_for_coach),
       });
 
-      setExistingCheckIn(savedCheckIn)
-      setForm(mapCheckInToForm(savedCheckIn))
-      setSuccessMessage(
+      const updatedForm =
+        mapCheckInToForm(savedCheckIn)
+
+        setExistingCheckIn(savedCheckIn)
+        setForm(updatedForm)
+        setSavedForm(updatedForm)      
+        setSuccessMessage(
         'Today’s check-in was saved.',
       )
 
@@ -359,17 +372,20 @@ export function useDailyCheckIn(plan, onSaved) {
         ),
       )
 
-      return false
+      return false;
     } finally {
       setSaving(false)
     }
   }
+
+const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
 
   return {
     today,
     firstCheckInDate,
     form,
     existingCheckIn,
+    isDirty,
     loading,
     saving,
     error,
@@ -378,5 +394,5 @@ export function useDailyCheckIn(plan, onSaved) {
     planHasStarted,
     setField,
     saveCheckIn,
-  }
+  };
 }

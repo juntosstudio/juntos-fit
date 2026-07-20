@@ -96,13 +96,12 @@ export function DailyCheckInPage({
   onSaved,
   onBack,
 }) {
-  console.log('Daily Check-In target:', target)
-
   const {
     today,
     firstCheckInDate,
     form,
     existingCheckIn,
+    isDirty,
     loading,
     saving,
     error,
@@ -117,7 +116,8 @@ export function DailyCheckInPage({
     STEP.WEIGHT,
   )
   const [reviewing, setReviewing] = useState(false)
-  const [completed, setCompleted] = useState(false)
+  const [completionType, setCompletionType] =
+    useState(null)
   const [previewing, setPreviewing] = useState(false)
 
   const steps = useMemo(
@@ -126,6 +126,7 @@ export function DailyCheckInPage({
   )
 
   const currentStepIndex = steps.indexOf(currentStep)
+
   const safeStepIndex =
     currentStepIndex >= 0 ? currentStepIndex : 0
 
@@ -136,6 +137,17 @@ export function DailyCheckInPage({
     import.meta.env.DEV && !planHasStarted
 
   const wizardAvailable = canEdit || previewing
+
+  const isEditing =
+    Boolean(existingCheckIn) && !previewing
+
+  const pageTitle = isEditing
+    ? 'Update Daily Check-In'
+    : 'Daily Check-In'
+
+  const reviewTitle = isEditing
+    ? 'Review Your Changes'
+    : 'Review Your Answers'
 
   function goNext() {
     if (!canContinueFromStep(activeStep, form)) {
@@ -166,13 +178,27 @@ export function DailyCheckInPage({
     }
   }
 
-  async function handleSubmit() {
+  // Saves immediately when editing, unless a newly required answer is missing.
+  async function handleSave() {
     if (previewing) return
 
+    const firstInvalidStep = steps.find(
+      (step) => !canContinueFromStep(step, form),
+    )
+
+    if (firstInvalidStep) {
+      setReviewing(false)
+      setCurrentStep(firstInvalidStep)
+      return
+    }
+
+    const wasUpdate = Boolean(existingCheckIn)
     const saved = await saveCheckIn()
 
     if (saved) {
-      setCompleted(true)
+      setCompletionType(
+        wasUpdate ? 'updated' : 'saved',
+      )
     }
   }
 
@@ -180,8 +206,42 @@ export function DailyCheckInPage({
     setPreviewing(true)
     setCurrentStep(STEP.WEIGHT)
     setReviewing(false)
-    setCompleted(false)
+    setCompletionType(null)
   }
+
+  const confirmationDialog = completionType ? (
+    <div className="confirmation-overlay">
+      <section
+        className="confirmation-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-title"
+      >
+        <div
+          className="confirmation-checkmark"
+          aria-hidden="true"
+        >
+          ✓
+        </div>
+
+        <h2 id="confirmation-title">
+          {completionType === 'updated'
+            ? 'Check-In Updated'
+            : 'Check-In Saved'}
+        </h2>
+
+        <p>
+          {completionType === 'updated'
+            ? 'Your changes have been saved. Keep up the good work.'
+            : 'Nice work showing up today. Keep following the plan—you’ve got this.'}
+        </p>
+
+        <button type="button" onClick={onBack}>
+          Back to Dashboard
+        </button>
+      </section>
+    </div>
+  ) : null
 
   if (loading) {
     return (
@@ -204,6 +264,7 @@ export function DailyCheckInPage({
         </button>
 
         <h1>Daily Check-In</h1>
+
         <p role="alert">
           No active coaching plan was found.
         </p>
@@ -242,83 +303,63 @@ export function DailyCheckInPage({
     )
   }
 
-  if (completed) {
-    return (
-      <main className="container">
-        <h1>Check-In Complete</h1>
-
-        <p>
-          Nice work showing up today. Keep following
-          the plan—you’ve got this.
-        </p>
-
-        <button type="button" onClick={onBack}>
-          Back to Dashboard
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setCompleted(false)
-            setReviewing(false)
-            setCurrentStep(STEP.WEIGHT)
-          }}
-        >
-          Edit Today’s Check-In
-        </button>
-      </main>
-    )
-  }
-
   if (reviewing) {
     return (
-      <main className="container">
-        <button type="button" onClick={onBack}>
-          Back to Dashboard
-        </button>
-
-        <h1>Review Your Answers</h1>
-
-       <DailyCheckInReview
-          form={form}
-          target={target}
-          today={today}
-        />
-
-        {(error || successMessage) && (
-          <p role={error ? 'alert' : 'status'}>
-            {error || successMessage}
-          </p>
-        )}
-
-        <div className="wizard-actions">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={goBack}
-          >
-            Edit Answers
+      <>
+        <main className="container">
+          <button type="button" onClick={onBack}>
+            Back to Dashboard
           </button>
 
-          <button
-            type="button"
-            disabled={saving || previewing}
-            onClick={handleSubmit}
-          >
-            {saving
-              ? 'Submitting...'
-              : existingCheckIn
-                ? 'Update Check-In'
-                : 'Submit Check-In'}
-          </button>
-        </div>
+          <h1>{reviewTitle}</h1>
 
-        {previewing && (
-          <p role="status">
-            Preview mode — nothing can be submitted.
-          </p>
-        )}
-      </main>
+          <DailyCheckInReview
+            form={form}
+            target={target}
+            today={today}
+          />
+
+          {(error || successMessage) && (
+            <p role={error ? 'alert' : 'status'}>
+              {error || successMessage}
+            </p>
+          )}
+
+          <div className="wizard-actions">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={goBack}
+            >
+              Edit Answers
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                saving ||
+                previewing ||
+                (isEditing && !isDirty)
+              }
+              onClick={handleSave}
+            >
+              {saving
+                ? 'Saving...'
+                : isEditing
+                  ? 'Save Changes'
+                  : 'Submit Check-In'}
+            </button>
+          </div>
+
+          {previewing && (
+            <p role="status">
+              Preview mode — nothing can be submitted.
+            </p>
+          )}
+        </main>
+
+        {confirmationDialog}
+      </>
     )
   }
 
@@ -326,66 +367,92 @@ export function DailyCheckInPage({
     ((safeStepIndex + 1) / steps.length) * 100
 
   return (
-    <main className="container">
-      <button type="button" onClick={onBack}>
-        Back to Dashboard
-      </button>
+    <>
+      <main className="container">
+        <button type="button" onClick={onBack}>
+          Back to Dashboard
+        </button>
 
-      <h1>Daily Check-In</h1>
-      <p>{formatDate(today)}</p>
+        <h1>{pageTitle}</h1>
+        <p>{formatDate(today)}</p>
 
-      {previewing && (
-        <p role="status">
-          Preview mode — answers cannot be submitted.
-        </p>
-      )}
+        {previewing && (
+          <p role="status">
+            Preview mode — answers cannot be submitted.
+          </p>
+        )}
 
-      {existingCheckIn && !previewing && (
+        {isEditing && (
+          <p>
+            Change only what you need, then save your
+            changes.
+          </p>
+        )}
+
+        {(error || successMessage) && (
+          <p role={error ? 'alert' : 'status'}>
+            {error || successMessage}
+          </p>
+        )}
+
+        <progress
+          max="100"
+          value={progress}
+          aria-label="Check-in progress"
+        />
+
         <p>
-          Today’s check-in has already been submitted.
-          You may update it until the day ends.
+          Question {safeStepIndex + 1} of {steps.length}
         </p>
-      )}
 
-      <progress
-        max="100"
-        value={progress}
-        aria-label="Check-in progress"
-      />
+        <DailyCheckInStep
+          step={activeStep}
+          form={form}
+          setField={setField}
+          target={target}
+          cardioCompleted={cardioCompleted}
+        />
 
-      <p>
-        Question {safeStepIndex + 1} of {steps.length}
-      </p>
+        <div className="wizard-actions">
+          <button
+            type="button"
+            disabled={safeStepIndex === 0}
+            onClick={goBack}
+          >
+            Back
+          </button>
 
-      <DailyCheckInStep
-        step={activeStep}
-        form={form}
-        setField={setField}
-        target={target}
-        cardioCompleted={cardioCompleted}
-      />
+          <button
+            type="button"
+            disabled={
+              !canContinueFromStep(activeStep, form)
+            }
+            onClick={goNext}
+          >
+            {safeStepIndex === steps.length - 1
+              ? isEditing
+                ? 'Review Changes'
+                : 'Review Answers'
+              : 'Next'}
+          </button>
+        </div>
 
-      <div className="wizard-actions">
-        <button
-          type="button"
-          disabled={safeStepIndex === 0}
-          onClick={goBack}
-        >
-          Back
-        </button>
+        {isEditing && (
+          <div className="quick-save-action">
+            <button
+              type="button"
+              disabled={saving || !isDirty}
+              onClick={handleSave}
+            >
+              {saving
+                ? 'Saving...'
+                : 'Save Changes'}
+            </button>
+          </div>
+        )}
+      </main>
 
-        <button
-          type="button"
-          disabled={
-            !canContinueFromStep(activeStep, form)
-          }
-          onClick={goNext}
-        >
-          {safeStepIndex === steps.length - 1
-            ? 'Review Answers'
-            : 'Next'}
-        </button>
-      </div>
-    </main>
+      {confirmationDialog}
+    </>
   )
 }

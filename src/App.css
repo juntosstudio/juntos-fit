@@ -557,3 +557,386 @@ fieldset textarea {
 .login-actions button {
   min-width: 9rem;
 }
+
+/* Dashboard */
+
+/* Dashboard */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dashboard-page {
+  padding-bottom: 7.5rem;
+}
+
+.dashboard-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.dashboard-title {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: clamp(2rem, 7vw, 2.8rem);
+  line-height: 1.1;
+}
+
+.dashboard-welcome-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 1rem;
+  margin-top: 0.65rem;
+}
+
+.dashboard-welcome-row p {
+  margin: 0;
+}
+
+.dashboard-welcome-row>p:first-child {
+  color: var(--color-text-muted);
+}
+
+.dashboard-streak {
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+/* Daily check-in button */
+
+.dashboard-check-in {
+  display: flex;
+  justify-content: center;
+  margin: 1.75rem 0;
+}
+
+.daily-check-in-button {
+  width: min(100%, 25rem);
+  min-height: 4.4rem;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  padding-inline: 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  font-size: clamp(1.05rem, 4vw, 1.25rem);
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+/* Not eligible yet: purple with no glow. */
+.daily-check-in-button.is-locked,
+.daily-check-in-button.is-locked:disabled {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* Eligible but incomplete: purple with breathing orange glow. */
+@keyframes check-in-breathe {
+
+  0%,
+  100% {
+    border-color: var(--color-interaction);
+    box-shadow:
+      0 0 4px rgb(var(--color-interaction-rgb) / 30%),
+      0 0 10px rgb(var(--color-interaction-rgb) / 15%);
+  }
+
+  50% {
+    border-color: var(--color-interaction);
+    box-shadow:
+      0 0 7px rgb(var(--color-interaction-rgb) / 90%),
+      0 0 22px 6px rgb(var(--color-interaction-rgb) / 46%);
+  }
+}
+
+.daily-check-in-button.is-due {
+  border-color: var(--color-interaction);
+  background: var(--color-primary);
+  color: white;
+  animation: check-in-breathe 2.5s ease-in-out infinite;
+}
+
+.daily-check-in-button.is-due:hover:not(:disabled) {
+  border-color: var(--color-interaction);
+  background: var(--color-primary-dark);
+}
+
+/* Completed: purple with steady orange confirmation glow. */
+.daily-check-in-button.is-complete {
+  border-color: var(--color-interaction);
+  background: var(--color-primary);
+  color: white;
+  box-shadow:
+    0 0 5px rgb(var(--color-interaction-rgb) / 70%),
+    0 0 13px rgb(var(--color-interaction-rgb) / 28%);
+  animation: none;
+}
+
+.daily-check-in-button.is-complete:hover:not(:disabled) {
+  border-color: var(--color-interaction);
+  background: var(--color-primary-dark);
+  box-shadow:
+    0 0 7px rgb(var(--color-interaction-rgb) / 80%),
+    0 0 17px rgb(var(--color-interaction-rgb) / 36%);
+}
+
+/* Current plan */
+
+.dashboard-plan-summary {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.25rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-plan-summary p {
+  margin: 0.3rem 0;
+}
+
+.dashboard-plan-progress {
+  margin-top: 0.75rem !important;
+  color: var(--color-primary);
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+/* Week at a Glance */
+
+.week-at-a-glance {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: clamp(1.2rem, 5vw, 1.75rem);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.week-at-a-glance h2 {
+  margin: 0 0 1.25rem;
+  text-align: center;
+}
+
+.weekly-score-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.weekly-score-list>div {
+  display: grid;
+  min-width: 0;
+  min-height: 7.2rem;
+  align-content: center;
+  gap: 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 0.85rem;
+  background: var(--color-background);
+  text-align: center;
+}
+
+.weekly-score-list dt {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.weekly-score-list dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-size: clamp(1rem, 4vw, 1.2rem);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.weekly-summary-link {
+  display: block;
+  width: min(100%, 18rem);
+  margin: 1.4rem auto 0;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.weekly-summary-link:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+/* Sign out */
+
+.dashboard-sign-out {
+  display: block;
+  min-height: auto;
+  margin: 1.5rem auto 0;
+  border: 0;
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.dashboard-sign-out:hover:not(:disabled) {
+  background: transparent;
+  color: var(--color-primary-dark);
+}
+
+/* Bottom navigation */
+
+.bottom-navigation {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: min(100%, 44rem);
+  margin-inline: auto;
+  border-top: 1px solid var(--color-border);
+  padding:
+    0.55rem max(0.4rem, env(safe-area-inset-right)) calc(0.55rem + env(safe-area-inset-bottom)) max(0.4rem, env(safe-area-inset-left));
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 -8px 24px rgb(33 31 44 / 10%);
+  backdrop-filter: blur(12px);
+}
+
+.bottom-navigation button {
+  min-width: 0;
+  min-height: 2.8rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.2rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: clamp(0.7rem, 2.7vw, 0.82rem);
+  font-weight: 700;
+}
+
+.bottom-navigation button:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+}
+
+.bottom-navigation button.is-active {
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+}
+
+.bottom-navigation button:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.45;
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-check-in-button.is-due {
+    box-shadow:
+      0 0 6px rgb(var(--color-interaction-rgb) / 70%),
+      0 0 14px rgb(var(--color-interaction-rgb) / 30%);
+    animation: none;
+  }
+}
+
+/* Desktop dashboard adjustments */
+
+@media (min-width: 40rem) {
+  .dashboard-page {
+    padding-bottom: 8rem;
+  }
+
+  .dashboard-welcome-row {
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .weekly-score-list>div {
+    min-height: 8rem;
+  }
+
+  .bottom-navigation {
+    bottom: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 0.55rem;
+  }
+}
+
+/* Check-in save confirmation */
+
+.confirmation-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgb(33 31 44 / 58%);
+  backdrop-filter: blur(3px);
+}
+
+.confirmation-dialog {
+  width: min(100%, 24rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 2rem 1.5rem;
+  background: var(--color-surface);
+  box-shadow:
+    0 18px 55px rgb(33 31 44 / 30%);
+  text-align: center;
+}
+
+.confirmation-checkmark {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  margin: 0 auto 1rem;
+  border: 2px solid var(--color-interaction);
+  border-radius: 50%;
+  color: var(--color-primary);
+  font-size: 1.75rem;
+  font-weight: 800;
+  box-shadow:
+    0 0 6px rgb(var(--color-interaction-rgb) / 65%),
+    0 0 15px rgb(var(--color-interaction-rgb) / 25%);
+}
+
+.confirmation-dialog h2 {
+  margin: 0;
+  color: var(--color-primary-dark);
+}
+
+.confirmation-dialog p {
+  margin: 0.9rem 0 1.5rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.confirmation-dialog button {
+  width: 100%;
+}
