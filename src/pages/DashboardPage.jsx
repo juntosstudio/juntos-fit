@@ -86,9 +86,9 @@ export function DashboardPage({
   const canCheckIn =
     Boolean(plan) && today > plan.start_date
 
-  const hasCheckedInToday = Boolean(
-    dashboard?.todayCheckIn,
-  )
+  const hasCheckedInToday =
+    dashboard?.todayCheckIn?.checkin_date ===
+  today
 
   const checkInState = !canCheckIn
     ? 'is-locked'

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useDashboard } from './hooks/useDashboard'
 import { DailyCheckInPage } from './pages/DailyCheckInPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
+import { getTodayDateKey } from './utils/dates'
 import './App.css'
 
 const PAGE_DASHBOARD = 'dashboard'
@@ -13,6 +14,9 @@ const PAGE_HISTORY = 'history'
 function App() {
   const [currentPage, setCurrentPage] = useState(PAGE_DASHBOARD)
 
+  const [activeDate, setActiveDate] = useState(
+  getTodayDateKey,
+)
   const {
     user,
     checkingSession,
@@ -29,6 +33,69 @@ function App() {
     error: dashboardError,
     refreshDashboard,
   } = useDashboard(user?.id)
+
+  useEffect(() => {
+  if (!user?.id) {
+    return undefined
+  }
+
+  function syncCurrentDate(refresh = false) {
+    const nextDate = getTodayDateKey()
+
+    if (nextDate !== activeDate) {
+      setActiveDate(nextDate)
+      refreshDashboard()
+      return
+    }
+
+    if (refresh) {
+      refreshDashboard()
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      syncCurrentDate(true)
+    }
+  }
+
+  function handlePageShow() {
+    syncCurrentDate(true)
+  }
+
+  // Check quietly while the app remains open across midnight.
+  const dateTimer = window.setInterval(() => {
+    syncCurrentDate()
+  }, 60_000)
+
+  document.addEventListener(
+    'visibilitychange',
+    handleVisibilityChange,
+  )
+
+  window.addEventListener(
+    'pageshow',
+    handlePageShow,
+  )
+
+  return () => {
+    window.clearInterval(dateTimer)
+
+    document.removeEventListener(
+      'visibilitychange',
+      handleVisibilityChange,
+    )
+
+    window.removeEventListener(
+      'pageshow',
+      handlePageShow,
+    )
+  }
+}, [
+  activeDate,
+  user?.id,
+  refreshDashboard,
+])
 
   async function handleSignOut() {
     // Return to the dashboard before ending the session.
@@ -60,6 +127,7 @@ function App() {
   if (currentPage === PAGE_DAILY_CHECK_IN) {
     return (
       <DailyCheckInPage
+        key={activeDate}
         plan={dashboard?.plan}
         target={dashboard?.target}
         cardioCompleted={dashboard?.cardioCompleted ?? 0}
