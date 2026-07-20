@@ -168,6 +168,47 @@ export function StartCheckInPage({
     )
   }, [form, unitSystem])
 
+  const displayedValidationByField =
+    useMemo(
+      () =>
+        Object.fromEntries(
+          Object.entries(
+            validationByField,
+          ).map(([field, validation]) => {
+            if (
+              validation.status !== 'warning'
+            ) {
+              return [field, validation]
+            }
+
+            const confirmationKey =
+              getWarningConfirmationKey({
+                field,
+                value: form[field],
+                unitSystem,
+              })
+
+            return confirmedWarningKeys.has(
+              confirmationKey,
+            )
+              ? [
+                  field,
+                  {
+                    status: 'valid',
+                    message: '',
+                  },
+                ]
+              : [field, validation]
+          }),
+        ),
+      [
+        confirmedWarningKeys,
+        form,
+        unitSystem,
+        validationByField,
+      ],
+    )
+
   const previewAvailable =
     import.meta.env.DEV && !planHasStarted
   const wizardAvailable =
@@ -702,7 +743,7 @@ export function StartCheckInPage({
           photos={photos}
           estimatedBodyFat={estimatedBodyFat}
           unitSystem={unitSystem}
-          validationByField={validationByField}
+          validationByField={displayedValidationByField}
           touchedFields={touchedFields}
           markFieldTouched={markFieldTouched}
           setField={setField}
