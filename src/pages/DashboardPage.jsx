@@ -98,6 +98,7 @@ export function DashboardPage({
     dashboard?.weekAtAGlance ?? null
 
   // Daily check-ins begin the morning after the plan start date.
+  // Start Check-In completion will become an additional gate once built.
   const canCheckIn =
     Boolean(plan) && today > plan.start_date
 
@@ -105,17 +106,13 @@ export function DashboardPage({
     dashboard?.todayCheckIn?.checkin_date ===
     today
 
-  const checkInState = !canCheckIn
-    ? 'is-locked'
-    : hasCheckedInToday
-      ? 'is-complete'
-      : 'is-due'
+  const checkInState = hasCheckedInToday
+    ? 'is-complete'
+    : 'is-due'
 
   const checkInLabel = hasCheckedInToday
     ? 'View Today’s Check-In ✓'
-    : today === plan?.start_date
-      ? 'Daily Check-In begins tomorrow'
-      : 'Daily Check-In'
+    : 'Daily Check-In'
 
   const streakDays = Number(
     dashboard?.streakDays ?? 0,
@@ -154,19 +151,20 @@ export function DashboardPage({
 
       {dashboard && plan && (
         <>
-          <section
-            className="dashboard-check-in"
-            aria-label="Today’s check-in"
-          >
-            <button
-              type="button"
-              className={`daily-check-in-button ${checkInState}`}
-              onClick={onOpenDailyCheckIn}
-              disabled={!canCheckIn}
+          {canCheckIn && (
+            <section
+              className="dashboard-check-in"
+              aria-label="Today’s check-in"
             >
-              {checkInLabel}
-            </button>
-          </section>
+              <button
+                type="button"
+                className={`daily-check-in-button ${checkInState}`}
+                onClick={onOpenDailyCheckIn}
+              >
+                {checkInLabel}
+              </button>
+            </section>
+          )}
 
           <section
             className="dashboard-plan-summary"

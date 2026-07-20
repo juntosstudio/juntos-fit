@@ -82,6 +82,113 @@
   margin-top: 1.25rem;
 }
 
+/*
+ * Required controls pulse until answered.
+ * The border itself changes so the signal stays visible on phones.
+ */
+.create-plan-page .interaction-field.needs-answer {
+  border: 2px solid
+    rgb(var(--color-interaction-rgb) / 72%);
+  background: var(--color-surface);
+  animation:
+    create-plan-required-pulse
+    1.8s ease-in-out infinite;
+}
+
+.create-plan-page .interaction-field.has-answer {
+  border: 2px solid var(--color-interaction);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 2px
+      rgb(var(--color-interaction-rgb) / 14%),
+    0 4px 12px
+      rgb(var(--color-interaction-rgb) / 16%);
+  animation: none;
+}
+
+/* All choice cards pulse while the question is unanswered. */
+.create-plan-page
+  .create-plan-choice-group.needs-answer
+  .choice-list
+  label {
+  border: 2px solid
+    rgb(var(--color-interaction-rgb) / 72%);
+  background: var(--color-surface);
+  animation:
+    create-plan-required-pulse
+    1.8s ease-in-out infinite;
+}
+
+/* Once answered, unselected choices return to neutral. */
+.create-plan-page
+  .create-plan-choice-group.has-answer
+  .choice-list
+  label {
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  animation: none;
+}
+
+/* The selected choice keeps a steady orange confirmation state. */
+.create-plan-page
+  .create-plan-choice-group.has-answer
+  .choice-list
+  label:has(input:checked) {
+  border-color: var(--color-interaction);
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  box-shadow:
+    0 0 0 2px
+      rgb(var(--color-interaction-rgb) / 16%),
+    0 4px 12px
+      rgb(var(--color-interaction-rgb) / 18%);
+}
+
+@keyframes create-plan-required-pulse {
+  0%,
+  100% {
+    border-color:
+      rgb(var(--color-interaction-rgb) / 55%);
+    background-color: var(--color-surface);
+    box-shadow:
+      0 0 0 1px
+        rgb(var(--color-interaction-rgb) / 10%),
+      0 2px 8px
+        rgb(var(--color-interaction-rgb) / 18%);
+  }
+
+  50% {
+    border-color: var(--color-interaction);
+    background-color:
+      rgb(var(--color-interaction-rgb) / 5%);
+    box-shadow:
+      0 0 0 3px
+        rgb(var(--color-interaction-rgb) / 20%),
+      0 4px 18px
+        rgb(var(--color-interaction-rgb) / 52%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-plan-page
+    .interaction-field.needs-answer,
+  .create-plan-page
+    .create-plan-choice-group.needs-answer
+    .choice-list
+    label {
+    border-color: var(--color-interaction);
+    background-color:
+      rgb(var(--color-interaction-rgb) / 5%);
+    box-shadow:
+      0 0 0 3px
+        rgb(var(--color-interaction-rgb) / 20%),
+      0 4px 14px
+        rgb(var(--color-interaction-rgb) / 36%);
+    animation: none;
+  }
+}
+
 @media (min-width: 40rem) {
   .create-plan-field-grid {
     grid-template-columns:

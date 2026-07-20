@@ -6,7 +6,12 @@ import {
 } from '../../utils/createPlanFlow'
 
 function fieldState(value) {
-  return value === ''
+  const isUnanswered =
+    value === '' ||
+    value === null ||
+    value === undefined
+
+  return isUnanswered
     ? 'needs-answer'
     : 'has-answer'
 }
@@ -59,14 +64,20 @@ export function CreatePlanStep({
       <fieldset>
         <legend>What is your primary goal?</legend>
 
-        <ChoiceButtons
-          name="plan-goal"
-          value={form.goal}
-          options={GOAL_OPTIONS}
-          onChange={(value) =>
-            setField('goal', value)
-          }
-        />
+        <div
+          className={`create-plan-choice-group ${fieldState(
+            form.goal,
+          )}`}
+        >
+          <ChoiceButtons
+            name="plan-goal"
+            value={form.goal}
+            options={GOAL_OPTIONS}
+            onChange={(value) =>
+              setField('goal', value)
+            }
+          />
+        </div>
       </fieldset>
     )
   }
@@ -142,14 +153,20 @@ export function CreatePlanStep({
           starts. You may choose another day.
         </p>
 
-        <ChoiceButtons
-          name="weekly-checkin-day"
-          value={form.checkin_day}
-          options={WEEKDAY_OPTIONS}
-          onChange={(value) =>
-            setField('checkin_day', value)
-          }
-        />
+        <div
+          className={`create-plan-choice-group ${fieldState(
+            form.checkin_day,
+          )}`}
+        >
+          <ChoiceButtons
+            name="weekly-checkin-day"
+            value={form.checkin_day}
+            options={WEEKDAY_OPTIONS}
+            onChange={(value) =>
+              setField('checkin_day', value)
+            }
+          />
+        </div>
       </fieldset>
     )
   }
