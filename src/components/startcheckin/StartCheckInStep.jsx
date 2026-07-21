@@ -29,9 +29,9 @@ const MEASUREMENT_CONFIG = {
     label: 'Waist',
     field: 'waist_inches',
     tip:
-      'Stand naturally and breathe normally. Measure ' +
-      'horizontally around your waist at the level of ' +
-      'your belly button. Keep the tape flat and snug ' +
+      'Measure horizontally around your waist at the ' +
+      'level of your belly button. Stand naturally and ' +
+      'breathe normally. Keep the tape flat and snug ' +
       'without pinching or indenting your skin.',
   },
   [STEP.HIPS]: {
@@ -247,24 +247,33 @@ export function StartCheckInStep({
 
         <div className="measurement-tips">
           <p>
+            <strong>Before you begin:</strong> Have a flexible measuring
+            tape and be prepared to take or upload three
+            full-body progress photos: front,
+            side, and back.
+          </p>
+          <p>
             <strong>Consistency is key:</strong>{' '}
             Take measurements first thing in the
             morning, after using the restroom, and
             before eating or drinking. Use the same
             side and the same location on your body
-            every time.
-          </p>
-
-          <p>
-            Use a flexible, non-stretch body measuring
-            tape.
-          </p>
-
-          <p>
-            Stand naturally and keep the tape measure
-            flat and parallel to the floor without
-            sucking in or flexing your muscles. Using
+            every time. Using
             a full-length mirror can be helpful.
+          </p>
+
+            <p>
+            <strong>Photos tips:</strong> For the clearest comparison, wear the same or
+            similarly fitted clothing each time. Use good
+            lighting, a plain background, and keep your
+            entire body visible from head to feet. Try to
+            use the same camera height, distance, and
+            position for future photos.</p>
+            
+            <p>
+            <strong>And relax:</strong> Stand naturally, relax your shoulders, and keep the tape measure
+            flat and parallel to the floor without
+            sucking in or flexing your muscles. 
           </p>
         </div>
       </fieldset>
@@ -542,7 +551,7 @@ export function StartCheckInStep({
       <PhotoField
         pose="front"
         title="Add your front progress photo."
-        helper="Stand naturally with your full body visible."
+        helper="Stand naturally facing the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
         photo={photos.front}
         uploadingPose={uploadingPose}
         uploadPhoto={uploadPhoto}
@@ -559,7 +568,7 @@ export function StartCheckInStep({
       <PhotoField
         pose="side"
         title={`Add your ${side} side progress photo.`}
-        helper="Use this same side for future comparison photos."
+        helper={`Stand naturally with your ${side} side facing the camera, your body relaxed, and your arms resting at your sides. Keep your full body visible from head to feet.`}
         photo={photos.side}
         uploadingPose={uploadingPose}
         uploadPhoto={uploadPhoto}
@@ -572,7 +581,7 @@ export function StartCheckInStep({
     <PhotoField
       pose="back"
       title="Add your back progress photo."
-      helper="Stand naturally with your full body visible."
+      helper="Stand naturally facing away from the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
       photo={photos.back}
       uploadingPose={uploadingPose}
       uploadPhoto={uploadPhoto}
