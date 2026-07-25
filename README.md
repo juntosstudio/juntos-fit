@@ -1,28 +1,49 @@
-# Weekly Measurement Validation
+# Daily Check-In Flow Reorder
 
-Fixes the body-fat Next-button bug and gives Weekly the same
-measurement validation behavior as Start Check-In.
+## New order
 
-Files:
+1. Morning weight
+2. Meal-plan adherence
+3. Meal-plan deviation type, when adherence is 1–4
+4. Deviation explanation only when needed
+5. Hunger
+6. Workout
+7. Workout branch questions
+8. Cardio
+9. Water
+10. Alcohol
+11. Alcohol details when needed
+12. One combined coach-notes question
 
-- src/components/checkin/questions/BodyFatQuestion.jsx
-- src/components/checkin/DailyCheckInStep.jsx
-- src/components/checkin/WeeklyCheckInStep.jsx
-- src/pages/WeeklyCheckInPage.jsx
-- src/utils/weeklyCheckInFlow.js
+## Meal-plan branch
 
-Changes:
+For adherence scores 1–4:
 
-- A valid entered body-fat percentage now enables Next.
-- Weekly validates morning weight, scale body fat, neck,
-  waist, hips, bicep, thigh, and calf using the existing
-  Start Day measurement-validation utility.
-- Invalid values show their message and keep Next disabled.
-- Unusual but possible values show the same
-  “Please Double-Check” confirmation used by Start Day.
-- Confirmations are tied to the exact value; editing it
-  requires another confirmation.
-- A blank Weekly cardio field is no longer interpreted as 0.
+- Planned cheat meal was the only deviation
+  - skip the text explanation
+- Planned cheat meal plus other deviations
+  - ask what else was different
+- Deviations did not include a planned cheat meal
+  - ask what was different
 
-No services, database schema, saving, cadence, photos, or
-body-fat formula changed.
+The new three-option answer is represented in the UI by the
+form-only `meal_plan_deviation_type` value. It maps back into the
+existing database fields:
+
+- `planned_cheat_meal_status`
+- `meal_plan_deviation_details`
+
+No database migration is required.
+
+## Coach notes
+
+The previous “anything else” and “questions for coach” screens
+are combined into one optional question. The answer is stored in
+the existing `additional_notes` database column. Existing values
+from both old columns are combined when an older check-in loads.
+
+## Weekly
+
+Weekly reuses `getDailyCheckInSteps`, `canContinueDailyStep`, and
+`DailyCheckInStep`, so its Daily-question section automatically
+inherits this new order and branching.

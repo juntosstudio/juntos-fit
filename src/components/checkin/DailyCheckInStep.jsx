@@ -10,6 +10,7 @@ import {
 } from './questions/WeightQuestion'
 import {
   DAILY_CHECKIN_STEP_IDS as STEP,
+  MEAL_PLAN_DEVIATION_TYPES as DEVIATION,
 } from '../../utils/dailyCheckInFlow'
 
 const MEAL_PLAN_LABELS = {
@@ -33,18 +34,24 @@ const YES_NO_OPTIONS = [
   { value: false, label: 'No' },
 ]
 
-const CHEAT_MEAL_OPTIONS = [
+const MEAL_PLAN_DEVIATION_OPTIONS = [
   {
-    value: 'eaten',
-    label: 'Yes',
+    value: DEVIATION.CHEAT_ONLY,
+    label:
+      'I ate my planned cheat meal, and that was ' +
+      'my only deviation.',
   },
   {
-    value: 'not_eaten',
-    label: 'No',
+    value: DEVIATION.CHEAT_PLUS,
+    label:
+      'I ate my planned cheat meal, and I had ' +
+      'other deviations too.',
   },
   {
-    value: 'not_planned',
-    label: 'No cheat meal was planned',
+    value: DEVIATION.NO_CHEAT,
+    label:
+      'My deviations did not include a planned ' +
+      'cheat meal.',
   },
 ]
 
@@ -67,8 +74,6 @@ const WORKOUT_OPTIONS = [
   },
 ]
 
-// Displays one question from the existing branching
-// Daily Check-In flow using the shared wizard UI.
 export function DailyCheckInStep({
   step,
   form,
@@ -110,23 +115,86 @@ export function DailyCheckInStep({
           name="meal-plan-score"
           value={form.meal_plan_score}
           labels={MEAL_PLAN_LABELS}
-          onChange={(value) =>
+          onChange={(value) => {
             setField(
               'meal_plan_score',
               value,
             )
+
+            if (Number(value) === 5) {
+              setField(
+                'meal_plan_deviation_type',
+                '',
+              )
+              setField(
+                'planned_cheat_meal_status',
+                '',
+              )
+              setField(
+                'meal_plan_deviation_details',
+                '',
+              )
+            }
+          }}
+        />
+      </WizardQuestion>
+    )
+  }
+
+  if (step === STEP.CHEAT_MEAL) {
+    return (
+      <WizardQuestion title="Which best describes why you didn’t follow the meal plan exactly?">
+        <WizardChoiceGroup
+          name="meal-plan-deviation-type"
+          value={
+            form.meal_plan_deviation_type ??
+            ''
           }
+          options={
+            MEAL_PLAN_DEVIATION_OPTIONS
+          }
+          onChange={(value) => {
+            setField(
+              'meal_plan_deviation_type',
+              value,
+            )
+
+            setField(
+              'planned_cheat_meal_status',
+              value === DEVIATION.NO_CHEAT
+                ? 'not_eaten'
+                : 'eaten',
+            )
+
+            if (
+              value ===
+              DEVIATION.CHEAT_ONLY
+            ) {
+              setField(
+                'meal_plan_deviation_details',
+                '',
+              )
+            }
+          }}
         />
       </WizardQuestion>
     )
   }
 
   if (step === STEP.MEAL_PLAN_DEVIATION) {
+    const cheatMealWasIncluded =
+      form.meal_plan_deviation_type ===
+      DEVIATION.CHEAT_PLUS
+
+    const title = cheatMealWasIncluded
+      ? 'What else was different from yesterday’s meal plan, and why?'
+      : 'What was different from yesterday’s meal plan, and why?'
+
     return (
-      <WizardQuestion title="What was different from yesterday’s meal plan, and why?">
+      <WizardQuestion title={title}>
         <WizardTextarea
           id="daily-meal-plan-deviation"
-          ariaLabel="What was different from yesterday’s meal plan, and why?"
+          ariaLabel={title}
           value={
             form.meal_plan_deviation_details
           }
@@ -136,26 +204,10 @@ export function DailyCheckInStep({
               value,
             )
           }
-          placeholder="Include anything you added, skipped, substituted, ate in a different amount, or any planned meal you did not eat."
-        />
-      </WizardQuestion>
-    )
-  }
-
-  if (step === STEP.CHEAT_MEAL) {
-    return (
-      <WizardQuestion title="Was one of yesterday’s meals your planned cheat meal?">
-        <WizardChoiceGroup
-          name="cheat-meal"
-          value={
-            form.planned_cheat_meal_status
-          }
-          options={CHEAT_MEAL_OPTIONS}
-          onChange={(value) =>
-            setField(
-              'planned_cheat_meal_status',
-              value,
-            )
+          placeholder={
+            cheatMealWasIncluded
+              ? 'Include only the other deviations besides your planned cheat meal.'
+              : 'Include anything you added, skipped, substituted, or ate in a different amount.'
           }
         />
       </WizardQuestion>
@@ -173,35 +225,6 @@ export function DailyCheckInStep({
             setField('hunger_score', value)
           }
           reversed
-        />
-      </WizardQuestion>
-    )
-  }
-
-  if (step === STEP.WATER) {
-    const waterGoal =
-      target?.daily_water_goal_oz ?? 0
-
-    return (
-      <WizardQuestion
-        title="Did you hit your water goal yesterday?"
-        helper={
-          <>
-            Your goal:{' '}
-            <strong>{waterGoal} oz</strong>
-          </>
-        }
-      >
-        <WizardChoiceGroup
-          name="water-goal"
-          value={form.water_goal_met}
-          options={YES_NO_OPTIONS}
-          onChange={(value) =>
-            setField(
-              'water_goal_met',
-              value,
-            )
-          }
         />
       </WizardQuestion>
     )
@@ -315,12 +338,50 @@ export function DailyCheckInStep({
           value={form.cardio_minutes}
           suffix="minutes"
           min="0"
-          max="1440"
+          max="600"
           step="1"
           inputMode="numeric"
+          integerOnly
+          feedback={
+            validationByField
+              .cardio_minutes?.message
+          }
+          state={
+            validationByField
+              .cardio_minutes?.displayState
+          }
           onChange={(value) =>
             setField(
               'cardio_minutes',
+              value,
+            )
+          }
+        />
+      </WizardQuestion>
+    )
+  }
+
+  if (step === STEP.WATER) {
+    const waterGoal =
+      target?.daily_water_goal_oz ?? 0
+
+    return (
+      <WizardQuestion
+        title="Did you hit your water goal yesterday?"
+        helper={
+          <>
+            Your goal:{' '}
+            <strong>{waterGoal} oz</strong>
+          </>
+        }
+      >
+        <WizardChoiceGroup
+          name="water-goal"
+          value={form.water_goal_met}
+          options={YES_NO_OPTIONS}
+          onChange={(value) =>
+            setField(
+              'water_goal_met',
               value,
             )
           }
@@ -366,46 +427,22 @@ export function DailyCheckInStep({
     )
   }
 
-  if (step === STEP.ADDITIONAL_NOTES) {
-    return (
-      <WizardQuestion
-        title="Is there anything else you would like to share with your coach?"
-        helper="Optional — leave blank and tap Next."
-      >
-        <WizardTextarea
-          id="daily-additional-notes"
-          ariaLabel="Anything else you would like to share with your coach"
-          value={form.additional_notes}
-          onChange={(value) =>
-            setField(
-              'additional_notes',
-              value,
-            )
-          }
-          placeholder="Poor sleep, unusual stress, illness, upcoming travel, a schedule change, a meal or workout concern, or anything else that may affect your plan."
-          optional
-          promptWhenEmpty
-        />
-      </WizardQuestion>
-    )
-  }
-
   return (
     <WizardQuestion
-      title="Do you have any questions for your coach?"
-      helper="Optional — leave blank and tap Next."
+      title="Do you have any questions for your coach, or anything else you’d like them to know?"
+      helper="Optional — leave blank and tap Review Answers."
     >
       <WizardTextarea
-        id="daily-questions-for-coach"
-        ariaLabel="Questions for your coach"
-        value={form.questions_for_coach}
+        id="daily-coach-notes"
+        ariaLabel="Questions or notes for your coach"
+        value={form.coach_notes ?? ''}
         onChange={(value) =>
           setField(
-            'questions_for_coach',
+            'coach_notes',
             value,
           )
         }
-        placeholder="Enter any questions you would like your coach to review."
+        placeholder="Questions, poor sleep, unusual stress, illness, upcoming travel, schedule changes, meal or workout concerns, or anything else your coach should know."
         optional
         promptWhenEmpty
       />

@@ -186,6 +186,7 @@ export function WeightQuestion({
         suffix="lbs"
         min="1"
         step="0.1"
+        maxDecimalPlaces={1}
         feedback={feedback}
         state={state}
         disabled={disabled}

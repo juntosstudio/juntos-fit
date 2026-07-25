@@ -21,7 +21,9 @@ import {
   normalizeUnitSystem,
   toCanonicalMeasurement,
 } from '../utils/measurementUnits'
-import { getMeasurementValidation } from '../utils/measurementValidation'
+import {
+  getFirstInvalidMeasurementMessage,
+} from '../utils/measurementValidation'
 import {
   getBrowserTimeZone,
   getDateKeyForTimeZone,
@@ -350,16 +352,15 @@ export function useStartCheckIn(
   }
 
   function validateEnteredMeasurements() {
-    for (const field of MEASUREMENT_FIELDS) {
-      const result = getMeasurementValidation({
-        field,
-        value: form[field],
+    const measurementError =
+      getFirstInvalidMeasurementMessage({
+        form,
+        fields: MEASUREMENT_FIELDS,
         unitSystem,
       })
 
-      if (result.status === 'invalid') {
-        return result.message
-      }
+    if (measurementError) {
+      return measurementError
     }
 
     if (
@@ -367,15 +368,11 @@ export function useStartCheckIn(
       !form.body_fat_unavailable &&
       form.body_fat_percent !== ''
     ) {
-      const result = getMeasurementValidation({
-        field: 'body_fat_percent',
-        value: form.body_fat_percent,
+      return getFirstInvalidMeasurementMessage({
+        form,
+        fields: ['body_fat_percent'],
         unitSystem,
       })
-
-      if (result.status === 'invalid') {
-        return result.message
-      }
     }
 
     return ''

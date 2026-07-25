@@ -16,132 +16,28 @@ import {
   useDailyCheckIn,
 } from '../hooks/useDailyCheckIn'
 import {
+  useCheckInMeasurementValidation,
+} from '../hooks/useCheckInMeasurementValidation'
+import {
   useWizardFocus,
 } from '../hooks/useWizardFocus'
 import {
+  canContinueDailyStep,
   DAILY_CHECKIN_STEP_IDS as STEP,
   getDailyCheckInSteps,
+  getFirstInvalidDailyStep,
 } from '../utils/dailyCheckInFlow'
+import {
+  DAILY_VALIDATED_MEASUREMENT_FIELDS,
+} from '../utils/measurementValidation'
 import {
   formatDate,
 } from '../utils/formatters'
 import '../styles/wizard.css'
 
-// Returns whether the current question has a valid answer.
-function canContinueFromStep(step, form) {
-  if (step === STEP.WEIGHT) {
-    if (!form.weight_status) return false
-
-    if (
-      form.weight_status === 'recorded'
-    ) {
-      const weight = Number(
-        form.morning_weight,
-      )
-
-      return (
-        Number.isFinite(weight) &&
-        weight > 0
-      )
-    }
-
-    return true
-  }
-
-  if (step === STEP.MEAL_PLAN_SCORE) {
-    return form.meal_plan_score !== ''
-  }
-
-  if (
-    step === STEP.MEAL_PLAN_DEVIATION
-  ) {
-    return Boolean(
-      form
-        .meal_plan_deviation_details
-        .trim(),
-    )
-  }
-
-  if (step === STEP.CHEAT_MEAL) {
-    return Boolean(
-      form.planned_cheat_meal_status,
-    )
-  }
-
-  if (step === STEP.HUNGER) {
-    return form.hunger_score !== ''
-  }
-
-  if (step === STEP.WATER) {
-    return form.water_goal_met !== null
-  }
-
-  if (step === STEP.WORKOUT_STATUS) {
-    return Boolean(form.workout_status)
-  }
-
-  if (
-    step ===
-    STEP.WORKOUT_INCOMPLETE_REASON
-  ) {
-    return Boolean(
-      form
-        .workout_incomplete_reason
-        .trim(),
-    )
-  }
-
-  if (
-    step === STEP.TRAINING_PROBLEM
-  ) {
-    return (
-      form.training_problem !== null
-    )
-  }
-
-  if (
-    step ===
-    STEP.TRAINING_PROBLEM_DETAILS
-  ) {
-    return Boolean(
-      form
-        .training_problem_details
-        .trim(),
-    )
-  }
-
-  if (step === STEP.CARDIO) {
-    if (form.cardio_minutes === '') {
-      return false
-    }
-
-    const minutes = Number(
-      form.cardio_minutes,
-    )
-
-    return (
-      Number.isInteger(minutes) &&
-      minutes >= 0 &&
-      minutes <= 1440
-    )
-  }
-
-  if (step === STEP.ALCOHOL) {
-    return (
-      form.alcohol_consumed !== null
-    )
-  }
-
-  if (
-    step === STEP.ALCOHOL_DETAILS
-  ) {
-    return Boolean(
-      form.alcohol_details.trim(),
-    )
-  }
-
-  // The final two text questions are optional.
-  return true
+const DAILY_MEASUREMENT_INPUT_IDS = {
+  morning_weight: 'daily-morning-weight',
+  cardio_minutes: 'daily-cardio-minutes',
 }
 
 // Displays the guided, one-question-at-a-time check-in.
@@ -184,6 +80,21 @@ export function DailyCheckInPage({
   const [previewing, setPreviewing] =
     useState(false)
 
+  const {
+    validationByField,
+    warningConfirmation,
+    requestWarningConfirmation,
+    confirmWarningValues,
+    cancelWarningConfirmation,
+  } = useCheckInMeasurementValidation({
+    form,
+    fields:
+      DAILY_VALIDATED_MEASUREMENT_FIELDS,
+    unitSystem: 'imperial',
+    inputIds:
+      DAILY_MEASUREMENT_INPUT_IDS,
+  })
+
   const steps = useMemo(
     () => getDailyCheckInSteps(form),
     [form],
@@ -203,6 +114,7 @@ export function DailyCheckInPage({
   const {
     markForwardNavigation,
     markBackNavigation,
+    focusField,
   } = useWizardFocus({
     stepKey: `${activeStep}:${
       form.weight_status ?? ''
@@ -210,7 +122,10 @@ export function DailyCheckInPage({
     rootId:
       'daily-checkin-wizard-step',
     reviewing,
-    disabled: Boolean(completionType),
+    disabled: Boolean(
+      completionType ||
+      warningConfirmation,
+    ),
   })
 
   const previewAvailable =
@@ -232,16 +147,7 @@ export function DailyCheckInPage({
     ? 'Review Your Changes'
     : 'Review Your Answers'
 
-  function goNext() {
-    if (
-      !canContinueFromStep(
-        activeStep,
-        form,
-      )
-    ) {
-      return
-    }
-
+  function advanceFromCurrentStep() {
     const nextStep =
       steps[safeStepIndex + 1]
 
@@ -253,6 +159,68 @@ export function DailyCheckInPage({
     }
 
     setCurrentStep(nextStep)
+  }
+
+  function goNext() {
+    if (
+      !canContinueDailyStep(
+        activeStep,
+        form,
+        { validationByField },
+      )
+    ) {
+      return
+    }
+
+    const warningFields = []
+
+    if (
+      activeStep === STEP.WEIGHT &&
+      form.weight_status === 'recorded'
+    ) {
+      warningFields.push(
+        'morning_weight',
+      )
+    }
+
+    if (activeStep === STEP.CARDIO) {
+      warningFields.push(
+        'cardio_minutes',
+      )
+    }
+
+    if (
+      requestWarningConfirmation(
+        warningFields,
+      )
+    ) {
+      return
+    }
+
+    advanceFromCurrentStep()
+  }
+
+  function editWarningValue() {
+    const warning =
+      warningConfirmation
+        ?.warnings?.[0]
+
+    cancelWarningConfirmation()
+
+    if (warning?.inputId) {
+      focusField(
+        warning.inputId,
+        {
+          selectAll: true,
+          preventScroll: false,
+        },
+      )
+    }
+  }
+
+  function confirmWarnings() {
+    confirmWarningValues()
+    advanceFromCurrentStep()
   }
 
   function goBack() {
@@ -279,13 +247,11 @@ export function DailyCheckInPage({
   async function handleSave() {
     if (previewing) return
 
-    const firstInvalidStep = steps.find(
-      (step) =>
-        !canContinueFromStep(
-          step,
-          form,
-        ),
-    )
+    const firstInvalidStep =
+      getFirstInvalidDailyStep(
+        form,
+        { validationByField },
+      )
 
     if (firstInvalidStep) {
       markForwardNavigation()
@@ -317,6 +283,46 @@ export function DailyCheckInPage({
     setReviewing(false)
     setCompletionType(null)
   }
+
+  const warningDialog =
+    warningConfirmation ? (
+      <div className="confirmation-overlay">
+        <section
+          className="confirmation-dialog measurement-warning-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="daily-measurement-warning-title"
+        >
+          <h2 id="daily-measurement-warning-title">
+            Please Double-Check
+          </h2>
+
+          {warningConfirmation.warnings.map(
+            (warning) => (
+              <p key={warning.key}>
+                {warning.validation.message}
+              </p>
+            ),
+          )}
+
+          <div className="wizard-actions">
+            <button
+              type="button"
+              onClick={editWarningValue}
+            >
+              Edit Value
+            </button>
+
+            <button
+              type="button"
+              onClick={confirmWarnings}
+            >
+              Use This Value
+            </button>
+          </div>
+        </section>
+      </div>
+    ) : null
 
   const confirmationDialog =
     completionType ? (
@@ -476,6 +482,7 @@ export function DailyCheckInPage({
         </WizardPage>
 
         {confirmationDialog}
+        {warningDialog}
       </>
     )
   }
@@ -532,9 +539,10 @@ export function DailyCheckInPage({
               safeStepIndex === 0
             }
             nextDisabled={
-              !canContinueFromStep(
+              !canContinueDailyStep(
                 activeStep,
                 form,
+                { validationByField },
               )
             }
             backLabel="Back"
@@ -574,11 +582,15 @@ export function DailyCheckInPage({
             cardioCompleted={
               cardioCompleted
             }
+            validationByField={
+              validationByField
+            }
           />
         </div>
       </WizardPage>
 
       {confirmationDialog}
+      {warningDialog}
     </>
   )
 }

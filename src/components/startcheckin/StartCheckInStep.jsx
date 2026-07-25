@@ -10,6 +10,9 @@ import {
   START_CHECKIN_STEP_IDS as STEP,
 } from '../../utils/startCheckInFlow'
 import { getMeasurementUnit } from '../../utils/measurementUnits'
+import {
+  isAllowedWizardNumberInput,
+} from '../wizard/WizardFields'
 
 const MEASUREMENT_CONFIG = {
   [STEP.NECK]: {
@@ -131,9 +134,19 @@ function MeasurementField({
           onBlur={() =>
             markFieldTouched(field)
           }
-          onChange={(event) =>
-            setField(field, event.target.value)
-          }
+          onChange={(event) => {
+            const nextValue =
+              event.target.value
+
+            if (
+              isAllowedWizardNumberInput(
+                nextValue,
+                { maxDecimalPlaces: 1 },
+              )
+            ) {
+              setField(field, nextValue)
+            }
+          }}
         />
 
         <span>{suffix}</span>

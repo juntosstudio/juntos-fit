@@ -1,7 +1,74 @@
 import {
+  useState,
+} from 'react'
+import {
   getWizardFieldState,
   joinWizardClasses,
 } from '../../utils/wizardFieldState'
+
+function getRejectedNumberInputMessage({
+  integerOnly,
+  maxDecimalPlaces,
+}) {
+  if (integerOnly) {
+    return 'Enter a whole number—no decimals.'
+  }
+
+  if (
+    Number.isInteger(maxDecimalPlaces) &&
+    maxDecimalPlaces >= 0
+  ) {
+    if (maxDecimalPlaces === 0) {
+      return 'Enter a whole number—no decimals.'
+    }
+
+    if (maxDecimalPlaces === 1) {
+      return (
+        'Enter no more than one digit after the ' +
+        'decimal point.'
+      )
+    }
+
+    return (
+      `Enter no more than ${maxDecimalPlaces} digits ` +
+      'after the decimal point.'
+    )
+  }
+
+  return 'Enter a valid number.'
+}
+
+export function isAllowedWizardNumberInput(
+  value,
+  {
+    integerOnly = false,
+    maxDecimalPlaces,
+  } = {},
+) {
+  if (value === '') {
+    return true
+  }
+
+  if (integerOnly) {
+    return /^\d+$/.test(value)
+  }
+
+  if (
+    Number.isInteger(maxDecimalPlaces) &&
+    maxDecimalPlaces >= 0
+  ) {
+    const pattern =
+      maxDecimalPlaces === 0
+        ? /^\d+$/
+        : new RegExp(
+            `^\\d+(?:\\.\\d{0,${maxDecimalPlaces}})?$`,
+          )
+
+    return pattern.test(value)
+  }
+
+  return true
+}
 
 function FieldFeedback({
   feedback,
@@ -42,6 +109,8 @@ export function WizardInputField({
   max,
   step,
   inputMode,
+  integerOnly = false,
+  maxDecimalPlaces,
   autoComplete,
   placeholder,
   disabled = false,
@@ -49,13 +118,50 @@ export function WizardInputField({
   onBlur,
   onChange,
 }) {
+  const [
+    rejectedInputMessage,
+    setRejectedInputMessage,
+  ] = useState('')
+
   const visualState =
-    state ??
-    getWizardFieldState({
-      value,
-      answered,
-      optional,
-    })
+    rejectedInputMessage
+      ? 'is-invalid'
+      : state ??
+        getWizardFieldState({
+          value,
+          answered,
+          optional,
+        })
+
+  const displayedFeedback =
+    rejectedInputMessage || feedback
+
+  const hasNumberFormatGuard =
+    type === 'number' &&
+    (integerOnly ||
+      Number.isInteger(maxDecimalPlaces))
+
+  // Browser number inputs can visibly hold an intermediate
+  // value such as "52." without exposing that same string
+  // through event.target.value. A text input with a numeric
+  // keyboard lets the shared guard handle the exact text.
+  const renderedType =
+    hasNumberFormatGuard ? 'text' : type
+
+  function handleBlur(event) {
+    if (
+      hasNumberFormatGuard &&
+      !integerOnly &&
+      String(value).endsWith('.')
+    ) {
+      onChange(
+        String(value).slice(0, -1),
+      )
+    }
+
+    setRejectedInputMessage('')
+    onBlur?.(event)
+  }
 
   return (
     <label
@@ -82,21 +188,51 @@ export function WizardInputField({
             visualState,
             inputClassName,
           )}
-          type={type}
+          type={renderedType}
           name={name}
           value={value}
           min={min}
           max={max}
           step={step}
           inputMode={inputMode}
+          pattern={
+            hasNumberFormatGuard
+              ? integerOnly
+                ? '[0-9]*'
+                : '[0-9]*[.]?[0-9]*'
+              : undefined
+          }
           autoComplete={autoComplete}
           placeholder={placeholder}
           disabled={disabled}
           readOnly={readOnly}
-          onBlur={onBlur}
-          onChange={(event) =>
-            onChange(event.target.value)
-          }
+          onBlur={handleBlur}
+          onChange={(event) => {
+            const nextValue =
+              event.target.value
+
+            if (
+              hasNumberFormatGuard &&
+              !isAllowedWizardNumberInput(
+                nextValue,
+                {
+                  integerOnly,
+                  maxDecimalPlaces,
+                },
+              )
+            ) {
+              setRejectedInputMessage(
+                getRejectedNumberInputMessage({
+                  integerOnly,
+                  maxDecimalPlaces,
+                }),
+              )
+              return
+            }
+
+            setRejectedInputMessage('')
+            onChange(nextValue)
+          }}
         />
 
         {suffix && (
@@ -113,7 +249,7 @@ export function WizardInputField({
       )}
 
       <FieldFeedback
-        feedback={feedback}
+        feedback={displayedFeedback}
         state={visualState}
       />
     </label>

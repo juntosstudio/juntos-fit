@@ -58,6 +58,7 @@ function MeasurementField({
       suffix="in"
       min="0.1"
       step="0.1"
+      maxDecimalPlaces={1}
       feedback={validation?.message}
       state={validation?.displayState}
       onChange={onChange}

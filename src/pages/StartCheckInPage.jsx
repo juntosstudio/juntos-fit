@@ -6,14 +6,17 @@ import {
 import { StartCheckInStep } from '../components/startcheckin/StartCheckInStep'
 import { StartCheckInReview } from '../components/startcheckin/StartCheckInReview'
 import { useStartCheckIn } from '../hooks/useStartCheckIn'
+import {
+  useCheckInMeasurementValidation,
+} from '../hooks/useCheckInMeasurementValidation'
 import { useWizardFocus } from '../hooks/useWizardFocus'
 import {
   getStartCheckInSteps,
   START_CHECKIN_STEP_IDS as STEP,
 } from '../utils/startCheckInFlow'
 import {
-  getMeasurementValidation,
-  getWarningConfirmationKey,
+  canContinueMeasurementFields,
+  START_VALIDATED_MEASUREMENT_FIELDS,
 } from '../utils/measurementValidation'
 import { formatDate } from '../utils/formatters'
 import '../styles/wizard.css'
@@ -21,6 +24,25 @@ import '../styles/startCheckIn.css'
 
 const START_PREVIEW_REQUEST_KEY =
   'juntos:start-checkin-preview'
+
+const START_MEASUREMENT_INPUT_IDS = {
+  starting_weight_lbs: 'start-weight',
+  body_fat_percent: 'start-scale-body-fat',
+  neck_inches:
+    'start-measurement-neck_inches',
+  chest_inches:
+    'start-measurement-chest_inches',
+  waist_inches:
+    'start-measurement-waist_inches',
+  hips_inches:
+    'start-measurement-hips_inches',
+  upper_arm_inches:
+    'start-measurement-upper_arm_inches',
+  thigh_inches:
+    'start-measurement-thigh_inches',
+  calf_inches:
+    'start-measurement-calf_inches',
+}
 
 function getStepFields(step, form) {
   const fieldMap = {
@@ -112,15 +134,6 @@ export function StartCheckInPage({
     useState(false)
   const [touchedFields, setTouchedFields] =
     useState({})
-  const [
-    confirmedWarningKeys,
-    setConfirmedWarningKeys,
-  ] = useState(() => new Set())
-  const [
-    warningConfirmation,
-    setWarningConfirmation,
-  ] = useState(null)
-
   useEffect(() => {
     if (
       !import.meta.env.DEV ||
@@ -150,6 +163,46 @@ export function StartCheckInPage({
   const isViewOnly =
     isReadOnly && !previewing
 
+  const measurementLabels =
+    useMemo(() => {
+      const side =
+        form.measurement_side ||
+        'chosen'
+
+      return {
+        starting_weight_lbs:
+          'Starting weight',
+        body_fat_percent:
+          'Body fat',
+        neck_inches: 'Neck',
+        chest_inches: 'Chest',
+        waist_inches: 'Waist',
+        hips_inches: 'Hips',
+        upper_arm_inches:
+          `${side} upper arm`,
+        thigh_inches:
+          `${side} thigh`,
+        calf_inches:
+          `${side} calf`,
+      }
+    }, [form.measurement_side])
+
+  const {
+    validationByField,
+    warningConfirmation,
+    requestWarningConfirmation,
+    confirmWarningValues,
+    cancelWarningConfirmation,
+  } = useCheckInMeasurementValidation({
+    form,
+    fields:
+      START_VALIDATED_MEASUREMENT_FIELDS,
+    unitSystem,
+    labels: measurementLabels,
+    inputIds:
+      START_MEASUREMENT_INPUT_IDS,
+  })
+
   const currentIndex =
     steps.indexOf(currentStep)
   const safeIndex =
@@ -171,77 +224,7 @@ export function StartCheckInPage({
     ),
   })
 
-  const validationByField = useMemo(() => {
-    const side =
-      form.measurement_side || 'chosen'
 
-    const labels = {
-      starting_weight_lbs: 'Starting weight',
-      body_fat_percent: 'Body fat',
-      neck_inches: 'Neck',
-      chest_inches: 'Chest',
-      waist_inches: 'Waist',
-      hips_inches: 'Hips',
-      upper_arm_inches: `${side} upper arm`,
-      thigh_inches: `${side} thigh`,
-      calf_inches: `${side} calf`,
-    }
-
-    return Object.fromEntries(
-      Object.entries(labels).map(
-        ([field, label]) => [
-          field,
-          getMeasurementValidation({
-            field,
-            value: form[field],
-            unitSystem,
-            label,
-          }),
-        ],
-      ),
-    )
-  }, [form, unitSystem])
-
-  const displayedValidationByField =
-    useMemo(
-      () =>
-        Object.fromEntries(
-          Object.entries(
-            validationByField,
-          ).map(([field, validation]) => {
-            if (
-              validation.status !== 'warning'
-            ) {
-              return [field, validation]
-            }
-
-            const confirmationKey =
-              getWarningConfirmationKey({
-                field,
-                value: form[field],
-                unitSystem,
-              })
-
-            return confirmedWarningKeys.has(
-              confirmationKey,
-            )
-              ? [
-                  field,
-                  {
-                    status: 'valid',
-                    message: '',
-                  },
-                ]
-              : [field, validation]
-          }),
-        ),
-      [
-        confirmedWarningKeys,
-        form,
-        unitSystem,
-        validationByField,
-      ],
-    )
 
   const previewAvailable =
     import.meta.env.DEV && !planHasStarted
@@ -286,39 +269,21 @@ export function StartCheckInPage({
     }))
   }
 
-  function getActiveWarnings(step) {
-    const fields = getStepFields(step, form)
+  function getStepValidationFields(step) {
+    const fields =
+      getStepFields(step, form).map(
+        ([field]) => field,
+      )
 
     if (
       step === STEP.BODY_FAT &&
       plan.body_fat_source === 'scale' &&
       !form.body_fat_unavailable
     ) {
-      fields.push([
-        'body_fat_percent',
-        'Body fat',
-      ])
+      fields.push('body_fat_percent')
     }
 
     return fields
-      .map(([field, label]) => ({
-        field,
-        label,
-        value: form[field],
-        validation:
-          validationByField[field],
-        key: getWarningConfirmationKey({
-          field,
-          value: form[field],
-          unitSystem,
-        }),
-      }))
-      .filter(
-        (item) =>
-          item.validation?.status ===
-            'warning' &&
-          !confirmedWarningKeys.has(item.key),
-      )
   }
 
   function stepCanContinue(step) {
@@ -341,12 +306,9 @@ export function StartCheckInPage({
         return true
       }
 
-      return ![
-        'unanswered',
-        'invalid',
-      ].includes(
-        validationByField.starting_weight_lbs
-          ?.status,
+      return canContinueMeasurementFields(
+        ['starting_weight_lbs'],
+        validationByField,
       )
     }
 
@@ -362,12 +324,9 @@ export function StartCheckInPage({
         return true
       }
 
-      return ![
-        'unanswered',
-        'invalid',
-      ].includes(
-        validationByField.body_fat_percent
-          ?.status,
+      return canContinueMeasurementFields(
+        ['body_fat_percent'],
+        validationByField,
       )
     }
 
@@ -375,11 +334,9 @@ export function StartCheckInPage({
       getStepFields(step, form)
 
     if (stepFields.length > 0) {
-      return stepFields.every(
-        ([field]) =>
-          !['unanswered', 'invalid'].includes(
-            validationByField[field]?.status,
-          ),
+      return canContinueMeasurementFields(
+        stepFields.map(([field]) => field),
+        validationByField,
       )
     }
 
@@ -432,13 +389,13 @@ export function StartCheckInPage({
       return
     }
 
-    const warnings =
-      getActiveWarnings(activeStep)
-
-    if (warnings.length > 0) {
-      setWarningConfirmation({
-        warnings,
-      })
+    if (
+      requestWarningConfirmation(
+        getStepValidationFields(
+          activeStep,
+        ),
+      )
+    ) {
       return
     }
 
@@ -446,14 +403,15 @@ export function StartCheckInPage({
   }
 
   function editWarningValue() {
-    const field =
-      warningConfirmation?.warnings?.[0]?.field
+    const inputId =
+      warningConfirmation
+        ?.warnings?.[0]?.inputId
 
-    setWarningConfirmation(null)
+    cancelWarningConfirmation()
 
-    if (field) {
+    if (inputId) {
       focusField(
-        `start-measurement-${field}`,
+        inputId,
         {
           selectAll: true,
           preventScroll: false,
@@ -463,16 +421,7 @@ export function StartCheckInPage({
   }
 
   function confirmWarnings() {
-    const keys =
-      warningConfirmation?.warnings.map(
-        (warning) => warning.key,
-      ) ?? []
-
-    setConfirmedWarningKeys(
-      (currentKeys) =>
-        new Set([...currentKeys, ...keys]),
-    )
-    setWarningConfirmation(null)
+    confirmWarningValues()
     advanceFromCurrentStep()
   }
 
@@ -804,7 +753,7 @@ export function StartCheckInPage({
           photos={photos}
           estimatedBodyFat={estimatedBodyFat}
           unitSystem={unitSystem}
-          validationByField={displayedValidationByField}
+          validationByField={validationByField}
           touchedFields={touchedFields}
           markFieldTouched={markFieldTouched}
           setField={setField}

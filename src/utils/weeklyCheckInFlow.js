@@ -3,9 +3,13 @@ import {
   getFirstWeeklyCheckInDate,
 } from './dates'
 import {
+  canContinueDailyStep,
   DAILY_CHECKIN_STEP_IDS,
   getDailyCheckInSteps,
 } from './dailyCheckInFlow'
+import {
+  canContinueMeasurementFields,
+} from './measurementValidation'
 
 const MILLISECONDS_PER_DAY =
   24 * 60 * 60 * 1000
@@ -156,145 +160,11 @@ export function canContinueWeeklyStep(
     fromWeeklyDailyStep(step)
 
   if (dailyStep) {
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.WEIGHT
-    ) {
-      if (!form.weight_status) {
-        return false
-      }
-
-      if (
-        form.weight_status !== 'recorded'
-      ) {
-        return true
-      }
-
-      const validation =
-        validationByField.morning_weight
-
-      if (validation) {
-        return ![
-          'unanswered',
-          'invalid',
-        ].includes(validation.status)
-      }
-
-      return isPositiveNumber(
-        form.morning_weight,
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.MEAL_PLAN_SCORE
-    ) {
-      return form.meal_plan_score !== ''
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS
-        .MEAL_PLAN_DEVIATION
-    ) {
-      return Boolean(
-        form.meal_plan_deviation_details?.trim(),
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.CHEAT_MEAL
-    ) {
-      return Boolean(
-        form.planned_cheat_meal_status,
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.HUNGER
-    ) {
-      return form.hunger_score !== ''
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.WATER
-    ) {
-      return form.water_goal_met !== null
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.WORKOUT_STATUS
-    ) {
-      return Boolean(form.workout_status)
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS
-        .WORKOUT_INCOMPLETE_REASON
-    ) {
-      return Boolean(
-        form.workout_incomplete_reason?.trim(),
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.TRAINING_PROBLEM
-    ) {
-      return form.training_problem !== null
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS
-        .TRAINING_PROBLEM_DETAILS
-    ) {
-      return Boolean(
-        form.training_problem_details?.trim(),
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.CARDIO
-    ) {
-      if (form.cardio_minutes === '') {
-        return false
-      }
-
-      const minutes = Number(
-        form.cardio_minutes,
-      )
-
-      return (
-        Number.isInteger(minutes) &&
-        minutes >= 0 &&
-        minutes <= 1440
-      )
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.ALCOHOL
-    ) {
-      return form.alcohol_consumed !== null
-    }
-
-    if (
-      dailyStep ===
-      DAILY_CHECKIN_STEP_IDS.ALCOHOL_DETAILS
-    ) {
-      return Boolean(
-        form.alcohol_details?.trim(),
-      )
-    }
-
-    return true
+    return canContinueDailyStep(
+      dailyStep,
+      form,
+      { validationByField },
+    )
   }
 
   if (
@@ -328,14 +198,9 @@ export function canContinueWeeklyStep(
           validationByField[field],
       )
     ) {
-      return fields.every(
-        (field) =>
-          ![
-            'unanswered',
-            'invalid',
-          ].includes(
-            validationByField[field].status,
-          ),
+      return canContinueMeasurementFields(
+        fields,
+        validationByField,
       )
     }
 
@@ -373,10 +238,10 @@ export function canContinueWeeklyStep(
           .scale_body_fat_percent
 
       if (validation) {
-        return ![
-          'unanswered',
-          'invalid',
-        ].includes(validation.status)
+        return canContinueMeasurementFields(
+          ['scale_body_fat_percent'],
+          validationByField,
+        )
       }
 
       return (

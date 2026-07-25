@@ -71,6 +71,7 @@ export function BodyFatQuestion({
         min="0.1"
         max="100"
         step="0.1"
+        maxDecimalPlaces={1}
         feedback={feedback}
         state={state}
         disabled={disabled}
