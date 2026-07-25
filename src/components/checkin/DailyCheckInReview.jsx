@@ -1,5 +1,12 @@
+import {
+  WizardReview,
+  WizardReviewItem,
+  WizardReviewSection,
+} from '../wizard'
 import { addDays } from '../../utils/dates'
-import { formatDateWithOrdinal } from '../../utils/formatters'
+import {
+  formatDateWithOrdinal,
+} from '../../utils/formatters'
 
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow the plan',
@@ -18,23 +25,30 @@ const HUNGER_LABELS = {
 }
 
 const CHEAT_MEAL_LABELS = {
-  eaten: 'Yes — had the planned cheat meal',
-  not_eaten: 'No — did not have the planned cheat meal',
-  not_planned: 'No cheat meal was planned',
+  eaten:
+    'Yes — had the planned cheat meal',
+  not_eaten:
+    'No — did not have the planned cheat meal',
+  not_planned:
+    'No cheat meal was planned',
 }
 
 const WORKOUT_LABELS = {
   completed: 'Completed',
   partial: 'Partially completed',
   missed: 'Did not complete',
-  rest_day: 'Rest day / no workout scheduled',
+  rest_day:
+    'Rest day / no workout scheduled',
 }
 
 const WEIGHT_STATUS_LABELS = {
   traveling: 'No weight — traveling',
-  no_scale: 'No weight — no scale available',
-  scale_issue: 'No weight — scale problem',
-  skipped: 'Skipped weighing this morning',
+  no_scale:
+    'No weight — no scale available',
+  scale_issue:
+    'No weight — scale problem',
+  skipped:
+    'Skipped weighing this morning',
 }
 
 function yesNo(value) {
@@ -44,19 +58,19 @@ function yesNo(value) {
   return 'Not answered'
 }
 
-function ReviewItem({ label, value }) {
-  return (
-    <div className="review-item">
-      <dt>{label}:</dt>
-      <dd>{value || 'None'}</dd>
-    </div>
+// Shows the same meaningful review answers using
+// the shared wizard review presentation.
+export function DailyCheckInReview({
+  form,
+  target,
+  today,
+}) {
+  const mealPlanScore = Number(
+    form.meal_plan_score,
   )
-}
 
-// Shows meaningful answers instead of raw database values.
-export function DailyCheckInReview({ form, target, today, }) {
-  const mealPlanScore = Number(form.meal_plan_score)
-  const waterGoal = target?.daily_water_goal_oz ?? 0
+  const waterGoal =
+    target?.daily_water_goal_oz ?? 0
 
   const workoutWasAttempted = [
     'completed',
@@ -66,7 +80,9 @@ export function DailyCheckInReview({ form, target, today, }) {
   const weightAnswer =
     form.weight_status === 'recorded'
       ? `${form.morning_weight} lbs`
-      : WEIGHT_STATUS_LABELS[form.weight_status]
+      : WEIGHT_STATUS_LABELS[
+          form.weight_status
+        ]
 
   const waterAnswer =
     form.water_goal_met === true
@@ -76,126 +92,144 @@ export function DailyCheckInReview({ form, target, today, }) {
   const reviewDate = addDays(today, -1)
 
   return (
-    <div className="checkin-review">
-      <section>
-        <h2>This Morning, {formatDateWithOrdinal(today)} </h2>
+    <WizardReview>
+      <WizardReviewSection
+        title={`This Morning, ${formatDateWithOrdinal(
+          today,
+        )}`}
+      >
+        <WizardReviewItem
+          label="Morning weight"
+          value={weightAnswer}
+        />
+      </WizardReviewSection>
 
-        <dl>
-          <ReviewItem
-            label="Morning weight"
-            value={weightAnswer}
-          />
-        </dl>
-      </section>
+      <WizardReviewSection
+        title={`Yesterday, ${formatDateWithOrdinal(
+          reviewDate,
+        )}`}
+      >
+        <WizardReviewItem
+          label="Meal-plan adherence"
+          value={
+            MEAL_PLAN_LABELS[
+              mealPlanScore
+            ]
+          }
+        />
 
-      <section>
-        <h2>Yesterday,  {formatDateWithOrdinal(reviewDate)} </h2>
+        {mealPlanScore >= 1 &&
+          mealPlanScore <= 4 && (
+            <WizardReviewItem
+              label="What was different"
+              value={
+                form
+                  .meal_plan_deviation_details
+              }
+            />
+          )}
 
-        <dl>
-          <ReviewItem
-            label="Meal-plan adherence"
-            value={MEAL_PLAN_LABELS[mealPlanScore]}
-          />
-
-          {mealPlanScore >= 1 &&
-            mealPlanScore <= 4 && (
-              <ReviewItem
-                label="What was different"
-                value={
-                  form.meal_plan_deviation_details
-                }
-              />
-            )}
-
-          {mealPlanScore >= 1 &&
-            mealPlanScore <= 4 && (
-              <ReviewItem
+        {mealPlanScore >= 1 &&
+          mealPlanScore <= 4 && (
+            <WizardReviewItem
               label="Planned cheat meal"
               value={
                 CHEAT_MEAL_LABELS[
-                  form.planned_cheat_meal_status
-               ]
+                  form
+                    .planned_cheat_meal_status
+                ]
               }
             />
           )}
 
-          <ReviewItem
-            label="Overall hunger"
-            value={HUNGER_LABELS[form.hunger_score]}
-          />
+        <WizardReviewItem
+          label="Overall hunger"
+          value={
+            HUNGER_LABELS[
+              form.hunger_score
+            ]
+          }
+        />
 
-          <ReviewItem
-            label="Water"
-            value={waterAnswer}
-          />
+        <WizardReviewItem
+          label="Water"
+          value={waterAnswer}
+        />
 
-          <ReviewItem
-            label="Workout"
+        <WizardReviewItem
+          label="Workout"
+          value={
+            WORKOUT_LABELS[
+              form.workout_status
+            ]
+          }
+        />
+
+        {form.workout_status ===
+          'missed' && (
+          <WizardReviewItem
+            label="What prevented the workout"
             value={
-              WORKOUT_LABELS[form.workout_status]
+              form
+                .workout_incomplete_reason
             }
           />
+        )}
 
-          {form.workout_status === 'missed' && (
-            <ReviewItem
-              label="What prevented the workout"
+        {workoutWasAttempted && (
+          <WizardReviewItem
+            label="Pain, difficulty, or problems"
+            value={yesNo(
+              form.training_problem,
+            )}
+          />
+        )}
+
+        {workoutWasAttempted &&
+          form.training_problem === true && (
+            <WizardReviewItem
+              label="Training problem details"
               value={
-                form.workout_incomplete_reason
+                form
+                  .training_problem_details
               }
             />
           )}
 
-          {workoutWasAttempted && (
-            <ReviewItem
-              label="Pain, difficulty, or problems"
-              value={yesNo(form.training_problem)}
-            />
+        <WizardReviewItem
+          label="Cardio"
+          value={`${form.cardio_minutes} minutes`}
+        />
+
+        <WizardReviewItem
+          label="Alcohol"
+          value={yesNo(
+            form.alcohol_consumed,
           )}
+        />
 
-          {workoutWasAttempted &&
-            form.training_problem === true && (
-              <ReviewItem
-                label="Training problem details"
-                value={
-                  form.training_problem_details
-                }
-              />
-            )}
-
-          <ReviewItem
-            label="Cardio"
-            value={`${form.cardio_minutes} minutes`}
+        {form.alcohol_consumed ===
+          true && (
+          <WizardReviewItem
+            label="What and how much"
+            value={form.alcohol_details}
           />
+        )}
+      </WizardReviewSection>
 
-          <ReviewItem
-            label="Alcohol"
-            value={yesNo(form.alcohol_consumed)}
-          />
+      <WizardReviewSection title="Coach Notes">
+        <WizardReviewItem
+          label="Anything else to share"
+          value={form.additional_notes}
+        />
 
-          {form.alcohol_consumed === true && (
-            <ReviewItem
-              label="What and how much"
-              value={form.alcohol_details}
-            />
-          )}
-        </dl>
-      </section>
-
-      <section>
-        <h2>Coach Notes</h2>
-
-        <dl>
-          <ReviewItem
-            label="Anything else to share"
-            value={form.additional_notes}
-          />
-
-          <ReviewItem
-            label="Questions for coach"
-            value={form.questions_for_coach}
-          />
-        </dl>
-      </section>
-    </div>
+        <WizardReviewItem
+          label="Questions for coach"
+          value={
+            form.questions_for_coach
+          }
+        />
+      </WizardReviewSection>
+    </WizardReview>
   )
 }

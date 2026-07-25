@@ -326,7 +326,7 @@ export async function loadDashboardData(userId) {
   const { data: profile, error: profileError } =
     await supabase
       .from('profiles')
-      .select('id, display_name, unit_system, time_zone')
+      .select('id, display_name, sex, unit_system, time_zone')
       .eq('id', userId)
       .single()
 

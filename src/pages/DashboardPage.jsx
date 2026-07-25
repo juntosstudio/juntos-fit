@@ -301,7 +301,15 @@ export function DashboardPage({
                 <button
                 type="button"
                 className="text-button"
-                onClick={onOpenWeeklyCheckIn}
+                onClick={onOpenDailyCheckIn}
+                >
+                Preview Daily Check-In Wizard
+                </button>
+
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenWeeklyCheckIn}
                 >
                 Preview Weekly Check-In Wizard
                 </button>

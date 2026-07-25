@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
 import {
-  AnswerSlider,
-  ChoiceButtons,
-  FocusedTextarea,
-} from './QuestionControls'
-import { DAILY_CHECKIN_STEP_IDS as STEP } from '../../utils/dailyCheckInFlow'
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import {
+  WizardChoiceGroup,
+  WizardNumberField,
+  WizardQuestion,
+  WizardSlider,
+  WizardTextarea,
+} from '../wizard'
+import {
+  DAILY_CHECKIN_STEP_IDS as STEP,
+} from '../../utils/dailyCheckInFlow'
 
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow it',
@@ -80,7 +88,8 @@ const WORKOUT_OPTIONS = [
   },
 ]
 
-// Displays one question from the branching daily check-in flow.
+// Displays one question from the existing branching
+// Daily Check-In flow using the shared wizard UI.
 export function DailyCheckInStep({
   step,
   form,
@@ -92,15 +101,19 @@ export function DailyCheckInStep({
     form.weight_status &&
     form.weight_status !== 'recorded'
 
-  const [showNoWeightReasons, setShowNoWeightReasons] =
-    useState(Boolean(hasNoWeight))
+  const [
+    showNoWeightReasons,
+    setShowNoWeightReasons,
+  ] = useState(Boolean(hasNoWeight))
 
   const weightInputRef = useRef(null)
 
   useEffect(() => {
     if (step !== STEP.WEIGHT) return
 
-    setShowNoWeightReasons(Boolean(hasNoWeight))
+    setShowNoWeightReasons(
+      Boolean(hasNoWeight),
+    )
   }, [step, hasNoWeight])
 
   useEffect(() => {
@@ -135,12 +148,8 @@ export function DailyCheckInStep({
   if (step === STEP.WEIGHT) {
     if (showNoWeightReasons) {
       return (
-        <fieldset>
-          <legend>
-            Why don’t you have a weight today?
-          </legend>
-
-          <ChoiceButtons
+        <WizardQuestion title="Why don’t you have a weight today?">
+          <WizardChoiceGroup
             name="weight-status"
             value={form.weight_status}
             options={NO_WEIGHT_OPTIONS}
@@ -154,31 +163,22 @@ export function DailyCheckInStep({
           >
             Enter a weight instead
           </button>
-        </fieldset>
+        </WizardQuestion>
       )
     }
 
     return (
-      <fieldset>
-        <legend>
-          What was your weight this morning?
-        </legend>
-
-        <div className="number-answer">
-          <input
-            ref={weightInputRef}
-            type="number"
-            min="1"
-            step="0.1"
-            inputMode="decimal"
-            value={form.morning_weight}
-            onChange={(event) =>
-              changeWeight(event.target.value)
-            }
-          />
-
-          <span>lbs</span>
-        </div>
+      <WizardQuestion title="What was your weight this morning?">
+        <WizardNumberField
+          id="daily-morning-weight"
+          inputRef={weightInputRef}
+          label="Morning weight"
+          value={form.morning_weight}
+          suffix="lbs"
+          min="1"
+          step="0.1"
+          onChange={changeWeight}
+        />
 
         <p className="answer-divider">or</p>
 
@@ -190,41 +190,37 @@ export function DailyCheckInStep({
         >
           I don’t have a weight today
         </button>
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.MEAL_PLAN_SCORE) {
     return (
-      <fieldset>
-        <legend>
-          How closely did you follow your meal plan
-          yesterday?
-        </legend>
-
-        <AnswerSlider
+      <WizardQuestion title="How closely did you follow your meal plan yesterday?">
+        <WizardSlider
           name="meal-plan-score"
           value={form.meal_plan_score}
           labels={MEAL_PLAN_LABELS}
           onChange={(value) =>
-            setField('meal_plan_score', value)
+            setField(
+              'meal_plan_score',
+              value,
+            )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.MEAL_PLAN_DEVIATION) {
     return (
-      <fieldset>
-        <legend>
-          What was different from yesterday’s meal
-          plan, and why?
-        </legend>
-
-        <FocusedTextarea
-          focusKey={step}
-          value={form.meal_plan_deviation_details}
+      <WizardQuestion title="What was different from yesterday’s meal plan, and why?">
+        <WizardTextarea
+          id="daily-meal-plan-deviation"
+          ariaLabel="What was different from yesterday’s meal plan, and why?"
+          value={
+            form.meal_plan_deviation_details
+          }
           onChange={(value) =>
             setField(
               'meal_plan_deviation_details',
@@ -233,21 +229,18 @@ export function DailyCheckInStep({
           }
           placeholder="Include anything you added, skipped, substituted, ate in a different amount, or any planned meal you did not eat."
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.CHEAT_MEAL) {
     return (
-      <fieldset>
-        <legend>
-          Was one of yesterday’s meals your planned
-          cheat meal?
-        </legend>
-
-        <ChoiceButtons
+      <WizardQuestion title="Was one of yesterday’s meals your planned cheat meal?">
+        <WizardChoiceGroup
           name="cheat-meal"
-          value={form.planned_cheat_meal_status}
+          value={
+            form.planned_cheat_meal_status
+          }
           options={CHEAT_MEAL_OPTIONS}
           onChange={(value) =>
             setField(
@@ -256,18 +249,14 @@ export function DailyCheckInStep({
             )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.HUNGER) {
     return (
-      <fieldset>
-        <legend>
-          How hungry were you overall yesterday?
-        </legend>
-
-        <AnswerSlider
+      <WizardQuestion title="How hungry were you overall yesterday?">
+        <WizardSlider
           name="hunger-score"
           value={form.hunger_score}
           labels={HUNGER_LABELS}
@@ -276,67 +265,69 @@ export function DailyCheckInStep({
           }
           reversed
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.WATER) {
+    const waterGoal =
+      target?.daily_water_goal_oz ?? 0
+
     return (
-      <fieldset>
-        <legend>
-          Did you hit your water goal yesterday?
-        </legend>
-
-        <p>
-          Your goal:{' '}
-          <strong>
-            {target?.daily_water_goal_oz ?? 0} oz
-          </strong>
-        </p>
-
-        <ChoiceButtons
+      <WizardQuestion
+        title="Did you hit your water goal yesterday?"
+        helper={
+          <>
+            Your goal:{' '}
+            <strong>{waterGoal} oz</strong>
+          </>
+        }
+      >
+        <WizardChoiceGroup
           name="water-goal"
           value={form.water_goal_met}
           options={YES_NO_OPTIONS}
           onChange={(value) =>
-            setField('water_goal_met', value)
+            setField(
+              'water_goal_met',
+              value,
+            )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.WORKOUT_STATUS) {
     return (
-      <fieldset>
-        <legend>
-          Did you complete your scheduled workout
-          yesterday?
-        </legend>
-
-        <ChoiceButtons
+      <WizardQuestion title="Did you complete your scheduled workout yesterday?">
+        <WizardChoiceGroup
           name="workout-status"
           value={form.workout_status}
           options={WORKOUT_OPTIONS}
           onChange={(value) =>
-            setField('workout_status', value)
+            setField(
+              'workout_status',
+              value,
+            )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
-  if (step === STEP.WORKOUT_INCOMPLETE_REASON) {
+  if (
+    step ===
+    STEP.WORKOUT_INCOMPLETE_REASON
+  ) {
     return (
-      <fieldset>
-        <legend>
-          What prevented you from completing
-          yesterday’s workout?
-        </legend>
-
-        <FocusedTextarea
-          focusKey={step}
-          value={form.workout_incomplete_reason}
+      <WizardQuestion title="What prevented you from completing yesterday’s workout?">
+        <WizardTextarea
+          id="daily-workout-incomplete-reason"
+          ariaLabel="What prevented you from completing yesterday’s workout?"
+          value={
+            form.workout_incomplete_reason
+          }
           onChange={(value) =>
             setField(
               'workout_incomplete_reason',
@@ -345,41 +336,40 @@ export function DailyCheckInStep({
           }
           placeholder="Tell your coach what got in the way."
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.TRAINING_PROBLEM) {
     return (
-      <fieldset>
-        <legend>
-          Did you have any pain, difficulty, or
-          problems during yesterday’s training?
-        </legend>
-
-        <ChoiceButtons
+      <WizardQuestion title="Did you have any pain, difficulty, or problems during yesterday’s training?">
+        <WizardChoiceGroup
           name="training-problem"
           value={form.training_problem}
           options={YES_NO_OPTIONS}
           onChange={(value) =>
-            setField('training_problem', value)
+            setField(
+              'training_problem',
+              value,
+            )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
-  if (step === STEP.TRAINING_PROBLEM_DETAILS) {
+  if (
+    step ===
+    STEP.TRAINING_PROBLEM_DETAILS
+  ) {
     return (
-      <fieldset>
-        <legend>
-          Describe what happened during yesterday’s
-          training.
-        </legend>
-
-        <FocusedTextarea
-          focusKey={step}
-          value={form.training_problem_details}
+      <WizardQuestion title="Describe what happened during yesterday’s training.">
+        <WizardTextarea
+          id="daily-training-problem-details"
+          ariaLabel="Describe what happened during yesterday’s training."
+          value={
+            form.training_problem_details
+          }
           onChange={(value) =>
             setField(
               'training_problem_details',
@@ -388,122 +378,128 @@ export function DailyCheckInStep({
           }
           placeholder="Include where you felt it, what movement caused it, and anything else your coach should know."
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.CARDIO) {
     const cardioTarget =
-      target?.weekly_cardio_target_minutes ?? 0
+      target
+        ?.weekly_cardio_target_minutes ?? 0
 
     return (
-      <fieldset>
-        <legend>
-          How many minutes of cardio did you complete
-          yesterday?
-        </legend>
-
-        <p>
-          This week: <strong>{cardioCompleted}</strong>{' '}
-          of <strong>{cardioTarget}</strong> minutes
-        </p>
-
-        <div className="number-answer">
-          <input
-            type="number"
-            min="0"
-            max="1440"
-            step="1"
-            inputMode="numeric"
-            value={form.cardio_minutes}
-            onChange={(event) =>
-              setField(
-                'cardio_minutes',
-                event.target.value,
-              )
-            }
-          />
-
-          <span>minutes</span>
-        </div>
-      </fieldset>
+      <WizardQuestion
+        title="How many minutes of cardio did you complete yesterday?"
+        helper={
+          <>
+            This week:{' '}
+            <strong>{cardioCompleted}</strong>{' '}
+            of{' '}
+            <strong>{cardioTarget}</strong>{' '}
+            minutes
+          </>
+        }
+      >
+        <WizardNumberField
+          id="daily-cardio-minutes"
+          label="Cardio"
+          value={form.cardio_minutes}
+          suffix="minutes"
+          min="0"
+          max="1440"
+          step="1"
+          inputMode="numeric"
+          onChange={(value) =>
+            setField(
+              'cardio_minutes',
+              value,
+            )
+          }
+        />
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.ALCOHOL) {
     return (
-      <fieldset>
-        <legend>
-          Did you drink alcohol yesterday?
-        </legend>
-
-        <ChoiceButtons
+      <WizardQuestion title="Did you drink alcohol yesterday?">
+        <WizardChoiceGroup
           name="alcohol"
           value={form.alcohol_consumed}
           options={YES_NO_OPTIONS}
           onChange={(value) =>
-            setField('alcohol_consumed', value)
+            setField(
+              'alcohol_consumed',
+              value,
+            )
           }
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.ALCOHOL_DETAILS) {
     return (
-      <fieldset>
-        <legend>
-          What did you drink yesterday, and how much?
-        </legend>
-
-        <FocusedTextarea
-          focusKey={step}
+      <WizardQuestion title="What did you drink yesterday, and how much?">
+        <WizardTextarea
+          id="daily-alcohol-details"
+          ariaLabel="What did you drink yesterday, and how much?"
           value={form.alcohol_details}
           onChange={(value) =>
-            setField('alcohol_details', value)
+            setField(
+              'alcohol_details',
+              value,
+            )
           }
           placeholder="Example: two 5 oz glasses of wine, three vodka shots, or two beers."
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   if (step === STEP.ADDITIONAL_NOTES) {
     return (
-      <fieldset>
-        <legend>
-          Is there anything else you would like to
-          share with your coach?
-        </legend>
-
-        <FocusedTextarea
-          focusKey={step}
+      <WizardQuestion
+        title="Is there anything else you would like to share with your coach?"
+        helper="Optional — leave blank and tap Next."
+      >
+        <WizardTextarea
+          id="daily-additional-notes"
+          ariaLabel="Anything else you would like to share with your coach"
           value={form.additional_notes}
           onChange={(value) =>
-            setField('additional_notes', value)
+            setField(
+              'additional_notes',
+              value,
+            )
           }
           placeholder="Poor sleep, unusual stress, illness, upcoming travel, a schedule change, a meal or workout concern, or anything else that may affect your plan."
           optional
+          promptWhenEmpty
         />
-      </fieldset>
+      </WizardQuestion>
     )
   }
 
   return (
-    <fieldset>
-      <legend>
-        Do you have any questions for your coach?
-      </legend>
-
-      <FocusedTextarea
-        focusKey={step}
+    <WizardQuestion
+      title="Do you have any questions for your coach?"
+      helper="Optional — leave blank and tap Next."
+    >
+      <WizardTextarea
+        id="daily-questions-for-coach"
+        ariaLabel="Questions for your coach"
         value={form.questions_for_coach}
         onChange={(value) =>
-          setField('questions_for_coach', value)
+          setField(
+            'questions_for_coach',
+            value,
+          )
         }
         placeholder="Enter any questions you would like your coach to review."
         optional
+        promptWhenEmpty
       />
-    </fieldset>
+    </WizardQuestion>
   )
 }

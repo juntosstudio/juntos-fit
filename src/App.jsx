@@ -6,6 +6,7 @@ import { DailyCheckInPage } from './pages/DailyCheckInPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { StartCheckInPage } from './pages/StartCheckInPage'
+import { WeeklyCheckInPage } from './pages/WeeklyCheckInPage'
 import { getTodayDateKey } from './utils/dates'
 import './App.css'
 
@@ -164,26 +165,19 @@ function App() {
 
   if (currentPage === PAGE_WEEKLY_CHECK_IN) {
     return (
-      <main className="container">
-        <button
-          type="button"
-          onClick={returnToDashboard}
-        >
-          Back to Dashboard
-        </button>
-
-        <h1>Weekly Check-In</h1>
-
-        <p>
-          Your Weekly Check-In replaces the Daily
-          Check-In on this scheduled date.
-        </p>
-
-        <p>
-          The full weekly wizard is the next feature
-          we’re building.
-        </p>
-      </main>
+      <WeeklyCheckInPage
+        key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        plan={dashboard?.plan}
+        profile={dashboard?.profile}
+        target={dashboard?.target}
+        cardioCompleted={
+          dashboard?.cardioCompleted ?? 0
+        }
+        weekSummary={
+          dashboard?.weekAtAGlance ?? null
+        }
+        onBack={returnToDashboard}
+      />
     )
   }
 

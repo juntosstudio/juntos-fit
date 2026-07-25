@@ -1,0 +1,517 @@
+/*
+ * Shared Juntos Fit Wizard UI
+ *
+ * Create Plan is the canonical question-screen layout:
+ * unboxed question heading + answer controls that carry
+ * the border, breathing state, and confirmation state.
+ */
+
+.wizard-page {
+  padding-bottom: 3rem;
+}
+
+.wizard-page-subtitle {
+  color: var(--color-text-muted);
+}
+
+.wizard-page > progress {
+  width: 100%;
+  height: 0.55rem;
+  margin: 1.25rem 0 0.5rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.wizard-step-label {
+  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/*
+ * Create Plan-style question structure.
+ * No outer card, border, background, or shadow.
+ */
+.wizard-question,
+.container > .wizard-question {
+  display: flow-root;
+  width: 100%;
+  min-width: 0;
+  margin: 1.25rem 0 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wizard-question > legend {
+  float: left;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  background: transparent;
+  color: var(--color-primary-dark);
+  font-size: clamp(1.3rem, 5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.wizard-question > :not(legend) {
+  clear: both;
+}
+
+.wizard-question-helper {
+  margin: 0 0 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.wizard-question-content {
+  display: grid;
+  gap: 1rem;
+}
+
+/*
+ * Clean Create Plan-style fields.
+ * Labels and helper text are unboxed. Only the actual
+ * input or textarea carries a border and answer-state glow.
+ */
+.wizard-field {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 0.55rem;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wizard-field-label {
+  display: block;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.wizard-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.wizard-input-field input {
+  width: auto;
+  min-width: 0;
+  min-height: 3.25rem;
+  flex: 1 1 0%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1.15rem;
+}
+
+.wizard-input-field input[type='number'] {
+  text-align: center;
+}
+
+.wizard-input-suffix {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.wizard-textarea-field textarea {
+  width: 100%;
+  min-height: 8rem;
+  margin-top: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  resize: vertical;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.wizard-field-helper,
+.wizard-field-feedback {
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.wizard-field-feedback.is-invalid {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.wizard-field-feedback.is-warning {
+  color: #b76e00;
+  font-weight: 650;
+}
+
+/*
+ * Shared required / answered signal.
+ */
+@keyframes wizard-required-breathe {
+  0%,
+  100% {
+    border-color:
+      rgb(var(--color-interaction-rgb) / 55%);
+    background-color: var(--color-surface);
+    box-shadow:
+      0 0 0 1px
+        rgb(var(--color-interaction-rgb) / 10%),
+      0 2px 8px
+        rgb(var(--color-interaction-rgb) / 18%);
+  }
+
+  50% {
+    border-color: var(--color-interaction);
+    background-color:
+      rgb(var(--color-interaction-rgb) / 5%);
+    box-shadow:
+      0 0 0 3px
+        rgb(var(--color-interaction-rgb) / 20%),
+      0 4px 18px
+        rgb(var(--color-interaction-rgb) / 52%);
+  }
+}
+
+.wizard-control {
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.wizard-control.needs-answer {
+  border: 2px solid
+    rgb(var(--color-interaction-rgb) / 72%);
+  animation:
+    wizard-required-breathe
+    1.8s ease-in-out infinite;
+}
+
+.wizard-control.has-answer {
+  border: 2px solid var(--color-interaction);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 70%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 28%);
+  animation: none;
+}
+
+.wizard-control.is-optional {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  animation: none;
+}
+
+.wizard-control.is-invalid {
+  border-color: var(--color-error);
+  background: var(--color-error-soft);
+  box-shadow:
+    0 0 0 2px rgb(166 61 64 / 14%);
+  animation: none;
+}
+
+.wizard-control.is-warning {
+  border-color: #b76e00;
+  background: #fff7e8;
+  box-shadow:
+    0 0 0 2px rgb(183 110 0 / 14%);
+  animation: none;
+}
+
+.wizard-control:focus {
+  border-color: var(--color-interaction);
+  outline: none;
+  box-shadow:
+    0 0 0 3px
+      rgb(var(--color-interaction-rgb) / 18%),
+    0 0 15px
+      rgb(var(--color-interaction-rgb) / 24%);
+}
+
+/*
+ * Radio answer cards.
+ */
+.wizard-choice-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.wizard-choice-option {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: flex-start;
+  gap: 0.8rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.wizard-choice-option input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  accent-color: var(--color-primary);
+}
+
+.wizard-choice-copy {
+  display: grid;
+  gap: 0.25rem;
+  line-height: 1.4;
+}
+
+.wizard-choice-label {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.wizard-choice-description {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+.wizard-choice-badge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  font-weight: 750;
+}
+
+.wizard-choice-group.needs-answer
+  .wizard-choice-option:not(.is-disabled) {
+  border-color:
+    rgb(var(--color-interaction-rgb) / 72%);
+  animation:
+    wizard-required-breathe
+    1.8s ease-in-out infinite;
+}
+
+.wizard-choice-group.has-answer
+  .wizard-choice-option {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  box-shadow: none;
+  animation: none;
+}
+
+.wizard-choice-group.has-answer
+  .wizard-choice-option:has(input:checked) {
+  border-color: var(--color-interaction);
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 70%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 28%);
+}
+
+.wizard-choice-option:hover:not(.is-disabled),
+.wizard-choice-option:focus-within {
+  border-color: var(--color-interaction);
+}
+
+.wizard-choice-option.is-disabled {
+  background: var(--color-background);
+  cursor: not-allowed;
+  opacity: 0.52;
+  animation: none;
+}
+
+/*
+ * Shared slider answer card.
+ */
+.wizard-slider-group {
+  width: 100%;
+  margin: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-background);
+}
+
+.wizard-slider-group.needs-answer {
+  border-color:
+    rgb(var(--color-interaction-rgb) / 72%);
+  animation:
+    wizard-required-breathe
+    1.8s ease-in-out infinite;
+}
+
+.wizard-slider-group.has-answer {
+  border-color: var(--color-interaction);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 70%),
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 28%);
+}
+
+.wizard-slider-group > p {
+  min-height: 2rem;
+  margin: 0 0 1rem;
+  color: var(--color-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.wizard-slider {
+  width: 100%;
+  height: 1.75rem;
+  margin: 0;
+  accent-color: var(--color-interaction);
+  cursor: pointer;
+}
+
+.wizard-slider-endpoints {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.wizard-slider-endpoints span:last-child {
+  text-align: right;
+}
+
+/*
+ * Reviews remain card-based.
+ */
+.wizard-review {
+  display: grid;
+  gap: 1.25rem;
+  width: 100%;
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.wizard-review-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.wizard-review-section h2 {
+  margin: 0 0 1rem;
+  color: var(--color-primary-dark);
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+.wizard-review-section dl {
+  margin: 0;
+}
+
+.wizard-review-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding-block: 0.45rem;
+}
+
+.wizard-review-item + .wizard-review-item {
+  border-top:
+    1px solid rgb(221 217 232 / 65%);
+}
+
+.wizard-review-item dt {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.wizard-review-item dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Shared wizard navigation.
+ */
+.wizard-ui-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.wizard-ui-actions button {
+  min-width: 7rem;
+}
+
+.wizard-ui-actions button:first-child {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.wizard-ui-actions
+  button:first-child:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+@media (min-width: 40rem) {
+  .wizard-choice-group {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .wizard-choice-option:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-control.needs-answer,
+  .wizard-choice-group.needs-answer
+    .wizard-choice-option:not(.is-disabled),
+  .wizard-slider-group.needs-answer {
+    border-color: var(--color-interaction);
+    background-color:
+      rgb(var(--color-interaction-rgb) / 5%);
+    box-shadow:
+      0 0 0 3px
+        rgb(var(--color-interaction-rgb) / 20%),
+      0 4px 14px
+        rgb(var(--color-interaction-rgb) / 36%);
+    animation: none;
+  }
+}

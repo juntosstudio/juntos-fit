@@ -1,23 +1,24 @@
-# Juntos Fit Weekly Check-In Gating Patch
+# Remove “Your Week at a Glance”
 
-Extract this ZIP into the app root and replace the four matching files.
+Replaces:
 
-Files changed:
+- src/utils/weeklyCheckInFlow.js
+- src/components/checkin/WeeklyCheckInStep.jsx
+- src/pages/WeeklyCheckInPage.jsx
+- src/styles/weeklyCheckIn.css
 
-- src/pages/DashboardPage.jsx
-- src/services/dashboardService.js
-- src/App.jsx
-- src/utils/dates.js
+Changes:
 
-Behavior:
+- Removes the standalone “Your Week at a Glance”
+  screen from the Weekly Check-In step list.
+- The question count and progress bar update
+  automatically.
+- After the Daily questions, the wizard proceeds
+  directly to Recovery & Context.
+- Removes the unused screen component, helper
+  functions, prop plumbing, and screen-specific CSS.
+- The final Review Weekly Check-In screen is unchanged.
 
-- The first Weekly Check-In occurs on the selected check-in weekday at least seven full days after plan start.
-- It repeats every seven days after that.
-- On a scheduled weekly date, Weekly Check-In replaces Daily Check-In completely.
-- The Weekly button currently opens a placeholder page.
-- Existing weekly records are recognized through their linked daily_checkin_id.
-
-Quick examples:
-
-- Sunday start + Sunday check-in: first Weekly Check-In is the following Sunday (Day 7).
-- Sunday start + Tuesday check-in: first Weekly Check-In is the following week's Tuesday (Day 9).
+No form answers, validation, saving, hooks, services,
+database behavior, measurements, photos, or final-review
+content changed.
