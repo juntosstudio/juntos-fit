@@ -149,6 +149,7 @@ export function canContinueWeeklyStep(
     photosRequired,
     photos,
     previewMode = false,
+    validationByField = {},
   } = {},
 ) {
   const dailyStep =
@@ -163,11 +164,25 @@ export function canContinueWeeklyStep(
         return false
       }
 
-      return form.weight_status === 'recorded'
-        ? isPositiveNumber(
-            form.morning_weight,
-          )
-        : true
+      if (
+        form.weight_status !== 'recorded'
+      ) {
+        return true
+      }
+
+      const validation =
+        validationByField.morning_weight
+
+      if (validation) {
+        return ![
+          'unanswered',
+          'invalid',
+        ].includes(validation.status)
+      }
+
+      return isPositiveNumber(
+        form.morning_weight,
+      )
     }
 
     if (
@@ -248,6 +263,10 @@ export function canContinueWeeklyStep(
       dailyStep ===
       DAILY_CHECKIN_STEP_IDS.CARDIO
     ) {
+      if (form.cardio_minutes === '') {
+        return false
+      }
+
       const minutes = Number(
         form.cardio_minutes,
       )
@@ -294,14 +313,36 @@ export function canContinueWeeklyStep(
     step ===
     WEEKLY_CHECKIN_STEP_IDS.MEASUREMENTS
   ) {
-    return [
-      form.neck_inches,
-      form.waist_inches,
-      form.hips_inches,
-      form.bicep_inches,
-      form.thigh_inches,
-      form.calf_inches,
-    ].every(isPositiveNumber)
+    const fields = [
+      'neck_inches',
+      'waist_inches',
+      'hips_inches',
+      'bicep_inches',
+      'thigh_inches',
+      'calf_inches',
+    ]
+
+    if (
+      fields.every(
+        (field) =>
+          validationByField[field],
+      )
+    ) {
+      return fields.every(
+        (field) =>
+          ![
+            'unanswered',
+            'invalid',
+          ].includes(
+            validationByField[field].status,
+          ),
+      )
+    }
+
+    return fields.every(
+      (field) =>
+        isPositiveNumber(form[field]),
+    )
   }
 
   if (
@@ -313,16 +354,39 @@ export function canContinueWeeklyStep(
         return false
       }
 
-      return form.body_fat_status ===
+      if (
+        form.body_fat_status ===
+        'no_reading'
+      ) {
+        return true
+      }
+
+      if (
+        form.body_fat_status !==
         'recorded'
-        ? isPositiveNumber(
-            form.scale_body_fat_percent,
-          ) &&
-            Number(
-              form.scale_body_fat_percent,
-            ) <= 100
-        : form.body_fat_status ===
-            'no_reading'
+      ) {
+        return false
+      }
+
+      const validation =
+        validationByField
+          .scale_body_fat_percent
+
+      if (validation) {
+        return ![
+          'unanswered',
+          'invalid',
+        ].includes(validation.status)
+      }
+
+      return (
+        isPositiveNumber(
+          form.scale_body_fat_percent,
+        ) &&
+        Number(
+          form.scale_body_fat_percent,
+        ) <= 100
+      )
     }
 
     return true

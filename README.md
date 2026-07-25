@@ -1,28 +1,28 @@
-# Weekly Body Fat After Weight
+# Weekly Measurement Validation
 
-Replaces:
+Fixes the body-fat Next-button bug and gives Weekly the same
+measurement validation behavior as Start Check-In.
 
-- src/utils/weeklyCheckInFlow.js
+Files:
+
+- src/components/checkin/questions/BodyFatQuestion.jsx
+- src/components/checkin/DailyCheckInStep.jsx
 - src/components/checkin/WeeklyCheckInStep.jsx
+- src/pages/WeeklyCheckInPage.jsx
+- src/utils/weeklyCheckInFlow.js
 
-Scale body-fat plans:
+Changes:
 
-- Body Fat now appears immediately after Morning Weight.
-- The screen matches the Weight interaction:
-  - blank numeric field
-  - percent suffix
-  - `or`
-  - “I don’t have a body-fat reading today”
-- Selecting no reading enables Next.
-- Users can switch back to entering a reading.
-- Entering a value automatically marks the reading as
-  recorded.
+- A valid entered body-fat percentage now enables Next.
+- Weekly validates morning weight, scale body fat, neck,
+  waist, hips, bicep, thigh, and calf using the existing
+  Start Day measurement-validation utility.
+- Invalid values show their message and keep Next disabled.
+- Unusual but possible values show the same
+  “Please Double-Check” confirmation used by Start Day.
+- Confirmations are tied to the exact value; editing it
+  requires another confirmation.
+- A blank Weekly cardio field is no longer interpreted as 0.
 
-Other plan methods:
-
-- Juntos estimate remains after Weekly Measurements
-  because it depends on those measurements.
-- “Do not track body fat” shows no Body Fat step.
-
-No review, saving, services, database behavior, or
-body-fat calculation was changed.
+No services, database schema, saving, cadence, photos, or
+body-fat formula changed.

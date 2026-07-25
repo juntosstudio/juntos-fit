@@ -172,6 +172,17 @@ export function DashboardPage({
     dashboard?.streakDays ?? 0,
   )
 
+  function openStartCheckInPreview() {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        'juntos:start-checkin-preview',
+        'true',
+      )
+    }
+
+    onOpenStartCheckIn()
+  }
+
   return (
     <main className="container dashboard-page">
       <header className="dashboard-header">
@@ -296,6 +307,16 @@ export function DashboardPage({
                 onClick={onCreatePlan}
                 >
                 Preview Create Plan Wizard
+                </button>
+
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={
+                    openStartCheckInPreview
+                  }
+                >
+                  Preview Start Check-In Wizard
                 </button>
 
                 <button

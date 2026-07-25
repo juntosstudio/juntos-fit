@@ -1,5 +1,11 @@
 import { ChoiceButtons } from '../checkin/QuestionControls'
 import {
+  BodyFatQuestion,
+} from '../checkin/questions/BodyFatQuestion'
+import {
+  WeightQuestion,
+} from '../checkin/questions/WeightQuestion'
+import {
   SIDE_OPTIONS,
   START_CHECKIN_STEP_IDS as STEP,
 } from '../../utils/startCheckInFlow'
@@ -236,8 +242,10 @@ export function StartCheckInStep({
   previewing,
   readOnly,
   sideLocked,
+  onSkipBodyFat,
 }) {
-  const inputsDisabled =
+  const inputsDisabled = readOnly
+  const photosDisabled =
     previewing || readOnly
 
   if (step === STEP.TIPS) {
@@ -282,26 +290,48 @@ export function StartCheckInStep({
 
   if (step === STEP.WEIGHT) {
     return (
-      <fieldset>
-        <legend>What is your starting weight?</legend>
-
-        <MeasurementField
-          label="Starting weight"
-          field="starting_weight_lbs"
-          value={form.starting_weight_lbs}
-          unitSystem={unitSystem}
-          validation={
-            validationByField.starting_weight_lbs
-          }
-          touched={
-            touchedFields.starting_weight_lbs
-          }
-          markFieldTouched={markFieldTouched}
-          tip="Use the same scale and similar conditions for future check-ins."
-          setField={setField}
-          disabled={inputsDisabled}
-        />
-      </fieldset>
+      <WeightQuestion
+        id="start-weight"
+        title="What is your starting weight?"
+        label="Starting weight"
+        value={form.starting_weight_lbs}
+        status={form.starting_weight_status}
+        feedback={
+          form.starting_weight_lbs !== '' &&
+          ['invalid', 'warning'].includes(
+            validationByField
+              .starting_weight_lbs?.status,
+          )
+            ? validationByField
+                .starting_weight_lbs?.message
+            : ''
+        }
+        state={
+          validationByField
+            .starting_weight_lbs?.status ===
+          'invalid'
+            ? 'is-invalid'
+            : validationByField
+                  .starting_weight_lbs
+                  ?.status === 'warning'
+              ? 'is-warning'
+              : undefined
+        }
+        disabled={previewing}
+        readOnly={readOnly}
+        onValueChange={(value) =>
+          setField(
+            'starting_weight_lbs',
+            value,
+          )
+        }
+        onStatusChange={(value) =>
+          setField(
+            'starting_weight_status',
+            value,
+          )
+        }
+      />
     )
   }
 
@@ -337,53 +367,39 @@ export function StartCheckInStep({
     }
 
     return (
-      <fieldset disabled={readOnly}>
-        <legend>
-          What body-fat percentage does your scale show?
-        </legend>
-
-        <p className="question-helper">
-          Use the same scale throughout this plan.
-        </p>
-
-        <MeasurementField
-          label="Scale body fat"
-          field="body_fat_percent"
-          value={form.body_fat_percent}
-          unitSystem={unitSystem}
-          validation={
-            validationByField.body_fat_percent
-          }
-          touched={
-            touchedFields.body_fat_percent
-          }
-          markFieldTouched={markFieldTouched}
-          optional={form.body_fat_unavailable}
-          disabled={
-            inputsDisabled ||
-            form.body_fat_unavailable
-          }
-          setField={setField}
-        />
-
-        <label className="body-fat-unavailable">
-          <input
-            type="checkbox"
-            checked={form.body_fat_unavailable}
-            disabled={inputsDisabled}
-            onChange={(event) =>
-              setField(
-                'body_fat_unavailable',
-                event.target.checked,
-              )
-            }
-          />
-
-          <span>
-            I don’t have a body-fat reading today.
-          </span>
-        </label>
-      </fieldset>
+      <BodyFatQuestion
+        id="start-scale-body-fat"
+        value={form.body_fat_percent}
+        unavailable={
+          form.body_fat_unavailable
+        }
+        feedback={
+          validationByField
+            .body_fat_percent?.message
+        }
+        state={
+          validationByField
+            .body_fat_percent?.status ===
+          'invalid'
+            ? 'is-invalid'
+            : undefined
+        }
+        disabled={inputsDisabled}
+        readOnly={readOnly}
+        onValueChange={(value) =>
+          setField(
+            'body_fat_percent',
+            value,
+          )
+        }
+        onUnavailableChange={(value) =>
+          setField(
+            'body_fat_unavailable',
+            value,
+          )
+        }
+        onSkip={onSkipBodyFat}
+      />
     )
   }
 
@@ -558,7 +574,7 @@ export function StartCheckInStep({
         photo={photos.front}
         uploadingPose={uploadingPose}
         uploadPhoto={uploadPhoto}
-        disabled={inputsDisabled}
+        disabled={photosDisabled}
       />
     )
   }
@@ -575,7 +591,7 @@ export function StartCheckInStep({
         photo={photos.side}
         uploadingPose={uploadingPose}
         uploadPhoto={uploadPhoto}
-        disabled={inputsDisabled}
+        disabled={photosDisabled}
       />
     )
   }
@@ -588,7 +604,7 @@ export function StartCheckInStep({
       photo={photos.back}
       uploadingPose={uploadingPose}
       uploadPhoto={uploadPhoto}
-      disabled={inputsDisabled}
+      disabled={photosDisabled}
     />
   )
 }

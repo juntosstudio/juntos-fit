@@ -34,6 +34,7 @@ import {
 
 const EMPTY_FORM = {
   starting_weight_lbs: '',
+  starting_weight_status: '',
   body_fat_percent: '',
   body_fat_unavailable: false,
   neck_inches: '',
@@ -58,7 +59,6 @@ const MEASUREMENT_FIELDS = [
 ]
 
 const REQUIRED_FIELDS = [
-  ['starting_weight_lbs', 'starting weight'],
   ['neck_inches', 'neck measurement'],
   ['chest_inches', 'chest measurement'],
   ['waist_inches', 'waist measurement'],
@@ -96,6 +96,14 @@ function mapCheckInToForm(
       unitSystem,
     )
   }
+
+  form.starting_weight_status =
+    checkin.starting_weight_lbs === null ||
+    checkin.starting_weight_lbs === undefined
+      ? checkin.status === 'completed'
+        ? 'not_recorded'
+        : ''
+      : 'recorded'
 
   form.body_fat_percent =
     checkin.body_fat_percent === null ||
@@ -290,6 +298,30 @@ export function useStartCheckIn(
 
   function setField(fieldName, value) {
     setForm((current) => {
+      if (fieldName === 'starting_weight_lbs') {
+        return {
+          ...current,
+          starting_weight_lbs: value,
+          starting_weight_status:
+            value === '' ? '' : 'recorded',
+        }
+      }
+
+      if (
+        fieldName ===
+        'starting_weight_status'
+      ) {
+        return {
+          ...current,
+          starting_weight_status: value,
+          starting_weight_lbs:
+            value &&
+            value !== 'recorded'
+              ? ''
+              : current.starting_weight_lbs,
+        }
+      }
+
       if (fieldName === 'body_fat_unavailable') {
         return {
           ...current,
@@ -372,6 +404,21 @@ export function useStartCheckIn(
       return enteredError
     }
 
+    if (!form.starting_weight_status) {
+      return (
+        'Enter your starting weight or choose ' +
+        'that you do not have one today.'
+      )
+    }
+
+    if (
+      form.starting_weight_status ===
+        'recorded' &&
+      form.starting_weight_lbs === ''
+    ) {
+      return 'Enter your starting weight.'
+    }
+
     for (const [field, label] of REQUIRED_FIELDS) {
       if (form[field] === '') {
         return `Enter your ${label}.`
@@ -397,6 +444,8 @@ export function useStartCheckIn(
     if (
       plan.body_fat_source ===
         'juntos_estimate' &&
+      form.starting_weight_status ===
+        'recorded' &&
       !estimatedBodyFat
     ) {
       return (
@@ -441,13 +490,22 @@ export function useStartCheckIn(
       plan.body_fat_source ===
       'juntos_estimate'
     ) {
+      if (!estimatedBodyFat) {
+        return {
+          body_fat_percent: null,
+          body_fat_status: 'unavailable',
+          body_fat_method: null,
+          body_fat_formula_version: null,
+        }
+      }
+
       return {
         body_fat_percent:
-          estimatedBodyFat?.percent ?? null,
+          estimatedBodyFat.percent,
         body_fat_status: 'estimated',
         body_fat_method: 'juntos_estimate',
         body_fat_formula_version:
-          estimatedBodyFat?.formulaVersion ??
+          estimatedBodyFat.formulaVersion ??
           null,
       }
     }

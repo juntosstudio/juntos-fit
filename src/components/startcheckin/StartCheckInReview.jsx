@@ -29,7 +29,10 @@ function getBodyFatReview(
       ? `${estimatedBodyFat.percent.toFixed(
           1,
         )}% — Juntos Fit estimate`
-      : 'Estimate unavailable'
+      : form.starting_weight_status !==
+          'recorded'
+        ? 'Estimate unavailable — no weight recorded'
+        : 'Estimate unavailable'
   }
 
   if (form.body_fat_unavailable) {
@@ -71,11 +74,17 @@ export function StartCheckInReview({
         <dl>
           <ReviewItem
             label="Weight"
-            value={formatMeasurementValue(
-              'starting_weight_lbs',
-              form.starting_weight_lbs,
-              unitSystem,
-            )}
+            value={
+              form.starting_weight_status ===
+                'recorded' &&
+              form.starting_weight_lbs !== ''
+                ? formatMeasurementValue(
+                    'starting_weight_lbs',
+                    form.starting_weight_lbs,
+                    unitSystem,
+                  )
+                : 'No weight recorded'
+            }
           />
 
           <ReviewItem

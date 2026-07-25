@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -15,7 +16,11 @@ import {
   getWarningConfirmationKey,
 } from '../utils/measurementValidation'
 import { formatDate } from '../utils/formatters'
+import '../styles/wizard.css'
 import '../styles/startCheckIn.css'
+
+const START_PREVIEW_REQUEST_KEY =
+  'juntos:start-checkin-preview'
 
 function getStepFields(step, form) {
   const fieldMap = {
@@ -115,6 +120,35 @@ export function StartCheckInPage({
     warningConfirmation,
     setWarningConfirmation,
   ] = useState(null)
+
+  useEffect(() => {
+    if (
+      !import.meta.env.DEV ||
+      typeof window === 'undefined'
+    ) {
+      return
+    }
+
+    const previewRequested =
+      window.sessionStorage.getItem(
+        START_PREVIEW_REQUEST_KEY,
+      ) === 'true'
+
+    if (!previewRequested) {
+      return
+    }
+
+    window.sessionStorage.removeItem(
+      START_PREVIEW_REQUEST_KEY,
+    )
+    setPreviewing(true)
+    setCurrentStep(STEP.TIPS)
+    setReviewing(false)
+    setCompletionType(null)
+  }, [])
+
+  const isViewOnly =
+    isReadOnly && !previewing
 
   const currentIndex =
     steps.indexOf(currentStep)
@@ -218,8 +252,10 @@ export function StartCheckInPage({
   const startedProgress =
     hasStartedProgress(form, photos)
 
-  const pageTitle = isCompleted
-    ? isReadOnly
+  const pageTitle = previewing
+    ? 'Preview Start Check-In'
+    : isCompleted
+    ? isViewOnly
       ? 'View Start Check-In'
       : 'Update Start Check-In'
     : startedProgress
@@ -287,10 +323,31 @@ export function StartCheckInPage({
 
   function stepCanContinue(step) {
     if (
-      isReadOnly ||
+      isViewOnly ||
       step === STEP.TIPS
     ) {
       return true
+    }
+
+    if (step === STEP.WEIGHT) {
+      if (!form.starting_weight_status) {
+        return false
+      }
+
+      if (
+        form.starting_weight_status !==
+        'recorded'
+      ) {
+        return true
+      }
+
+      return ![
+        'unanswered',
+        'invalid',
+      ].includes(
+        validationByField.starting_weight_lbs
+          ?.status,
+      )
     }
 
     if (step === STEP.BODY_FAT) {
@@ -362,6 +419,10 @@ export function StartCheckInPage({
     }
 
     setCurrentStep(nextStep)
+  }
+
+  function skipBodyFatAndAdvance() {
+    advanceFromCurrentStep()
   }
 
   function goNext() {
@@ -619,14 +680,14 @@ export function StartCheckInPage({
           </button>
 
           <h1>
-            {isReadOnly
+            {isViewOnly
               ? 'Starting Baseline'
               : isCompleted
                 ? 'Review Your Changes'
                 : 'Review Your Starting Baseline'}
           </h1>
 
-          {isReadOnly && (
+          {isViewOnly && (
             <p className="start-lock-notice">
               This baseline is locked because the plan
               start date has passed.
@@ -655,12 +716,12 @@ export function StartCheckInPage({
               disabled={saving}
               onClick={goBack}
             >
-              {isReadOnly
+              {isViewOnly
                 ? 'View Answers'
                 : 'Edit Answers'}
             </button>
 
-            {!isReadOnly && (
+            {!isViewOnly && (
               <button
                 type="button"
                 disabled={
@@ -706,7 +767,7 @@ export function StartCheckInPage({
         <h1>{pageTitle}</h1>
         <p>{formatDate(plan.start_date)}</p>
 
-        {isReadOnly && (
+        {isViewOnly && (
           <p className="start-lock-notice">
             This baseline is locked and view-only.
           </p>
@@ -750,8 +811,11 @@ export function StartCheckInPage({
           uploadPhoto={uploadPhoto}
           uploadingPose={uploadingPose}
           previewing={previewing}
-          readOnly={isReadOnly}
+          readOnly={isViewOnly}
             sideLocked={isCompleted}
+            onSkipBodyFat={
+              skipBodyFatAndAdvance
+            }
           />
         </div>
 
@@ -770,7 +834,7 @@ export function StartCheckInPage({
             onClick={goNext}
           >
             {safeIndex === steps.length - 1
-              ? isReadOnly
+              ? isViewOnly
                 ? 'Review Baseline'
                 : isCompleted
                   ? 'Review Changes'

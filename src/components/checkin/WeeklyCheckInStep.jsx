@@ -1,5 +1,8 @@
 import { DailyCheckInStep } from './DailyCheckInStep'
 import {
+  BodyFatQuestion,
+} from './questions/BodyFatQuestion'
+import {
   WizardNumberField,
   WizardQuestion,
   WizardTextarea,
@@ -44,6 +47,7 @@ function MeasurementField({
   id,
   label,
   value,
+  validation,
   onChange,
 }) {
   return (
@@ -54,6 +58,8 @@ function MeasurementField({
       suffix="in"
       min="0.1"
       step="0.1"
+      feedback={validation?.message}
+      state={validation?.displayState}
       onChange={onChange}
     />
   )
@@ -131,6 +137,7 @@ function MeasurementsStep({
   form,
   setField,
   measurementSide,
+  validationByField,
 }) {
   const sideLabel =
     measurementSide === 'left'
@@ -168,6 +175,9 @@ function MeasurementsStep({
       <div className="weekly-measurement-grid">
         <MeasurementField
           id="weekly-neck"
+          validation={
+            validationByField.neck_inches
+          }
           label="Neck"
           value={form.neck_inches}
           onChange={(value) =>
@@ -177,6 +187,9 @@ function MeasurementsStep({
 
         <MeasurementField
           id="weekly-waist"
+          validation={
+            validationByField.waist_inches
+          }
           label="Waist"
           value={form.waist_inches}
           onChange={(value) =>
@@ -186,6 +199,9 @@ function MeasurementsStep({
 
         <MeasurementField
           id="weekly-hips"
+          validation={
+            validationByField.hips_inches
+          }
           label="Hips"
           value={form.hips_inches}
           onChange={(value) =>
@@ -195,6 +211,9 @@ function MeasurementsStep({
 
         <MeasurementField
           id="weekly-bicep"
+          validation={
+            validationByField.bicep_inches
+          }
           label={`${sideLabel} Bicep`}
           value={form.bicep_inches}
           onChange={(value) =>
@@ -204,6 +223,9 @@ function MeasurementsStep({
 
         <MeasurementField
           id="weekly-thigh"
+          validation={
+            validationByField.thigh_inches
+          }
           label={`${sideLabel} Thigh`}
           value={form.thigh_inches}
           onChange={(value) =>
@@ -213,6 +235,9 @@ function MeasurementsStep({
 
         <MeasurementField
           id="weekly-calf"
+          validation={
+            validationByField.calf_inches
+          }
           label={`${sideLabel} Calf`}
           value={form.calf_inches}
           onChange={(value) =>
@@ -229,6 +254,8 @@ function BodyFatStep({
   form,
   setField,
   bodyFatSource,
+  validationByField,
+  onSkipBodyFat,
 }) {
   if (
     bodyFatSource === 'juntos_estimate'
@@ -246,84 +273,49 @@ function BodyFatStep({
     )
   }
 
-  function changeBodyFat(value) {
-    setField(
-      'scale_body_fat_percent',
-      value,
-    )
-
-    setField(
-      'body_fat_status',
-      value === '' ? '' : 'recorded',
-    )
-  }
-
-  function skipBodyFat() {
-    setField(
-      'scale_body_fat_percent',
-      '',
-    )
-    setField(
-      'body_fat_status',
-      'no_reading',
-    )
-  }
-
-  function enterBodyFatInstead() {
-    setField(
-      'body_fat_status',
-      '',
-    )
-    setField(
-      'scale_body_fat_percent',
-      '',
-    )
-  }
-
-  if (
-    form.body_fat_status ===
-    'no_reading'
-  ) {
-    return (
-      <WizardQuestion
-        title="Body Fat"
-        helper="No body-fat reading today."
-      >
-        <button
-          type="button"
-          className="text-button"
-          onClick={enterBodyFatInstead}
-        >
-          Enter a body-fat reading instead
-        </button>
-      </WizardQuestion>
-    )
-  }
-
   return (
-    <WizardQuestion title="What was your body fat this morning?">
-      <WizardNumberField
-        id="weekly-scale-body-fat"
-        label="Body fat"
-        value={
-          form.scale_body_fat_percent
+    <BodyFatQuestion
+      id="weekly-scale-body-fat"
+      value={
+        form.scale_body_fat_percent
+      }
+      unavailable={
+        form.body_fat_status ===
+        'no_reading'
+      }
+      feedback={
+        validationByField
+          .scale_body_fat_percent?.message
+      }
+      state={
+        validationByField
+          .scale_body_fat_percent?.displayState
+      }
+      onValueChange={(value) => {
+        setField(
+          'scale_body_fat_percent',
+          value,
+        )
+        setField(
+          'body_fat_status',
+          value === '' ? '' : 'recorded',
+        )
+      }}
+      onUnavailableChange={(unavailable) => {
+        setField(
+          'body_fat_status',
+          unavailable ? 'no_reading' : '',
+        )
+
+        if (unavailable) {
+          setField(
+            'scale_body_fat_percent',
+            '',
+          )
         }
-        suffix="%"
-        min="0.1"
-        max="100"
-        step="0.1"
-        onChange={changeBodyFat}
-      />
-
-      <p className="answer-divider">or</p>
-
-      <button
-        type="button"
-        onClick={skipBodyFat}
-      >
-        I don’t have a body-fat reading today
-      </button>
-    </WizardQuestion>
+      }}
+      onSkip={onSkipBodyFat}
+    />
   )
 }
 
@@ -458,6 +450,8 @@ export function WeeklyCheckInStep({
   plan,
   photos,
   addPreviewPhoto,
+  onSkipBodyFat,
+  validationByField = {},
 }) {
   const dailyStep =
     fromWeeklyDailyStep(step)
@@ -470,6 +464,9 @@ export function WeeklyCheckInStep({
         setField={setField}
         target={target}
         cardioCompleted={cardioCompleted}
+        validationByField={
+          validationByField
+        }
       />
     )
   }
@@ -491,6 +488,9 @@ export function WeeklyCheckInStep({
         measurementSide={
           plan?.measurement_side
         }
+        validationByField={
+          validationByField
+        }
       />
     )
   }
@@ -502,6 +502,10 @@ export function WeeklyCheckInStep({
         setField={setField}
         bodyFatSource={
           plan?.body_fat_source
+        }
+        onSkipBodyFat={onSkipBodyFat}
+        validationByField={
+          validationByField
         }
       />
     )

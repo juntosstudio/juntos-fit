@@ -1,15 +1,13 @@
 import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
-import {
   WizardChoiceGroup,
   WizardNumberField,
   WizardQuestion,
   WizardSlider,
   WizardTextarea,
 } from '../wizard'
+import {
+  WeightQuestion,
+} from './questions/WeightQuestion'
 import {
   DAILY_CHECKIN_STEP_IDS as STEP,
 } from '../../utils/dailyCheckInFlow'
@@ -33,25 +31,6 @@ const HUNGER_LABELS = {
 const YES_NO_OPTIONS = [
   { value: true, label: 'Yes' },
   { value: false, label: 'No' },
-]
-
-const NO_WEIGHT_OPTIONS = [
-  {
-    value: 'traveling',
-    label: 'Traveling',
-  },
-  {
-    value: 'no_scale',
-    label: 'No scale available',
-  },
-  {
-    value: 'scale_issue',
-    label: 'Scale problem / broken scale',
-  },
-  {
-    value: 'skipped',
-    label: 'Skipped weighing this morning',
-  },
 ]
 
 const CHEAT_MEAL_OPTIONS = [
@@ -96,101 +75,31 @@ export function DailyCheckInStep({
   setField,
   target,
   cardioCompleted,
+  validationByField = {},
 }) {
-  const hasNoWeight =
-    form.weight_status &&
-    form.weight_status !== 'recorded'
-
-  const [
-    showNoWeightReasons,
-    setShowNoWeightReasons,
-  ] = useState(Boolean(hasNoWeight))
-
-  const weightInputRef = useRef(null)
-
-  useEffect(() => {
-    if (step !== STEP.WEIGHT) return
-
-    setShowNoWeightReasons(
-      Boolean(hasNoWeight),
-    )
-  }, [step, hasNoWeight])
-
-  useEffect(() => {
-    if (
-      step === STEP.WEIGHT &&
-      !showNoWeightReasons
-    ) {
-      weightInputRef.current?.focus()
-    }
-  }, [step, showNoWeightReasons])
-
-  function changeWeight(value) {
-    setField('morning_weight', value)
-
-    setField(
-      'weight_status',
-      value === '' ? '' : 'recorded',
-    )
-  }
-
-  function chooseNoWeightReason(value) {
-    setField('morning_weight', '')
-    setField('weight_status', value)
-  }
-
-  function enterWeightInstead() {
-    setField('weight_status', '')
-    setField('morning_weight', '')
-    setShowNoWeightReasons(false)
-  }
-
   if (step === STEP.WEIGHT) {
-    if (showNoWeightReasons) {
-      return (
-        <WizardQuestion title="Why don’t you have a weight today?">
-          <WizardChoiceGroup
-            name="weight-status"
-            value={form.weight_status}
-            options={NO_WEIGHT_OPTIONS}
-            onChange={chooseNoWeightReason}
-          />
-
-          <button
-            type="button"
-            className="text-button"
-            onClick={enterWeightInstead}
-          >
-            Enter a weight instead
-          </button>
-        </WizardQuestion>
-      )
-    }
-
     return (
-      <WizardQuestion title="What was your weight this morning?">
-        <WizardNumberField
-          id="daily-morning-weight"
-          inputRef={weightInputRef}
-          label="Morning weight"
-          value={form.morning_weight}
-          suffix="lbs"
-          min="1"
-          step="0.1"
-          onChange={changeWeight}
-        />
-
-        <p className="answer-divider">or</p>
-
-        <button
-          type="button"
-          onClick={() =>
-            setShowNoWeightReasons(true)
-          }
-        >
-          I don’t have a weight today
-        </button>
-      </WizardQuestion>
+      <WeightQuestion
+        id="daily-morning-weight"
+        title="What was your weight this morning?"
+        label="Morning weight"
+        value={form.morning_weight}
+        status={form.weight_status}
+        feedback={
+          validationByField
+            .morning_weight?.message
+        }
+        state={
+          validationByField
+            .morning_weight?.displayState
+        }
+        onValueChange={(value) =>
+          setField('morning_weight', value)
+        }
+        onStatusChange={(value) =>
+          setField('weight_status', value)
+        }
+      />
     )
   }
 
