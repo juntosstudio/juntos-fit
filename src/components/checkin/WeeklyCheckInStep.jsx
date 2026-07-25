@@ -1,8 +1,5 @@
 import { DailyCheckInStep } from './DailyCheckInStep'
 import {
-  ChoiceButtons,
-} from './QuestionControls'
-import {
   WizardNumberField,
   WizardQuestion,
   WizardTextarea,
@@ -11,17 +8,6 @@ import {
   WEEKLY_CHECKIN_STEP_IDS as STEP,
   fromWeeklyDailyStep,
 } from '../../utils/weeklyCheckInFlow'
-
-const BODY_FAT_OPTIONS = [
-  {
-    value: 'recorded',
-    label: 'I have a reading today',
-  },
-  {
-    value: 'no_reading',
-    label: 'No reading today',
-  },
-]
 
 function ScoreButtons({
   name,
@@ -260,47 +246,83 @@ function BodyFatStep({
     )
   }
 
-  return (
-    <WizardQuestion
-      title="Body Fat"
-      helper="Enter the reading from the same scale used for this plan. A missing reading will not be replaced with an estimate."
-    >
-      <ChoiceButtons
-        name="body-fat-status"
-        value={form.body_fat_status}
-        options={BODY_FAT_OPTIONS}
-        onChange={(value) => {
-          setField('body_fat_status', value)
+  function changeBodyFat(value) {
+    setField(
+      'scale_body_fat_percent',
+      value,
+    )
 
-          if (value === 'no_reading') {
-            setField(
-              'scale_body_fat_percent',
-              '',
-            )
-          }
-        }}
+    setField(
+      'body_fat_status',
+      value === '' ? '' : 'recorded',
+    )
+  }
+
+  function skipBodyFat() {
+    setField(
+      'scale_body_fat_percent',
+      '',
+    )
+    setField(
+      'body_fat_status',
+      'no_reading',
+    )
+  }
+
+  function enterBodyFatInstead() {
+    setField(
+      'body_fat_status',
+      '',
+    )
+    setField(
+      'scale_body_fat_percent',
+      '',
+    )
+  }
+
+  if (
+    form.body_fat_status ===
+    'no_reading'
+  ) {
+    return (
+      <WizardQuestion
+        title="Body Fat"
+        helper="No body-fat reading today."
+      >
+        <button
+          type="button"
+          className="text-button"
+          onClick={enterBodyFatInstead}
+        >
+          Enter a body-fat reading instead
+        </button>
+      </WizardQuestion>
+    )
+  }
+
+  return (
+    <WizardQuestion title="What was your body fat this morning?">
+      <WizardNumberField
+        id="weekly-scale-body-fat"
+        label="Body fat"
+        value={
+          form.scale_body_fat_percent
+        }
+        suffix="%"
+        min="0.1"
+        max="100"
+        step="0.1"
+        onChange={changeBodyFat}
       />
 
-      {form.body_fat_status ===
-        'recorded' && (
-        <WizardNumberField
-          id="weekly-scale-body-fat"
-          label="Scale body fat"
-          value={
-            form.scale_body_fat_percent
-          }
-          suffix="%"
-          min="0.1"
-          max="100"
-          step="0.1"
-          onChange={(value) =>
-            setField(
-              'scale_body_fat_percent',
-              value,
-            )
-          }
-        />
-      )}
+      <p className="answer-divider">or</p>
+
+      <button
+        type="button"
+        onClick={skipBodyFat}
+      >
+        I don’t have a body-fat reading today
+      </button>
     </WizardQuestion>
   )
 }

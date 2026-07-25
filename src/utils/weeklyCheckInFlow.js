@@ -76,12 +76,30 @@ export function getWeeklyCheckInSteps(
       toWeeklyDailyStep,
     )
 
+  if (bodyFatSource === 'scale') {
+    const weightStep =
+      toWeeklyDailyStep(
+        DAILY_CHECKIN_STEP_IDS.WEIGHT,
+      )
+
+    const weightStepIndex =
+      dailySteps.indexOf(weightStep)
+
+    dailySteps.splice(
+      weightStepIndex + 1,
+      0,
+      WEEKLY_CHECKIN_STEP_IDS.BODY_FAT,
+    )
+  }
+
   const weeklySteps = [
     WEEKLY_CHECKIN_STEP_IDS.RECOVERY,
     WEEKLY_CHECKIN_STEP_IDS.MEASUREMENTS,
   ]
 
-  if (bodyFatSource !== 'none') {
+  if (
+    bodyFatSource === 'juntos_estimate'
+  ) {
     weeklySteps.push(
       WEEKLY_CHECKIN_STEP_IDS.BODY_FAT,
     )

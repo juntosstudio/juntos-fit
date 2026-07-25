@@ -21,7 +21,7 @@ const EMPTY_FORM = {
   workout_incomplete_reason: '',
   training_problem: null,
   training_problem_details: '',
-  cardio_minutes: '0',
+  cardio_minutes: '',
   alcohol_consumed: null,
   alcohol_details: '',
   additional_notes: '',

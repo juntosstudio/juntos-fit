@@ -1,24 +1,28 @@
-# Remove “Your Week at a Glance”
+# Weekly Body Fat After Weight
 
 Replaces:
 
 - src/utils/weeklyCheckInFlow.js
 - src/components/checkin/WeeklyCheckInStep.jsx
-- src/pages/WeeklyCheckInPage.jsx
-- src/styles/weeklyCheckIn.css
 
-Changes:
+Scale body-fat plans:
 
-- Removes the standalone “Your Week at a Glance”
-  screen from the Weekly Check-In step list.
-- The question count and progress bar update
-  automatically.
-- After the Daily questions, the wizard proceeds
-  directly to Recovery & Context.
-- Removes the unused screen component, helper
-  functions, prop plumbing, and screen-specific CSS.
-- The final Review Weekly Check-In screen is unchanged.
+- Body Fat now appears immediately after Morning Weight.
+- The screen matches the Weight interaction:
+  - blank numeric field
+  - percent suffix
+  - `or`
+  - “I don’t have a body-fat reading today”
+- Selecting no reading enables Next.
+- Users can switch back to entering a reading.
+- Entering a value automatically marks the reading as
+  recorded.
 
-No form answers, validation, saving, hooks, services,
-database behavior, measurements, photos, or final-review
-content changed.
+Other plan methods:
+
+- Juntos estimate remains after Weekly Measurements
+  because it depends on those measurements.
+- “Do not track body fat” shows no Body Fat step.
+
+No review, saving, services, database behavior, or
+body-fat calculation was changed.
