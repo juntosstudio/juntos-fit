@@ -80,6 +80,7 @@ export function DashboardPage({
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
   onOpenHistory,
+  onOpenSettings,
   onSignOut,
 }) {
   if (loading) {
@@ -99,6 +100,11 @@ export function DashboardPage({
   const target = dashboard?.target ?? null
   const weekly =
     dashboard?.weekAtAGlance ?? null
+  const settings =
+    dashboard?.settings ?? {
+      track_water: true,
+      track_alcohol: true,
+    }
 
   const startCheckIn =
     dashboard?.startCheckIn ?? null
@@ -171,17 +177,6 @@ export function DashboardPage({
   const streakDays = Number(
     dashboard?.streakDays ?? 0,
   )
-
-  function openStartCheckInPreview() {
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(
-        'juntos:start-checkin-preview',
-        'true',
-      )
-    }
-
-    onOpenStartCheckIn()
-  }
 
   return (
     <main className="container dashboard-page">
@@ -312,9 +307,7 @@ export function DashboardPage({
                 <button
                   type="button"
                   className="text-button"
-                  onClick={
-                    openStartCheckInPreview
-                  }
+                  onClick={onOpenStartCheckIn}
                 >
                   Preview Start Check-In Wizard
                 </button>
@@ -380,16 +373,18 @@ export function DashboardPage({
                   </dd>
                 </div>
 
-                <div>
-                  <dt>Daily Water Goal Hit</dt>
-                  <dd>
-                    {formatCount(
-                      weekly?.waterGoalDays,
-                      weekly?.daysTracked,
-                      ' days',
-                    )}
-                  </dd>
-                </div>
+                {settings.track_water && (
+                  <div>
+                    <dt>Daily Water Goal Hit</dt>
+                    <dd>
+                      {formatCount(
+                        weekly?.waterGoalDays,
+                        weekly?.daysTracked,
+                        ' days',
+                      )}
+                    </dd>
+                  </div>
+                )}
 
                 <div>
                   <dt>Weight Weekly Average</dt>
@@ -400,16 +395,18 @@ export function DashboardPage({
                   </dd>
                 </div>
 
-                <div>
-                  <dt>Alcohol</dt>
-                  <dd>
-                    {formatCount(
-                      weekly?.alcoholDays,
-                      weekly?.daysTracked,
-                      ' days',
-                    )}
-                  </dd>
-                </div>
+                {settings.track_alcohol && (
+                  <div>
+                    <dt>Alcohol</dt>
+                    <dd>
+                      {formatCount(
+                        weekly?.alcoholDays,
+                        weekly?.daysTracked,
+                        ' days',
+                      )}
+                    </dd>
+                  </div>
+                )}
               </dl>
 
               <button
@@ -469,8 +466,11 @@ export function DashboardPage({
           Coach
         </button>
 
-        <button type="button" disabled>
-          More
+        <button
+          type="button"
+          onClick={onOpenSettings}
+        >
+          Settings
         </button>
       </nav>
     </main>

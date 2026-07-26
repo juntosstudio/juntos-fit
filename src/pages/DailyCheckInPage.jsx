@@ -37,7 +37,6 @@ import '../styles/wizard.css'
 
 const DAILY_MEASUREMENT_INPUT_IDS = {
   morning_weight: 'daily-morning-weight',
-  cardio_minutes: 'daily-cardio-minutes',
 }
 
 // Displays the guided, one-question-at-a-time check-in.
@@ -45,6 +44,7 @@ export function DailyCheckInPage({
   plan,
   target,
   cardioCompleted,
+  settings,
   onSaved,
   onBack,
 }) {
@@ -62,7 +62,11 @@ export function DailyCheckInPage({
     planHasStarted,
     setField,
     saveCheckIn,
-  } = useDailyCheckIn(plan, onSaved)
+  } = useDailyCheckIn(
+    plan,
+    onSaved,
+    settings,
+  )
 
   const [
     currentStep,
@@ -96,8 +100,16 @@ export function DailyCheckInPage({
   })
 
   const steps = useMemo(
-    () => getDailyCheckInSteps(form),
-    [form],
+    () =>
+      getDailyCheckInSteps(
+        form,
+        settings,
+      ),
+    [
+      form,
+      settings?.track_water,
+      settings?.track_alcohol,
+    ],
   )
 
   const currentStepIndex =
@@ -166,33 +178,21 @@ export function DailyCheckInPage({
       !canContinueDailyStep(
         activeStep,
         form,
-        { validationByField },
+        {
+          validationByField,
+          trackingSettings: settings,
+        },
       )
     ) {
       return
     }
 
-    const warningFields = []
-
     if (
       activeStep === STEP.WEIGHT &&
-      form.weight_status === 'recorded'
-    ) {
-      warningFields.push(
+      form.weight_status === 'recorded' &&
+      requestWarningConfirmation([
         'morning_weight',
-      )
-    }
-
-    if (activeStep === STEP.CARDIO) {
-      warningFields.push(
-        'cardio_minutes',
-      )
-    }
-
-    if (
-      requestWarningConfirmation(
-        warningFields,
-      )
+      ])
     ) {
       return
     }
@@ -250,7 +250,10 @@ export function DailyCheckInPage({
     const firstInvalidStep =
       getFirstInvalidDailyStep(
         form,
-        { validationByField },
+        {
+          validationByField,
+          trackingSettings: settings,
+        },
       )
 
     if (firstInvalidStep) {
@@ -478,6 +481,7 @@ export function DailyCheckInPage({
             form={form}
             target={target}
             today={today}
+            settings={settings}
           />
         </WizardPage>
 
@@ -542,7 +546,10 @@ export function DailyCheckInPage({
               !canContinueDailyStep(
                 activeStep,
                 form,
-                { validationByField },
+                {
+                  validationByField,
+                  trackingSettings: settings,
+                },
               )
             }
             backLabel="Back"

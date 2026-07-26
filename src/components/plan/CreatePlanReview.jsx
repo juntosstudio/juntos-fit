@@ -87,6 +87,30 @@ export function CreatePlanReview({ form }) {
       </section>
 
       <section>
+        <h2>Check-In Tracking</h2>
+
+        <dl>
+          <ReviewItem
+            label="Water"
+            value={
+              form.track_water
+                ? 'Included'
+                : 'Not included'
+            }
+          />
+
+          <ReviewItem
+            label="Alcohol"
+            value={
+              form.track_alcohol
+                ? 'Included'
+                : 'Not included'
+            }
+          />
+        </dl>
+      </section>
+
+      <section>
         <h2>Nutrition Targets</h2>
 
         <dl>

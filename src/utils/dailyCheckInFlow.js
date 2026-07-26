@@ -1,4 +1,7 @@
 import {
+  normalizeCheckInSettings,
+} from './checkInTracking'
+import {
   canContinueMeasurementFields,
   getCheckInMeasurementValidation,
 } from './measurementValidation'
@@ -32,7 +35,16 @@ export const MEAL_PLAN_DEVIATION_TYPES = {
   NO_CHEAT: 'no_cheat',
 }
 
-export function getDailyCheckInSteps(form) {
+export function getDailyCheckInSteps(
+  form,
+  trackingSettings,
+) {
+  const {
+    track_water: trackWater,
+    track_alcohol: trackAlcohol,
+  } = normalizeCheckInSettings(
+    trackingSettings,
+  )
   const steps = [
     DAILY_CHECKIN_STEP_IDS.WEIGHT,
     DAILY_CHECKIN_STEP_IDS.MEAL_PLAN_SCORE,
@@ -105,11 +117,22 @@ export function getDailyCheckInSteps(form) {
 
   steps.push(
     DAILY_CHECKIN_STEP_IDS.CARDIO,
-    DAILY_CHECKIN_STEP_IDS.WATER,
-    DAILY_CHECKIN_STEP_IDS.ALCOHOL,
   )
 
+  if (trackWater) {
+    steps.push(
+      DAILY_CHECKIN_STEP_IDS.WATER,
+    )
+  }
+
+  if (trackAlcohol) {
+    steps.push(
+      DAILY_CHECKIN_STEP_IDS.ALCOHOL,
+    )
+  }
+
   if (
+    trackAlcohol &&
     form.alcohol_consumed === true
   ) {
     steps.push(
@@ -317,7 +340,10 @@ export function getFirstInvalidDailyStep(
   form,
   options = {},
 ) {
-  return getDailyCheckInSteps(form).find(
+  return getDailyCheckInSteps(
+    form,
+    options.trackingSettings,
+  ).find(
     (step) =>
       !canContinueDailyStep(
         step,
@@ -331,6 +357,7 @@ export function getDailyCheckInValidationError(
   form,
   {
     unitSystem = 'imperial',
+    trackingSettings,
   } = {},
 ) {
   const weightValidation =
@@ -357,7 +384,10 @@ export function getDailyCheckInValidationError(
   const invalidStep =
     getFirstInvalidDailyStep(
       form,
-      { validationByField },
+      {
+        validationByField,
+        trackingSettings,
+      },
     )
 
   if (!invalidStep) {

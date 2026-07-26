@@ -1,131 +1,192 @@
-import { DailyCheckInStep } from './DailyCheckInStep'
+import {
+  DailyCheckInStep,
+} from './DailyCheckInStep'
 import {
   BodyFatQuestion,
 } from './questions/BodyFatQuestion'
 import {
   WizardNumberField,
   WizardQuestion,
+  WizardSlider,
   WizardTextarea,
 } from '../wizard'
 import {
   WEEKLY_CHECKIN_STEP_IDS as STEP,
   fromWeeklyDailyStep,
 } from '../../utils/weeklyCheckInFlow'
+import {
+  getMeasurementUnit,
+} from '../../utils/measurementUnits'
 
-function ScoreButtons({
-  name,
-  value,
-  onChange,
-}) {
-  return (
-    <div
-      className="weekly-score-buttons"
-      role="radiogroup"
-      aria-label={name}
-    >
-      {[1, 2, 3, 4, 5].map((score) => (
-        <label key={score}>
-          <input
-            type="radio"
-            name={name}
-            value={score}
-            checked={
-              Number(value) === score
-            }
-            onChange={() =>
-              onChange(String(score))
-            }
-          />
-          <span>{score}</span>
-        </label>
-      ))}
-    </div>
-  )
+const RECOVERY_QUESTIONS = [
+  {
+    field: 'sleep_quality',
+    prompt:
+      'How was your sleep overall this week?',
+    labels: {
+      1: 'Poor',
+      2: 'Below average',
+      3: 'Okay',
+      4: 'Good',
+      5: 'Excellent',
+    },
+  },
+  {
+    field: 'energy_level',
+    prompt:
+      'How was your energy overall this week?',
+    labels: {
+      1: 'Very low',
+      2: 'Low',
+      3: 'Moderate',
+      4: 'Good',
+      5: 'Excellent',
+    },
+  },
+  {
+    field: 'recovery_score',
+    prompt:
+      'How well did your body recover from training?',
+    labels: {
+      1: 'Poorly recovered',
+      2: 'Still very sore',
+      3: 'Managing',
+      4: 'Well recovered',
+      5: 'Fully recovered',
+    },
+  },
+  {
+    field: 'stress_level',
+    prompt:
+      'How manageable was your stress this week?',
+    labels: {
+      1: 'Overwhelming',
+      2: 'Difficult',
+      3: 'Manageable',
+      4: 'Mostly manageable',
+      5: 'Very manageable',
+    },
+  },
+]
+
+const MEASUREMENT_CONFIG = {
+  [STEP.NECK]: {
+    title: 'Measure your neck.',
+    label: 'Neck',
+    formField: 'neck_inches',
+    validationField: 'neck_inches',
+    inputId: 'weekly-neck',
+    tip:
+      'Look straight ahead and relax your shoulders. ' +
+      'Measure around the middle of your neck, just ' +
+      'below the larynx. Keep the tape level.',
+  },
+  [STEP.CHEST]: {
+    title: 'Measure your chest.',
+    label: 'Chest',
+    formField: 'chest_inches',
+    validationField: 'chest_inches',
+    inputId: 'weekly-chest',
+    tip:
+      'Stand tall and relaxed with your feet together. ' +
+      'Measure around the fullest part of your chest ' +
+      'or bust. Keep the tape level and breathe normally.',
+  },
+  [STEP.WAIST]: {
+    title: 'Measure your waist.',
+    label: 'Waist',
+    formField: 'waist_inches',
+    validationField: 'waist_inches',
+    inputId: 'weekly-waist',
+    tip:
+      'Measure horizontally around your waist at the ' +
+      'level of your belly button. Stand naturally and ' +
+      'breathe normally. Keep the tape flat and snug ' +
+      'without pinching or indenting your skin.',
+  },
+  [STEP.HIPS]: {
+    title: 'Measure your hips.',
+    label: 'Hips',
+    formField: 'hips_inches',
+    validationField: 'hips_inches',
+    inputId: 'weekly-hips',
+    tip:
+      'Stand with your feet together. Measure around ' +
+      'the widest part of your hips and glutes, keeping ' +
+      'the tape flat and level.',
+  },
 }
 
 function MeasurementField({
   id,
   label,
+  formField,
+  validationField,
   value,
+  unitSystem,
   validation,
+  helper,
   onChange,
 }) {
   return (
     <WizardNumberField
       id={id}
+      className="weekly-measurement-field"
       label={label}
       value={value}
-      suffix="in"
+      suffix={getMeasurementUnit(
+        validationField,
+        unitSystem,
+      )}
       min="0.1"
       step="0.1"
       maxDecimalPlaces={1}
+      helper={helper}
       feedback={validation?.message}
       state={validation?.displayState}
+      onBlur={() => {
+        if (
+          value !== '' &&
+          Number.isFinite(Number(value))
+        ) {
+          onChange(
+            Number(value).toString(),
+          )
+        }
+      }}
       onChange={onChange}
+      name={formField}
     />
   )
 }
 
-function RecoveryStep({ form, setField }) {
-  const questions = [
-    {
-      field: 'sleep_quality',
-      prompt:
-        'How was your sleep overall this week?',
-      low: 'Poor',
-      high: 'Excellent',
-    },
-    {
-      field: 'energy_level',
-      prompt:
-        'How was your energy overall this week?',
-      low: 'Very low',
-      high: 'Excellent',
-    },
-    {
-      field: 'recovery_score',
-      prompt:
-        'How well did your body recover from training?',
-      low: 'Poorly',
-      high: 'Very well',
-    },
-    {
-      field: 'stress_level',
-      prompt:
-        'How high was your stress this week?',
-      low: 'Very low',
-      high: 'Very high',
-    },
-  ]
-
+function RecoveryStep({
+  form,
+  setField,
+}) {
   return (
     <WizardQuestion
       title="Recovery & Context"
-      helper="This helps Juntos Fit understand whether changes may be related to nutrition, sleep, stress, or training recovery."
+      helper="Slide right when things were going well. Complete all four so your coach can interpret this week in context."
     >
       <div className="weekly-recovery-list">
-        {questions.map(
+        {RECOVERY_QUESTIONS.map(
           ({
             field,
             prompt,
-            low,
-            high,
+            labels,
           }) => (
             <section key={field}>
               <h2>{prompt}</h2>
 
-              <ScoreButtons
+              <WizardSlider
                 name={field}
                 value={form[field]}
+                labels={labels}
                 onChange={(value) =>
                   setField(field, value)
                 }
               />
-
-              <div className="weekly-score-labels">
-                <span>{low}</span>
-                <span>{high}</span>
-              </div>
             </section>
           ),
         )}
@@ -134,10 +195,51 @@ function RecoveryStep({ form, setField }) {
   )
 }
 
-function MeasurementsStep({
+function SingleMeasurementStep({
+  step,
+  form,
+  setField,
+  unitSystem,
+  validationByField,
+}) {
+  const config =
+    MEASUREMENT_CONFIG[step]
+
+  return (
+    <WizardQuestion
+      title={config.title}
+      helper={config.tip}
+    >
+      <MeasurementField
+        id={config.inputId}
+        label={config.label}
+        formField={config.formField}
+        validationField={
+          config.validationField
+        }
+        value={form[config.formField]}
+        unitSystem={unitSystem}
+        validation={
+          validationByField[
+            config.formField
+          ]
+        }
+        onChange={(value) =>
+          setField(
+            config.formField,
+            value,
+          )
+        }
+      />
+    </WizardQuestion>
+  )
+}
+
+function SideMeasurementsStep({
   form,
   setField,
   measurementSide,
+  unitSystem,
   validationByField,
 }) {
   const sideLabel =
@@ -147,106 +249,73 @@ function MeasurementsStep({
 
   return (
     <WizardQuestion
-      title="Weekly Measurements"
+      title={`Measure your ${sideLabel.toUpperCase()} side.`}
       helper={
         <>
-          Repeat the same measurements and
-          landmarks used for your Start Day
-          Check-In. Your saved side is{' '}
-          <strong>{sideLabel}</strong>.
+          Use the same saved side and landmarks from
+          Start Day. Keep each muscle relaxed and the
+          tape flat and snug.
         </>
       }
     >
-      <details className="weekly-measurement-tips">
-        <summary>
-          Pro-Tips for Accuracy
-        </summary>
-
-        <p>
-          Take measurements first thing in the
-          morning, after using the restroom, and
-          before eating or drinking. Use the same
-          landmarks and saved side. Stand
-          naturally, and keep the tape flat,
-          level, and snug without flexing or
-          sucking in.
-        </p>
-      </details>
-
-      <div className="weekly-measurement-grid">
-        <MeasurementField
-          id="weekly-neck"
-          validation={
-            validationByField.neck_inches
-          }
-          label="Neck"
-          value={form.neck_inches}
-          onChange={(value) =>
-            setField('neck_inches', value)
-          }
-        />
-
-        <MeasurementField
-          id="weekly-waist"
-          validation={
-            validationByField.waist_inches
-          }
-          label="Waist"
-          value={form.waist_inches}
-          onChange={(value) =>
-            setField('waist_inches', value)
-          }
-        />
-
-        <MeasurementField
-          id="weekly-hips"
-          validation={
-            validationByField.hips_inches
-          }
-          label="Hips"
-          value={form.hips_inches}
-          onChange={(value) =>
-            setField('hips_inches', value)
-          }
-        />
-
+      <div className="weekly-side-measurements">
         <MeasurementField
           id="weekly-bicep"
+          label={`${sideLabel} Bicep`}
+          formField="bicep_inches"
+          validationField="upper_arm_inches"
+          value={form.bicep_inches}
+          unitSystem={unitSystem}
           validation={
             validationByField.bicep_inches
           }
-          label={`${sideLabel} Bicep`}
-          value={form.bicep_inches}
+          helper="Let your arm hang relaxed. Measure halfway between your shoulder and elbow. Do not flex."
           onChange={(value) =>
-            setField('bicep_inches', value)
+            setField(
+              'bicep_inches',
+              value,
+            )
           }
         />
 
         <MeasurementField
           id="weekly-thigh"
+          label={`${sideLabel} Thigh`}
+          formField="thigh_inches"
+          validationField="thigh_inches"
+          value={form.thigh_inches}
+          unitSystem={unitSystem}
           validation={
             validationByField.thigh_inches
           }
-          label={`${sideLabel} Thigh`}
-          value={form.thigh_inches}
+          helper="Stand with your leg relaxed. Measure around the widest part of your upper leg, usually just below the glutes."
           onChange={(value) =>
-            setField('thigh_inches', value)
+            setField(
+              'thigh_inches',
+              value,
+            )
           }
         />
 
         <MeasurementField
           id="weekly-calf"
+          label={`${sideLabel} Calf`}
+          formField="calf_inches"
+          validationField="calf_inches"
+          value={form.calf_inches}
+          unitSystem={unitSystem}
           validation={
             validationByField.calf_inches
           }
-          label={`${sideLabel} Calf`}
-          value={form.calf_inches}
+          helper="Stand with your leg relaxed. Measure around the widest part of your calf."
           onChange={(value) =>
-            setField('calf_inches', value)
+            setField(
+              'calf_inches',
+              value,
+            )
           }
         />
       </div>
-
     </WizardQuestion>
   )
 }
@@ -264,11 +333,13 @@ function BodyFatStep({
     return (
       <WizardQuestion
         title="Body Fat Estimate"
-        helper="The calculation will be connected after we finalize and validate the estimation method."
+        helper="The calculation will be connected only after the Juntos Fit estimation method is finalized and validated."
       >
         <p>
-          Juntos Fit will estimate your body-fat
-          trend using this week’s measurements.
+          Juntos Fit will use the appropriate
+          profile and measurement data to estimate
+          your body-fat trend. No estimate is being
+          invented in this preview.
         </p>
       </WizardQuestion>
     )
@@ -290,7 +361,8 @@ function BodyFatStep({
       }
       state={
         validationByField
-          .scale_body_fat_percent?.displayState
+          .scale_body_fat_percent
+          ?.displayState
       }
       onValueChange={(value) => {
         setField(
@@ -299,22 +371,28 @@ function BodyFatStep({
         )
         setField(
           'body_fat_status',
-          value === '' ? '' : 'recorded',
+          value === ''
+            ? ''
+            : 'recorded',
         )
       }}
-      onUnavailableChange={(unavailable) => {
-        setField(
-          'body_fat_status',
-          unavailable ? 'no_reading' : '',
-        )
-
-        if (unavailable) {
+      onUnavailableChange={
+        (unavailable) => {
           setField(
-            'scale_body_fat_percent',
-            '',
+            'body_fat_status',
+            unavailable
+              ? 'no_reading'
+              : '',
           )
+
+          if (unavailable) {
+            setField(
+              'scale_body_fat_percent',
+              '',
+            )
+          }
         }
-      }}
+      }
       onSkip={onSkipBodyFat}
     />
   )
@@ -348,96 +426,122 @@ function MenstrualContextStep({
   )
 }
 
-function PhotoCard({
-  pose,
-  label,
-  photo,
-  onSelect,
-}) {
-  return (
-    <article className="weekly-photo-card">
-      <h2>{label}</h2>
-
-      {photo?.preview_url ? (
-        <img
-          src={photo.preview_url}
-          alt={`${label} preview`}
-        />
-      ) : (
-        <div className="weekly-photo-placeholder">
-          No photo selected
-        </div>
-      )}
-
-      <label className="weekly-photo-picker">
-        <span>
-          {photo
-            ? 'Choose a different photo'
-            : 'Choose photo'}
-        </span>
-
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(event) => {
-            const file =
-              event.target.files?.[0]
-
-            if (file) {
-              onSelect(pose, file)
-            }
-
-            event.target.value = ''
-          }}
-        />
-      </label>
-    </article>
-  )
-}
-
-function PhotosStep({
-  photos,
-  addPreviewPhoto,
+function PhotoTipsStep({
   measurementSide,
 }) {
   const sideLabel =
     measurementSide === 'left'
-      ? 'Left'
-      : 'Right'
+      ? 'left'
+      : 'right'
+
+  return (
+    <WizardQuestion title="Pro-Tips for Progress Photos">
+      <div className="weekly-photo-tips">
+        <p>
+          <strong>
+            Wear the same or similarly fitted clothing:
+          </strong>{' '}
+          This makes changes easier to compare.
+        </p>
+
+        <p>
+          <strong>
+            Use consistent lighting and framing:
+          </strong>{' '}
+          Choose a plain background and keep your
+          entire body visible from head to feet.
+        </p>
+
+        <p>
+          <strong>
+            Keep the camera position consistent:
+          </strong>{' '}
+          Use the same camera height, distance, and
+          location whenever possible.
+        </p>
+
+        <p>
+          <strong>Stand naturally:</strong>{' '}
+          Relax your shoulders, keep your arms at
+          your sides, and do not flex or suck in.
+        </p>
+
+        <p>
+          <strong>Your side photo:</strong>{' '}
+          Use your {sideLabel} side—the same saved
+          side used for measurements.
+        </p>
+      </div>
+    </WizardQuestion>
+  )
+}
+
+function PhotoQuestion({
+  pose,
+  title,
+  helper,
+  photo,
+  addPreviewPhoto,
+}) {
+  const inputId =
+    `weekly-${pose}-photo`
+
+  async function handleChange(event) {
+    const file =
+      event.target.files?.[0]
+
+    if (file) {
+      addPreviewPhoto(pose, file)
+    }
+
+    event.target.value = ''
+  }
 
   return (
     <WizardQuestion
-      title="Progress Photos"
-      helper="Photos are due every four weeks and on the final plan check-in. Use the same framing, lighting, and saved side as Start Day."
+      title={title}
+      helper={helper}
     >
       <p className="weekly-preview-note">
-        DEV preview: selecting a photo shows it
-        only on this screen. Nothing is uploaded
-        or saved.
+        DEV preview: the selected photo stays
+        only in this browser preview. Nothing is
+        uploaded or saved.
       </p>
 
-      <div className="weekly-photo-grid">
-        <PhotoCard
-          pose="front"
-          label="Front"
-          photo={photos.front}
-          onSelect={addPreviewPhoto}
-        />
+      <label
+        className={`weekly-photo-card ${
+          photo
+            ? 'has-answer'
+            : 'needs-answer'
+        }`}
+        htmlFor={inputId}
+      >
+        {photo?.preview_url ? (
+          <img
+            src={photo.preview_url}
+            alt={`${pose} Weekly Check-In preview`}
+          />
+        ) : (
+          <span className="weekly-photo-placeholder">
+            Tap to take or choose a photo
+          </span>
+        )}
 
-        <PhotoCard
-          pose="side"
-          label={`Side (${sideLabel})`}
-          photo={photos.side}
-          onSelect={addPreviewPhoto}
-        />
+        <span className="weekly-photo-action">
+          {photo
+            ? 'Replace Photo'
+            : 'Add Photo'}
+        </span>
+      </label>
 
-        <PhotoCard
-          pose="back"
-          label="Back"
-          photo={photos.back}
-          onSelect={addPreviewPhoto}
-        />
-      </div>
+      <input
+        id={inputId}
+        className="visually-hidden"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        capture="environment"
+        onChange={handleChange}
+      />
     </WizardQuestion>
   )
 }
@@ -452,6 +556,7 @@ export function WeeklyCheckInStep({
   photos,
   addPreviewPhoto,
   onSkipBodyFat,
+  unitSystem,
   validationByField = {},
 }) {
   const dailyStep =
@@ -464,30 +569,8 @@ export function WeeklyCheckInStep({
         form={form}
         setField={setField}
         target={target}
-        cardioCompleted={cardioCompleted}
-        validationByField={
-          validationByField
-        }
-      />
-    )
-  }
-
-  if (step === STEP.RECOVERY) {
-    return (
-      <RecoveryStep
-        form={form}
-        setField={setField}
-      />
-    )
-  }
-
-  if (step === STEP.MEASUREMENTS) {
-    return (
-      <MeasurementsStep
-        form={form}
-        setField={setField}
-        measurementSide={
-          plan?.measurement_side
+        cardioCompleted={
+          cardioCompleted
         }
         validationByField={
           validationByField
@@ -512,6 +595,55 @@ export function WeeklyCheckInStep({
     )
   }
 
+  if (step === STEP.RECOVERY) {
+    return (
+      <RecoveryStep
+        form={form}
+        setField={setField}
+      />
+    )
+  }
+
+  if (
+    [
+      STEP.NECK,
+      STEP.CHEST,
+      STEP.WAIST,
+      STEP.HIPS,
+    ].includes(step)
+  ) {
+    return (
+      <SingleMeasurementStep
+        step={step}
+        form={form}
+        setField={setField}
+        unitSystem={unitSystem}
+        validationByField={
+          validationByField
+        }
+      />
+    )
+  }
+
+  if (
+    step === STEP.SIDE_MEASUREMENTS
+  ) {
+    return (
+      <SideMeasurementsStep
+        form={form}
+        setField={setField}
+        measurementSide={
+          plan?.measurement_side ??
+          plan?.side_choice
+        }
+        unitSystem={unitSystem}
+        validationByField={
+          validationByField
+        }
+      />
+    )
+  }
+
   if (
     step === STEP.MENSTRUAL_CONTEXT
   ) {
@@ -523,13 +655,59 @@ export function WeeklyCheckInStep({
     )
   }
 
-  if (step === STEP.PHOTOS) {
+  if (step === STEP.PHOTO_TIPS) {
     return (
-      <PhotosStep
-        photos={photos}
-        addPreviewPhoto={addPreviewPhoto}
+      <PhotoTipsStep
         measurementSide={
-          plan?.measurement_side
+          plan?.measurement_side ??
+          plan?.side_choice
+        }
+      />
+    )
+  }
+
+  if (step === STEP.FRONT_PHOTO) {
+    return (
+      <PhotoQuestion
+        pose="front"
+        title="Add your FRONT progress photo."
+        helper="Stand naturally facing the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
+        photo={photos.front}
+        addPreviewPhoto={
+          addPreviewPhoto
+        }
+      />
+    )
+  }
+
+  if (step === STEP.SIDE_PHOTO) {
+    const side =
+      plan?.measurement_side ??
+      plan?.side_choice ??
+      'chosen'
+
+    return (
+      <PhotoQuestion
+        pose="side"
+        title={`Add your ${side.toUpperCase()} SIDE progress photo.`}
+        helper={`Stand naturally with your ${side} side facing the camera, your body relaxed, and your arms resting at your sides. Keep your full body visible from head to feet.`}
+        photo={photos.side}
+        addPreviewPhoto={
+          addPreviewPhoto
+        }
+      />
+    )
+  }
+
+  if (step === STEP.BACK_PHOTO) {
+    return (
+      <PhotoQuestion
+        pose="back"
+        title="Add your BACK progress photo."
+        helper="Stand naturally facing away from the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
+        photo={photos.back}
+        addPreviewPhoto={
+          addPreviewPhoto
         }
       />
     )
@@ -537,12 +715,12 @@ export function WeeklyCheckInStep({
 
   return (
     <WizardQuestion
-      title="Weekly Reflection"
-      helper="Optional — leave blank and tap Next."
+      title="How do you feel this week went? Include anything you’d like your coach to know or any questions you have."
+      helper="Optional — leave blank and tap Review Answers."
     >
       <WizardTextarea
         id="weekly-reflection"
-        ariaLabel="Weekly reflection"
+        ariaLabel="Weekly reflection, coach notes, and questions"
         value={form.weekly_reflection}
         onChange={(value) =>
           setField(
@@ -550,8 +728,9 @@ export function WeeklyCheckInStep({
             value,
           )
         }
-        placeholder="Wins, challenges, schedule changes, digestion, soreness, or anything else your coach should understand about this week."
+        placeholder="Share your wins, challenges, schedule changes, concerns, questions, or anything else that would help your coach understand the week."
         optional
+        promptWhenEmpty
       />
     </WizardQuestion>
   )

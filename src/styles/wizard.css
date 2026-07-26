@@ -122,7 +122,8 @@
   font-size: 1.15rem;
 }
 
-.wizard-input-field input[type='number'] {
+.wizard-input-field input[type='number'],
+.wizard-input-field input.wizard-number-control {
   text-align: center;
 }
 

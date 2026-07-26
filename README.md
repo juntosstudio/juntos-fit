@@ -1,49 +1,53 @@
-# Daily Check-In Flow Reorder
+# Weekly Check-In Flow Rebuild
 
-## New order
+This is still a DEV front-end preview. Nothing in this patch enables
+Weekly submission or adds a database migration.
+
+## Approved Week 4 preview order
 
 1. Morning weight
-2. Meal-plan adherence
-3. Meal-plan deviation type, when adherence is 1–4
-4. Deviation explanation only when needed
-5. Hunger
-6. Workout
-7. Workout branch questions
-8. Cardio
-9. Water
-10. Alcohol
-11. Alcohol details when needed
-12. One combined coach-notes question
+2. Body fat, when tracked
+3. Daily meal-plan adherence and its shared branching
+4. Hunger
+5. Workout and its shared branching
+6. Cardio
+7. Water, when enabled in Settings
+8. Alcohol, when enabled in Settings
+9. Recovery & Context — four sliders on one page
+10. Menstrual context for female profiles
+11. Neck
+12. Chest
+13. Waist
+14. Hips
+15. Saved-side bicep, thigh, and calf together
+16. Progress-photo tips
+17. Front photo
+18. Saved-side photo
+19. Back photo
+20. One combined weekly reflection / coach-message question
 
-## Meal-plan branch
+The exact step count changes with meal-plan, workout, alcohol, body-fat,
+water/alcohol Settings, and menstrual-context branches.
 
-For adherence scores 1–4:
+## Regular non-photo weeks
 
-- Planned cheat meal was the only deviation
-  - skip the text explanation
-- Planned cheat meal plus other deviations
-  - ask what else was different
-- Deviations did not include a planned cheat meal
-  - ask what was different
+The flow asks Waist immediately after weight/body fat. Neck, chest, hips,
+saved-side measurements, and photos are omitted. Waist is never duplicated.
 
-The new three-option answer is represented in the UI by the
-form-only `meal_plan_deviation_type` value. It maps back into the
-existing database fields:
+## Other fixes
 
-- `planned_cheat_meal_status`
-- `meal_plan_deviation_details`
+- Chest is restored.
+- Daily coach notes are removed from Weekly because the final Weekly
+  question now handles reflection, coach notes, and coach questions.
+- Weekly cardio begins at 0 and selects the zero when focused.
+- Recovery uses four positive-direction 1–5 sliders.
+- Measurements use the same clean field treatment as Start Day.
+- Photos are separate pages matching the Start Day photo-card workflow.
+- Weekly Review formats measurements/body fat cleanly and includes Chest.
+- Shared cardio warnings are included in Weekly.
 
-No database migration is required.
+## Install
 
-## Coach notes
+Extract the ZIP into the app root and replace matching files.
 
-The previous “anything else” and “questions for coach” screens
-are combined into one optional question. The answer is stored in
-the existing `additional_notes` database column. Existing values
-from both old columns are combined when an older check-in loads.
-
-## Weekly
-
-Weekly reuses `getDailyCheckInSteps`, `canContinueDailyStep`, and
-`DailyCheckInStep`, so its Daily-question section automatically
-inherits this new order and branching.
+No Supabase push or database migration is required.

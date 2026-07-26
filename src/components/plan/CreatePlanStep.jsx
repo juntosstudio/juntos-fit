@@ -7,6 +7,10 @@ import {
   UNIT_SYSTEM_OPTIONS,
   WEEKDAY_OPTIONS,
 } from '../../utils/createPlanFlow'
+import {
+  calculateCaloriesFromMacros,
+} from '../../utils/nutritionTargets'
+import '../../styles/createPlanFinalTidy.css'
 
 function fieldState(value) {
   const unanswered =
@@ -88,6 +92,40 @@ function NutritionMethodChoices({
   )
 }
 
+function getNumberFieldFeedback({
+  value,
+  min,
+  max,
+  rangeMessage,
+}) {
+  if (
+    value === '' ||
+    value === null ||
+    value === undefined
+  ) {
+    return ''
+  }
+
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) {
+    return 'Enter a valid number.'
+  }
+
+  if (!Number.isInteger(number)) {
+    return 'Enter a whole number—no decimals.'
+  }
+
+  if (
+    number < Number(min) ||
+    number > Number(max)
+  ) {
+    return rangeMessage
+  }
+
+  return ''
+}
+
 function NumberField({
   label,
   name,
@@ -96,17 +134,27 @@ function NumberField({
   min,
   max,
   helper,
+  rangeMessage,
   onChange,
 }) {
+  const feedback = getNumberFieldFeedback({
+    value,
+    min,
+    max,
+    rangeMessage,
+  })
+  const state = feedback
+    ? 'is-invalid'
+    : fieldState(value)
+  const feedbackId = `${name}-feedback`
+
   return (
     <label className="create-plan-number-field">
       <span>{label}</span>
 
       <div className="number-answer">
         <input
-          className={`interaction-field ${fieldState(
-            value,
-          )}`}
+          className={`interaction-field ${state}`}
           type="number"
           inputMode="numeric"
           name={name}
@@ -114,6 +162,10 @@ function NumberField({
           max={max}
           step="1"
           value={value}
+          aria-invalid={Boolean(feedback)}
+          aria-describedby={
+            feedback ? feedbackId : undefined
+          }
           onChange={(event) =>
             onChange(event.target.value)
           }
@@ -125,6 +177,16 @@ function NumberField({
       {helper && (
         <small className="macro-calorie-helper">
           {helper}
+        </small>
+      )}
+
+      {feedback && (
+        <small
+          id={feedbackId}
+          className="create-plan-field-feedback"
+          role="alert"
+        >
+          {feedback}
         </small>
       )}
     </label>
@@ -205,6 +267,57 @@ export function CreatePlanStep({
     )
   }
 
+  if (step === STEP.CHECKIN_TRACKING) {
+    return (
+      <fieldset>
+        <legend>
+          What would you like included in your
+          check-ins?
+        </legend>
+
+        <p className="question-helper">
+          You can turn either one on or off later in
+          Settings without changing your plan or
+          deleting earlier answers.
+        </p>
+
+        <div className="create-plan-field-grid">
+          <section>
+            <h2>Track water?</h2>
+
+            <ChoiceGroup
+              name="track-water"
+              value={form.track_water}
+              options={[
+                { value: true, label: 'Yes' },
+                { value: false, label: 'No' },
+              ]}
+              onChange={(value) =>
+                setField('track_water', value)
+              }
+            />
+          </section>
+
+          <section>
+            <h2>Track alcohol?</h2>
+
+            <ChoiceGroup
+              name="track-alcohol"
+              value={form.track_alcohol}
+              options={[
+                { value: true, label: 'Yes' },
+                { value: false, label: 'No' },
+              ]}
+              onChange={(value) =>
+                setField('track_alcohol', value)
+              }
+            />
+          </section>
+        </div>
+      </fieldset>
+    )
+  }
+
   if (step === STEP.START_DATE) {
     return (
       <fieldset>
@@ -253,6 +366,7 @@ export function CreatePlanStep({
           suffix="weeks"
           min="1"
           max="52"
+          rangeMessage="Program length must be between 1 and 52 weeks."
           onChange={(value) =>
             setField(
               'program_length_weeks',
@@ -315,6 +429,10 @@ export function CreatePlanStep({
   }
 
   if (step === STEP.NUTRITION) {
+    const calculatedCalories = Number(
+      calculateCaloriesFromMacros(form),
+    )
+
     return (
       <fieldset>
         <legend>Set your daily macro targets.</legend>
@@ -325,15 +443,13 @@ export function CreatePlanStep({
         </p>
 
         <div
-          className="calculated-calorie-target"
+          className="calculated-calorie-target daily-calorie-total"
           aria-live="polite"
         >
           <span>Daily Calories</span>
 
           <strong>
-            {Number(
-              form.calorie_target || 0,
-            ).toLocaleString()}
+            {calculatedCalories.toLocaleString()}
           </strong>
 
           <small>
@@ -349,6 +465,7 @@ export function CreatePlanStep({
             suffix="g"
             min="0"
             max="1000"
+            rangeMessage="Protein must be between 0 and 1,000 grams."
             helper="1 g protein = 4 calories"
             onChange={(value) =>
               setField('protein_grams', value)
@@ -362,6 +479,7 @@ export function CreatePlanStep({
             suffix="g"
             min="0"
             max="1000"
+            rangeMessage="Carbohydrates must be between 0 and 1,000 grams."
             helper="1 g carbs = 4 calories"
             onChange={(value) =>
               setField('carb_grams', value)
@@ -375,6 +493,7 @@ export function CreatePlanStep({
             suffix="g"
             min="0"
             max="1000"
+            rangeMessage="Fat must be between 0 and 1,000 grams."
             helper="1 g fat = 9 calories"
             onChange={(value) =>
               setField('fat_grams', value)
@@ -397,6 +516,7 @@ export function CreatePlanStep({
           suffix="per week"
           min="0"
           max="14"
+          rangeMessage="Scheduled workouts must be between 0 and 14 per week."
           onChange={(value) =>
             setField(
               'weekly_workout_target',
@@ -414,6 +534,7 @@ export function CreatePlanStep({
           suffix="min/week"
           min="0"
           max="3000"
+          rangeMessage="Weekly cardio must be between 0 and 3,000 minutes."
           onChange={(value) =>
             setField(
               'weekly_cardio_target_minutes',
@@ -429,6 +550,7 @@ export function CreatePlanStep({
           suffix="oz/day"
           min="1"
           max="500"
+          rangeMessage="Daily water must be between 1 and 500 ounces."
           onChange={(value) =>
             setField(
               'daily_water_goal_oz',

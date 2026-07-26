@@ -4,7 +4,9 @@ import {
   useRef,
   useState,
 } from 'react'
-import { getTodayDateKey } from '../utils/dates'
+import {
+  getTodayDateKey,
+} from '../utils/dates'
 import {
   getWeeklyCheckInNumber,
 } from '../utils/weeklyCheckInFlow'
@@ -13,34 +15,42 @@ const EMPTY_FORM = {
   morning_weight: '',
   weight_status: '',
   meal_plan_score: '',
+  meal_plan_deviation_type: '',
   meal_plan_deviation_details: '',
   planned_cheat_meal_status: '',
   hunger_score: '',
-  water_goal_met: null,
   workout_status: '',
   workout_incomplete_reason: '',
   training_problem: null,
   training_problem_details: '',
-  cardio_minutes: '',
+  cardio_minutes: '0',
+  water_goal_met: null,
   alcohol_consumed: null,
   alcohol_details: '',
-  additional_notes: '',
-  questions_for_coach: '',
+
   sleep_quality: '',
   energy_level: '',
   recovery_score: '',
   stress_level: '',
+
   measurement_side: '',
   neck_inches: '',
+  chest_inches: '',
   waist_inches: '',
   hips_inches: '',
   bicep_inches: '',
   thigh_inches: '',
   calf_inches: '',
+
   body_fat_status: '',
   scale_body_fat_percent: '',
   menstrual_cycle_context: '',
   weekly_reflection: '',
+
+  // Kept for compatibility with older preview data.
+  coach_notes: '',
+  additional_notes: '',
+  questions_for_coach: '',
 }
 
 const EMPTY_PHOTOS = {
@@ -49,21 +59,45 @@ const EMPTY_PHOTOS = {
   back: null,
 }
 
-export function useWeeklyCheckInPreview(plan) {
+function getSavedMeasurementSide(plan) {
+  return (
+    plan?.measurement_side ??
+    plan?.side_choice ??
+    ''
+  )
+}
+
+function getInitialBodyFatStatus(plan) {
+  if (
+    plan?.body_fat_source ===
+    'juntos_estimate'
+  ) {
+    return 'pending_estimate'
+  }
+
+  if (
+    plan?.body_fat_source === 'none'
+  ) {
+    return 'not_tracked'
+  }
+
+  return ''
+}
+
+export function useWeeklyCheckInPreview(
+  plan,
+) {
   const today = getTodayDateKey()
 
-  const [form, setForm] = useState(() => ({
-    ...EMPTY_FORM,
-    measurement_side:
-      plan?.measurement_side ?? '',
-    body_fat_status:
-      plan?.body_fat_source ===
-      'juntos_estimate'
-        ? 'pending_estimate'
-        : plan?.body_fat_source === 'none'
-          ? 'not_tracked'
-          : '',
-  }))
+  const [form, setForm] = useState(
+    () => ({
+      ...EMPTY_FORM,
+      measurement_side:
+        getSavedMeasurementSide(plan),
+      body_fat_status:
+        getInitialBodyFatStatus(plan),
+    }),
+  )
 
   const [photos, setPhotos] = useState({
     ...EMPTY_PHOTOS,
@@ -83,8 +117,11 @@ export function useWeeklyCheckInPreview(plan) {
     ],
   )
 
-  // DEV preview intentionally uses a Week 4 example
-  // so the complete photo flow can be reviewed.
+  // Weekly remains a DEV front-end preview. It
+  // intentionally shows a Week 4/full-measurement
+  // example so every measurement and photo screen
+  // can be reviewed before database submission is
+  // connected.
   const photosRequired = true
 
   const photosRef = useRef(photos)
@@ -137,26 +174,22 @@ export function useWeeklyCheckInPreview(plan) {
   }
 
   function resetPreview() {
-    Object.values(photos).forEach((photo) => {
-      if (photo?.preview_url) {
-        URL.revokeObjectURL(
-          photo.preview_url,
-        )
-      }
-    })
+    Object.values(photos).forEach(
+      (photo) => {
+        if (photo?.preview_url) {
+          URL.revokeObjectURL(
+            photo.preview_url,
+          )
+        }
+      },
+    )
 
     setForm({
       ...EMPTY_FORM,
       measurement_side:
-        plan?.measurement_side ?? '',
+        getSavedMeasurementSide(plan),
       body_fat_status:
-        plan?.body_fat_source ===
-        'juntos_estimate'
-          ? 'pending_estimate'
-          : plan?.body_fat_source ===
-              'none'
-            ? 'not_tracked'
-            : '',
+        getInitialBodyFatStatus(plan),
     })
     setPhotos({ ...EMPTY_PHOTOS })
   }

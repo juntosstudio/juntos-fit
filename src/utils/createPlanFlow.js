@@ -4,6 +4,7 @@ export const CREATE_PLAN_STEP_IDS = {
   GOAL: 'goal',
   UNIT_SYSTEM: 'unit-system',
   BODY_FAT_SOURCE: 'body-fat-source',
+  CHECKIN_TRACKING: 'checkin-tracking',
   START_DATE: 'start-date',
   LENGTH: 'length',
   CHECKIN_DAY: 'checkin-day',
@@ -16,6 +17,7 @@ export const CREATE_PLAN_STEPS = [
   CREATE_PLAN_STEP_IDS.GOAL,
   CREATE_PLAN_STEP_IDS.UNIT_SYSTEM,
   CREATE_PLAN_STEP_IDS.BODY_FAT_SOURCE,
+  CREATE_PLAN_STEP_IDS.CHECKIN_TRACKING,
   CREATE_PLAN_STEP_IDS.START_DATE,
   CREATE_PLAN_STEP_IDS.LENGTH,
   CREATE_PLAN_STEP_IDS.CHECKIN_DAY,
@@ -144,6 +146,18 @@ export function validateCreatePlanStep(
     ].includes(form.body_fat_source)
       ? ''
       : 'Choose how body fat will be tracked.'
+  }
+
+  if (
+    step ===
+    CREATE_PLAN_STEP_IDS.CHECKIN_TRACKING
+  ) {
+    return (
+      typeof form.track_water === 'boolean' &&
+      typeof form.track_alcohol === 'boolean'
+    )
+      ? ''
+      : 'Choose whether to track water and alcohol.'
   }
 
   if (

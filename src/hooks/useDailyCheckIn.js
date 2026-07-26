@@ -19,6 +19,9 @@ import {
   MEAL_PLAN_DEVIATION_TYPES as DEVIATION,
 } from '../utils/dailyCheckInFlow'
 import {
+  normalizeCheckInSettings,
+} from '../utils/checkInTracking'
+import {
   getErrorMessage,
   logDevelopmentError,
 } from '../utils/errors'
@@ -141,7 +144,14 @@ function optionalText(value = '') {
 export function useDailyCheckIn(
   plan,
   onSaved,
+  trackingSettings,
 ) {
+  const {
+    track_water: trackWater,
+    track_alcohol: trackAlcohol,
+  } = normalizeCheckInSettings(
+    trackingSettings,
+  )
   const [form, setForm] = useState({
     ...EMPTY_FORM,
   })
@@ -265,7 +275,10 @@ export function useDailyCheckIn(
 
     return getDailyCheckInValidationError(
       form,
-      { unitSystem: 'imperial' },
+      {
+        unitSystem: 'imperial',
+        trackingSettings,
+      },
     )
   }
 
@@ -341,7 +354,10 @@ export function useDailyCheckIn(
             form.hunger_score,
           ),
           water_goal_met:
-            form.water_goal_met,
+            trackWater
+              ? form.water_goal_met
+              : existingCheckIn
+                  ?.water_goal_met ?? null,
           workout_status:
             form.workout_status,
           workout_incomplete_reason:
@@ -367,14 +383,20 @@ export function useDailyCheckIn(
             form.cardio_minutes || 0,
           ),
           alcohol_consumed:
-            form.alcohol_consumed,
+            trackAlcohol
+              ? form.alcohol_consumed
+              : existingCheckIn
+                  ?.alcohol_consumed ?? null,
           alcohol_details:
-            form.alcohol_consumed ===
-            true
-              ? optionalText(
-                  form.alcohol_details,
-                )
-              : null,
+            trackAlcohol
+              ? form.alcohol_consumed ===
+                true
+                ? optionalText(
+                    form.alcohol_details,
+                  )
+                : null
+              : existingCheckIn
+                  ?.alcohol_details ?? null,
 
           // Store the combined answer in the existing
           // additional_notes column. No migration needed.

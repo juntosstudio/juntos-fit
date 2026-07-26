@@ -9,10 +9,10 @@ import {
   SIDE_OPTIONS,
   START_CHECKIN_STEP_IDS as STEP,
 } from '../../utils/startCheckInFlow'
-import { getMeasurementUnit } from '../../utils/measurementUnits'
 import {
-  isAllowedWizardNumberInput,
-} from '../wizard/WizardFields'
+  getMeasurementUnit,
+} from '../../utils/measurementUnits'
+import '../../styles/startCheckInTidy.css'
 
 const MEASUREMENT_CONFIG = {
   [STEP.NECK]: {
@@ -80,6 +80,25 @@ function getFieldClass(
   return 'has-answer'
 }
 
+// Removes trailing zeroes only from locked saved values.
+// Editable values are left untouched so users may type 13.5.
+function formatLockedNumber(value, locked) {
+  if (
+    !locked ||
+    value === '' ||
+    value === null ||
+    value === undefined
+  ) {
+    return value
+  }
+
+  const number = Number(value)
+
+  return Number.isFinite(number)
+    ? number.toString()
+    : value
+}
+
 function MeasurementField({
   label,
   field,
@@ -97,11 +116,29 @@ function MeasurementField({
     field,
     unitSystem,
   )
+  const displayedValue =
+    formatLockedNumber(value, disabled)
   const showFeedback =
     value !== '' &&
     ['invalid', 'warning'].includes(
       validation?.status,
     )
+
+  function handleBlur() {
+    markFieldTouched(field)
+
+    if (
+      !disabled &&
+      value !== '' &&
+      Number.isFinite(Number(value))
+    ) {
+      setField(
+        field,
+        Number(value).toString(),
+      )
+    }
+  }
+
   return (
     <label className="start-measurement-field">
       <span>{label}</span>
@@ -126,27 +163,18 @@ function MeasurementField({
           inputMode="decimal"
           min="0"
           step="0.1"
-          value={value}
+          value={displayedValue}
           disabled={disabled}
           aria-invalid={
             validation?.status === 'invalid'
           }
-          onBlur={() =>
-            markFieldTouched(field)
+          onBlur={handleBlur}
+          onChange={(event) =>
+            setField(
+              field,
+              event.target.value,
+            )
           }
-          onChange={(event) => {
-            const nextValue =
-              event.target.value
-
-            if (
-              isAllowedWizardNumberInput(
-                nextValue,
-                { maxDecimalPlaces: 1 },
-              )
-            ) {
-              setField(field, nextValue)
-            }
-          }}
         />
 
         <span>{suffix}</span>
@@ -193,7 +221,9 @@ function PhotoField({
   return (
     <fieldset>
       <legend>{title}</legend>
-      <p className="question-helper">{helper}</p>
+      <p className="question-helper">
+        {helper}
+      </p>
 
       <label
         className={`start-photo-card ${
@@ -264,39 +294,55 @@ export function StartCheckInStep({
   if (step === STEP.TIPS) {
     return (
       <fieldset>
-        <legend>Pro-Tips for Accuracy</legend>
+        <legend>Let’s Get Started</legend>
 
-        <div className="measurement-tips">
-          <p>
-            <strong>Before you begin:</strong> Have a flexible measuring
-            tape and be prepared to take or upload three
-            full-body progress photos: front,
-            side, and back.
-          </p>
-          <p>
-            <strong>Consistency is key:</strong>{' '}
-            Take measurements first thing in the
-            morning, after using the restroom, and
-            before eating or drinking. Use the same
-            side and the same location on your body
-            every time. Using
-            a full-length mirror can be helpful.
-          </p>
+        <p className="start-prep-intro">
+          Before you begin, have these ready:
+        </p>
 
+        <div className="start-prep-list">
+          <div>
+            <span aria-hidden="true">✓</span>
             <p>
-            <strong>Photos tips:</strong> For the clearest comparison, wear the same or
-            similarly fitted clothing each time. Use good
-            lighting, a plain background, and keep your
-            entire body visible from head to feet. Try to
-            use the same camera height, distance, and
-            position for future photos.</p>
-            
+              <strong>A scale</strong>
+              <small>
+                Use the same scale whenever possible.
+              </small>
+            </p>
+          </div>
+
+          <div>
+            <span aria-hidden="true">✓</span>
             <p>
-            <strong>And relax:</strong> Stand naturally, relax your shoulders, and keep the tape measure
-            flat and parallel to the floor without
-            sucking in or flexing your muscles. 
-          </p>
+              <strong>
+                A flexible body-measuring tape
+              </strong>
+              <small>
+                Use a non-stretch tape made for body
+                measurements.
+              </small>
+            </p>
+          </div>
+
+          <div>
+            <span aria-hidden="true">✓</span>
+            <p>
+              <strong>
+                Your phone or camera
+              </strong>
+              <small>
+                You will take front, side, and back
+                progress photos.
+              </small>
+            </p>
+          </div>
         </div>
+
+        <p className="start-prep-note">
+          Wear light, fitted clothing or measure over
+          bare skin. Keep the same or a similar outfit
+          available for your future progress photos.
+        </p>
       </fieldset>
     )
   }
@@ -307,7 +353,10 @@ export function StartCheckInStep({
         id="start-weight"
         title="What is your starting weight?"
         label="Starting weight"
-        value={form.starting_weight_lbs}
+        value={formatLockedNumber(
+          form.starting_weight_lbs,
+          readOnly,
+        )}
         status={form.starting_weight_status}
         feedback={
           form.starting_weight_lbs !== '' &&
@@ -367,8 +416,8 @@ export function StartCheckInStep({
           <div className="body-fat-estimate">
             <strong>
               {estimatedBodyFat
-                ? `${estimatedBodyFat.percent.toFixed(
-                    1,
+                ? `${Number(
+                    estimatedBodyFat.percent,
                   )}%`
                 : 'Estimate unavailable'}
             </strong>
@@ -382,7 +431,10 @@ export function StartCheckInStep({
     return (
       <BodyFatQuestion
         id="start-scale-body-fat"
-        value={form.body_fat_percent}
+        value={formatLockedNumber(
+          form.body_fat_percent,
+          readOnly,
+        )}
         unavailable={
           form.body_fat_unavailable
         }
@@ -430,10 +482,14 @@ export function StartCheckInStep({
           value={form[measurement.field]}
           unitSystem={unitSystem}
           validation={
-            validationByField[measurement.field]
+            validationByField[
+              measurement.field
+            ]
           }
           touched={
-            touchedFields[measurement.field]
+            touchedFields[
+              measurement.field
+            ]
           }
           markFieldTouched={markFieldTouched}
           tip={measurement.tip}
@@ -448,7 +504,9 @@ export function StartCheckInStep({
     if (sideLocked) {
       return (
         <fieldset>
-          <legend>Your chosen measurement side</legend>
+          <legend>
+            Your chosen measurement side
+          </legend>
 
           <p className="locked-side-value">
             {form.measurement_side === 'left'
@@ -457,9 +515,10 @@ export function StartCheckInStep({
           </p>
 
           <p className="question-helper">
-            Your measurement side is locked for this 
-            plan because your baseline measurements 
-            and side progress photo have already been submitted.
+            Your measurement side is locked for this
+            plan because your baseline measurements
+            and side progress photo have already been
+            submitted.
           </p>
         </fieldset>
       )
@@ -474,8 +533,8 @@ export function StartCheckInStep({
         <p className="question-helper">
           Choose the side you will measure throughout
           this plan. We recommend using your dominant
-          side. It cannot be changed once your Start Check-In 
-          is submitted.
+          side. It cannot be changed once your Start
+          Check-In is submitted.
         </p>
 
         <div
@@ -490,7 +549,10 @@ export function StartCheckInStep({
             value={form.measurement_side}
             options={SIDE_OPTIONS}
             onChange={(value) =>
-              setField('measurement_side', value)
+              setField(
+                'measurement_side',
+                value,
+              )
             }
           />
         </div>
@@ -578,6 +640,59 @@ export function StartCheckInStep({
     )
   }
 
+  if (step === STEP.PHOTO_TIPS) {
+    const side =
+      form.measurement_side === 'left'
+        ? 'left'
+        : 'right'
+
+    return (
+      <fieldset>
+        <legend>
+          Pro-Tips for Progress Photos
+        </legend>
+
+        <div className="measurement-tips">
+          <p>
+            <strong>
+              Wear the same or similarly fitted clothing:
+            </strong>{' '}
+            This makes changes easier to compare from
+            one photo check-in to the next.
+          </p>
+
+          <p>
+            <strong>
+              Use consistent lighting and framing:
+            </strong>{' '}
+            Choose a plain background and keep your
+            entire body visible from head to feet.
+          </p>
+
+          <p>
+            <strong>
+              Keep the camera position consistent:
+            </strong>{' '}
+            Try to use the same camera height, distance,
+            and location for future photos.
+          </p>
+
+          <p>
+            <strong>Stand naturally:</strong>{' '}
+            Relax your shoulders, keep your arms at your
+            sides, and do not flex or suck in.
+          </p>
+
+          <p>
+            <strong>Your side photo:</strong>{' '}
+            Use your {side} side—the same side selected
+            for your measurements.
+          </p>
+        </div>
+      </fieldset>
+    )
+  }
+
   if (step === STEP.FRONT_PHOTO) {
     return (
       <PhotoField
@@ -600,7 +715,7 @@ export function StartCheckInStep({
       <PhotoField
         pose="side"
         title={`Add your ${side.toUpperCase()} SIDE progress photo.`}
-        helper={`Stand naturally with your ${side} side facing the camera, your body relaxed, and your arms resting at your sides. \n Keep your full body visible from head to feet.`}
+        helper={`Stand naturally with your ${side} side facing the camera, your body relaxed, and your arms resting at your sides. Keep your full body visible from head to feet.`}
         photo={photos.side}
         uploadingPose={uploadingPose}
         uploadPhoto={uploadPhoto}

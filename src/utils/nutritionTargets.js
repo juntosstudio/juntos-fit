@@ -1,29 +1,42 @@
-export const MACRO_CALORIE_TOLERANCE = 50;
+function macroValue(value) {
+  if (
+    value === '' ||
+    value === null ||
+    value === undefined
+  ) {
+    return 0
+  }
 
-function hasValue(value) {
-  return value !== "" && value !== null && value !== undefined;
+  const number = Number(value)
+
+  if (
+    !Number.isFinite(number) ||
+    number < 0
+  ) {
+    return 0
+  }
+
+  return number
 }
 
-export function calculateCaloriesFromMacros(form) {
-  const macroValues = [form.protein_grams, form.carb_grams, form.fat_grams];
+// Calculates calories immediately from every macro
+// entered so far. Blank macros count as zero.
+export function calculateCaloriesFromMacros(
+  form,
+) {
+  const proteinGrams = macroValue(
+    form.protein_grams,
+  )
+  const carbGrams = macroValue(
+    form.carb_grams,
+  )
+  const fatGrams = macroValue(
+    form.fat_grams,
+  )
 
-  const allMacrosEntered = macroValues.every(
-    (value) => value !== "" && value !== null && value !== undefined,
-  );
-
-  if (!allMacrosEntered) {
-    return "";
-  }
-
-  const proteinGrams = Number(form.protein_grams);
-  const carbGrams = Number(form.carb_grams);
-  const fatGrams = Number(form.fat_grams);
-
-  const numbers = [proteinGrams, carbGrams, fatGrams];
-
-  if (!numbers.every(Number.isFinite) || numbers.some((value) => value < 0)) {
-    return "";
-  }
-
-  return String(proteinGrams * 4 + carbGrams * 4 + fatGrams * 9);
+  return String(
+    proteinGrams * 4 +
+      carbGrams * 4 +
+      fatGrams * 9,
+  )
 }

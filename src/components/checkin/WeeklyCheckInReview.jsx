@@ -1,14 +1,89 @@
-import { DailyCheckInReview } from './DailyCheckInReview'
+import {
+  DailyCheckInReview,
+} from './DailyCheckInReview'
+import {
+  getMeasurementUnit,
+} from '../../utils/measurementUnits'
 
-function displayNumber(
-  value,
-  suffix = '',
-) {
-  return value === '' ||
+const RECOVERY_LABELS = {
+  sleep_quality: {
+    1: 'Poor',
+    2: 'Below average',
+    3: 'Okay',
+    4: 'Good',
+    5: 'Excellent',
+  },
+  energy_level: {
+    1: 'Very low',
+    2: 'Low',
+    3: 'Moderate',
+    4: 'Good',
+    5: 'Excellent',
+  },
+  recovery_score: {
+    1: 'Poorly recovered',
+    2: 'Still very sore',
+    3: 'Managing',
+    4: 'Well recovered',
+    5: 'Fully recovered',
+  },
+  stress_level: {
+    1: 'Overwhelming',
+    2: 'Difficult',
+    3: 'Manageable',
+    4: 'Mostly manageable',
+    5: 'Very manageable',
+  },
+}
+
+function formatNumber(value) {
+  if (
+    value === '' ||
     value === null ||
     value === undefined
-    ? '—'
-    : `${value}${suffix}`
+  ) {
+    return ''
+  }
+
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) {
+    return String(value)
+  }
+
+  return Number(
+    number.toFixed(1),
+  ).toString()
+}
+
+function displayMeasurement(
+  value,
+  validationField,
+  unitSystem,
+) {
+  const formatted = formatNumber(value)
+
+  return formatted
+    ? `${formatted} ${getMeasurementUnit(
+        validationField,
+        unitSystem,
+      )}`
+    : '—'
+}
+
+function displayScore(field, value) {
+  if (
+    value === '' ||
+    value === null ||
+    value === undefined
+  ) {
+    return '—'
+  }
+
+  return (
+    `${RECOVERY_LABELS[field]?.[value] ?? value} ` +
+    `(${value} / 5)`
+  )
 }
 
 function ReviewItem({ label, value }) {
@@ -27,9 +102,15 @@ export function WeeklyCheckInReview({
   weekNumber,
   plan,
   photos,
+  settings,
+  photosRequired,
+  unitSystem,
 }) {
   const sideLabel =
-    plan?.measurement_side === 'left'
+    (
+      plan?.measurement_side ??
+      plan?.side_choice
+    ) === 'left'
       ? 'Left'
       : 'Right'
 
@@ -41,7 +122,9 @@ export function WeeklyCheckInReview({
   ) {
     bodyFatAnswer =
       form.body_fat_status === 'recorded'
-        ? `${form.scale_body_fat_percent}% from scale`
+        ? `${formatNumber(
+            form.scale_body_fat_percent,
+          )}% from scale`
         : 'No scale reading today'
   }
 
@@ -62,8 +145,24 @@ export function WeeklyCheckInReview({
           form={form}
           target={target}
           today={today}
+          settings={settings}
+          showCoachNotes={false}
         />
       </section>
+
+      {plan?.body_fat_source !==
+        'none' && (
+        <section>
+          <h2>Body Fat</h2>
+
+          <dl>
+            <ReviewItem
+              label="Body fat"
+              value={bodyFatAnswer}
+            />
+          </dl>
+        </section>
+      )}
 
       <section>
         <h2>Week {weekNumber} Recovery</h2>
@@ -71,98 +170,121 @@ export function WeeklyCheckInReview({
         <dl>
           <ReviewItem
             label="Sleep"
-            value={displayNumber(
+            value={displayScore(
+              'sleep_quality',
               form.sleep_quality,
-              ' / 5',
             )}
           />
 
           <ReviewItem
             label="Energy"
-            value={displayNumber(
+            value={displayScore(
+              'energy_level',
               form.energy_level,
-              ' / 5',
             )}
           />
 
           <ReviewItem
             label="Training recovery"
-            value={displayNumber(
+            value={displayScore(
+              'recovery_score',
               form.recovery_score,
-              ' / 5',
             )}
           />
 
           <ReviewItem
-            label="Stress"
-            value={displayNumber(
+            label="Stress manageability"
+            value={displayScore(
+              'stress_level',
               form.stress_level,
-              ' / 5',
             )}
           />
         </dl>
       </section>
 
       <section>
-        <h2>Weekly Measurements</h2>
+        <h2>
+          {photosRequired
+            ? 'Full Measurements'
+            : 'Weekly Measurement'}
+        </h2>
 
         <dl>
-          <ReviewItem
-            label="Neck"
-            value={displayNumber(
-              form.neck_inches,
-              ' in',
-            )}
-          />
+          {photosRequired && (
+            <>
+              <ReviewItem
+                label="Neck"
+                value={displayMeasurement(
+                  form.neck_inches,
+                  'neck_inches',
+                  unitSystem,
+                )}
+              />
+
+              <ReviewItem
+                label="Chest"
+                value={displayMeasurement(
+                  form.chest_inches,
+                  'chest_inches',
+                  unitSystem,
+                )}
+              />
+            </>
+          )}
 
           <ReviewItem
             label="Waist"
-            value={displayNumber(
+            value={displayMeasurement(
               form.waist_inches,
-              ' in',
+              'waist_inches',
+              unitSystem,
             )}
           />
 
-          <ReviewItem
-            label="Hips"
-            value={displayNumber(
-              form.hips_inches,
-              ' in',
-            )}
-          />
+          {photosRequired && (
+            <>
+              <ReviewItem
+                label="Hips"
+                value={displayMeasurement(
+                  form.hips_inches,
+                  'hips_inches',
+                  unitSystem,
+                )}
+              />
 
-          <ReviewItem
-            label={`${sideLabel} bicep`}
-            value={displayNumber(
-              form.bicep_inches,
-              ' in',
-            )}
-          />
+              <ReviewItem
+                label={`${sideLabel} bicep`}
+                value={displayMeasurement(
+                  form.bicep_inches,
+                  'upper_arm_inches',
+                  unitSystem,
+                )}
+              />
 
-          <ReviewItem
-            label={`${sideLabel} thigh`}
-            value={displayNumber(
-              form.thigh_inches,
-              ' in',
-            )}
-          />
+              <ReviewItem
+                label={`${sideLabel} thigh`}
+                value={displayMeasurement(
+                  form.thigh_inches,
+                  'thigh_inches',
+                  unitSystem,
+                )}
+              />
 
-          <ReviewItem
-            label={`${sideLabel} calf`}
-            value={displayNumber(
-              form.calf_inches,
-              ' in',
-            )}
-          />
-
-          <ReviewItem
-            label="Body fat"
-            value={bodyFatAnswer}
-          />
+              <ReviewItem
+                label={`${sideLabel} calf`}
+                value={displayMeasurement(
+                  form.calf_inches,
+                  'calf_inches',
+                  unitSystem,
+                )}
+              />
+            </>
+          )}
         </dl>
       </section>
 
-      {form.menstrual_cycle_context?.trim() && (
+      {form.menstrual_cycle_context
+        ?.trim() && (
         <section>
           <h2>Menstrual Cycle Context</h2>
           <p>
@@ -171,42 +293,48 @@ export function WeeklyCheckInReview({
         </section>
       )}
 
-      <section>
-        <h2>Progress Photos</h2>
-
-        <dl>
-          <ReviewItem
-            label="Front"
-            value={
-              photos.front?.name ??
-              'Not selected in preview'
-            }
-          />
-
-          <ReviewItem
-            label="Side"
-            value={
-              photos.side?.name ??
-              'Not selected in preview'
-            }
-          />
-
-          <ReviewItem
-            label="Back"
-            value={
-              photos.back?.name ??
-              'Not selected in preview'
-            }
-          />
-        </dl>
-      </section>
-
-      {form.weekly_reflection?.trim() && (
+      {photosRequired && (
         <section>
-          <h2>Weekly Reflection</h2>
-          <p>{form.weekly_reflection}</p>
+          <h2>Progress Photos</h2>
+
+          <dl>
+            <ReviewItem
+              label="Front"
+              value={
+                photos.front?.name ??
+                'Not selected in preview'
+              }
+            />
+
+            <ReviewItem
+              label={`${sideLabel} side`}
+              value={
+                photos.side?.name ??
+                'Not selected in preview'
+              }
+            />
+
+            <ReviewItem
+              label="Back"
+              value={
+                photos.back?.name ??
+                'Not selected in preview'
+              }
+            />
+          </dl>
         </section>
       )}
+
+      <section>
+        <h2>
+          Weekly Reflection & Coach Message
+        </h2>
+
+        <p>
+          {form.weekly_reflection?.trim() ||
+            'None'}
+        </p>
+      </section>
     </div>
   )
 }

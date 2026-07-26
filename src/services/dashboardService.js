@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase'
 import {
+  loadCheckInSettings,
+} from './checkInSettingsService'
+import {
   addDays,
   getProgramWeekRange,
   getTodayDateKey,
@@ -326,13 +329,16 @@ export async function loadDashboardData(userId) {
   const { data: profile, error: profileError } =
     await supabase
       .from('profiles')
-      .select('id, display_name, sex, unit_system, time_zone')
+      .select('id, display_name, unit_system, time_zone')
       .eq('id', userId)
       .single()
 
   if (profileError) {
     throw profileError
   }
+
+  const settings =
+    await loadCheckInSettings(userId)
 
   const { data: plan, error: planError } =
     await supabase
@@ -351,6 +357,7 @@ export async function loadDashboardData(userId) {
 
     return {
       profile,
+      settings,
       plan: null,
       target: null,
       startCheckIn: null,
@@ -417,6 +424,7 @@ export async function loadDashboardData(userId) {
 
   const dashboard = {
     profile,
+    settings,
     plan,
     target,
     startCheckIn,

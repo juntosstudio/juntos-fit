@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -12,19 +13,18 @@ import {
   useWeeklyCheckInPreview,
 } from '../hooks/useWeeklyCheckInPreview'
 import {
-  useCheckInMeasurementValidation,
-} from '../hooks/useCheckInMeasurementValidation'
-import {
   DAILY_CHECKIN_STEP_IDS,
 } from '../utils/dailyCheckInFlow'
 import {
   canContinueWeeklyStep,
   fromWeeklyDailyStep,
   getWeeklyCheckInSteps,
+  getWeeklyStepMeasurementFields,
   WEEKLY_CHECKIN_STEP_IDS as STEP,
 } from '../utils/weeklyCheckInFlow'
 import {
-  WEEKLY_VALIDATED_MEASUREMENT_FIELDS,
+  getCheckInMeasurementValidation,
+  getCheckInWarningConfirmationKey,
 } from '../utils/measurementValidation'
 import {
   normalizeUnitSystem,
@@ -35,29 +35,47 @@ import {
 import '../styles/wizard.css'
 import '../styles/weeklyCheckIn.css'
 
-const WEEKLY_MEASUREMENT_LABELS = {
-  morning_weight: 'Morning weight',
-  scale_body_fat_percent: 'Body fat',
-  neck_inches: 'Neck',
-  waist_inches: 'Waist',
-  hips_inches: 'Hips',
-  bicep_inches: 'Bicep',
-  thigh_inches: 'Thigh',
-  calf_inches: 'Calf',
-  cardio_minutes: 'Cardio',
-}
-
-const WEEKLY_MEASUREMENT_INPUT_IDS = {
-  morning_weight: 'daily-morning-weight',
-  scale_body_fat_percent:
-    'weekly-scale-body-fat',
-  neck_inches: 'weekly-neck',
-  waist_inches: 'weekly-waist',
-  hips_inches: 'weekly-hips',
-  bicep_inches: 'weekly-bicep',
-  thigh_inches: 'weekly-thigh',
-  calf_inches: 'weekly-calf',
-  cardio_minutes: 'daily-cardio-minutes',
+const VALIDATION_CONFIG = {
+  morning_weight: {
+    label: 'Morning weight',
+    inputId: 'daily-morning-weight',
+  },
+  scale_body_fat_percent: {
+    label: 'Body fat',
+    inputId: 'weekly-scale-body-fat',
+  },
+  cardio_minutes: {
+    label: 'Cardio',
+    inputId: 'daily-cardio-minutes',
+  },
+  neck_inches: {
+    label: 'Neck',
+    inputId: 'weekly-neck',
+  },
+  chest_inches: {
+    label: 'Chest',
+    inputId: 'weekly-chest',
+  },
+  waist_inches: {
+    label: 'Waist',
+    inputId: 'weekly-waist',
+  },
+  hips_inches: {
+    label: 'Hips',
+    inputId: 'weekly-hips',
+  },
+  bicep_inches: {
+    label: 'Bicep',
+    inputId: 'weekly-bicep',
+  },
+  thigh_inches: {
+    label: 'Thigh',
+    inputId: 'weekly-thigh',
+  },
+  calf_inches: {
+    label: 'Calf',
+    inputId: 'weekly-calf',
+  },
 }
 
 export function WeeklyCheckInPage({
@@ -65,6 +83,7 @@ export function WeeklyCheckInPage({
   profile,
   target,
   cardioCompleted,
+  settings,
   onBack,
 }) {
   const {
@@ -82,28 +101,105 @@ export function WeeklyCheckInPage({
     useState(0)
   const [reviewing, setReviewing] =
     useState(false)
+  const [
+    confirmedWarningKeys,
+    setConfirmedWarningKeys,
+  ] = useState(() => new Set())
+  const [
+    warningConfirmation,
+    setWarningConfirmation,
+  ] = useState(null)
+
   const unitSystem =
     normalizeUnitSystem(
       profile?.unit_system,
     )
 
-  const {
-    validationByField,
-    warningConfirmation,
-    requestWarningConfirmation,
-    confirmWarningValues,
-    cancelWarningConfirmation,
-    resetWarningConfirmations,
-  } = useCheckInMeasurementValidation({
-    form,
-    fields:
-      WEEKLY_VALIDATED_MEASUREMENT_FIELDS,
-    unitSystem,
-    labels:
-      WEEKLY_MEASUREMENT_LABELS,
-    inputIds:
-      WEEKLY_MEASUREMENT_INPUT_IDS,
-  })
+  const rawValidationByField =
+    useMemo(
+      () =>
+        Object.fromEntries(
+          Object.entries(
+            VALIDATION_CONFIG,
+          ).map(
+            ([
+              formField,
+              config,
+            ]) => [
+              formField,
+              getCheckInMeasurementValidation({
+                formField,
+                value: form[formField],
+                unitSystem,
+                label: config.label,
+              }),
+            ],
+          ),
+        ),
+      [form, unitSystem],
+    )
+
+  const validationByField =
+    useMemo(
+      () =>
+        Object.fromEntries(
+          Object.entries(
+            rawValidationByField,
+          ).map(
+            ([
+              formField,
+              validation,
+            ]) => {
+              const key =
+                getCheckInWarningConfirmationKey({
+                  formField,
+                  value: form[formField],
+                  unitSystem,
+                })
+
+              const displayed =
+                validation.status ===
+                  'warning' &&
+                confirmedWarningKeys.has(key)
+                  ? {
+                      status: 'valid',
+                      message: '',
+                    }
+                  : validation
+
+              const showMessage =
+                ['invalid', 'warning']
+                  .includes(
+                    displayed.status,
+                  )
+
+              return [
+                formField,
+                {
+                  ...displayed,
+                  message: showMessage
+                    ? displayed.message
+                    : '',
+                  displayState:
+                    displayed.status ===
+                    'invalid'
+                      ? 'is-invalid'
+                      : displayed.status ===
+                          'warning'
+                        ? 'is-warning'
+                        : undefined,
+                },
+              ]
+            },
+          ),
+        ),
+      [
+        confirmedWarningKeys,
+        form,
+        rawValidationByField,
+        unitSystem,
+      ],
+    )
 
   const steps = useMemo(
     () =>
@@ -112,12 +208,15 @@ export function WeeklyCheckInPage({
           plan?.body_fat_source,
         sex: profile?.sex,
         photosRequired,
+        trackingSettings: settings,
       }),
     [
       form,
       plan?.body_fat_source,
       profile?.sex,
       photosRequired,
+      settings?.track_water,
+      settings?.track_alcohol,
     ],
   )
 
@@ -141,6 +240,48 @@ export function WeeklyCheckInPage({
         validationByField,
       },
     )
+
+  // Weekly begins cardio at zero. Tapping the field
+  // selects that zero so the first typed digit replaces
+  // it instead of being appended.
+  useEffect(() => {
+    const dailyStep =
+      fromWeeklyDailyStep(activeStep)
+
+    if (
+      dailyStep !==
+      DAILY_CHECKIN_STEP_IDS.CARDIO
+    ) {
+      return undefined
+    }
+
+    const input =
+      document.getElementById(
+        'daily-cardio-minutes',
+      )
+
+    if (!input) {
+      return undefined
+    }
+
+    function selectDefaultZero() {
+      if (input.value === '0') {
+        input.select?.()
+      }
+    }
+
+    input.addEventListener(
+      'focus',
+      selectDefaultZero,
+    )
+
+    return () => {
+      input.removeEventListener(
+        'focus',
+        selectDefaultZero,
+      )
+    }
+  }, [activeStep])
 
   function getWarningFields(step) {
     const dailyStep =
@@ -170,18 +311,39 @@ export function WeeklyCheckInPage({
       ]
     }
 
-    if (step === STEP.MEASUREMENTS) {
-      return [
-        'neck_inches',
-        'waist_inches',
-        'hips_inches',
-        'bicep_inches',
-        'thigh_inches',
-        'calf_inches',
-      ]
-    }
+    return getWeeklyStepMeasurementFields(
+      step,
+    )
+  }
 
-    return []
+  function getActiveWarnings(step) {
+    return getWarningFields(step)
+      .map((formField) => {
+        const config =
+          VALIDATION_CONFIG[formField]
+        const validation =
+          rawValidationByField[formField]
+        const key =
+          getCheckInWarningConfirmationKey({
+            formField,
+            value: form[formField],
+            unitSystem,
+          })
+
+        return {
+          inputId: config.inputId,
+          key,
+          validation,
+        }
+      })
+      .filter(
+        (item) =>
+          item.validation?.status ===
+            'warning' &&
+          !confirmedWarningKeys.has(
+            item.key,
+          ),
+      )
   }
 
   function advanceOneStep() {
@@ -207,11 +369,13 @@ export function WeeklyCheckInPage({
       return
     }
 
-    if (
-      requestWarningConfirmation(
-        getWarningFields(activeStep),
-      )
-    ) {
+    const warnings =
+      getActiveWarnings(activeStep)
+
+    if (warnings.length > 0) {
+      setWarningConfirmation({
+        warnings,
+      })
       return
     }
 
@@ -223,7 +387,7 @@ export function WeeklyCheckInPage({
       warningConfirmation
         ?.warnings?.[0]
 
-    cancelWarningConfirmation()
+    setWarningConfirmation(null)
 
     if (!warning?.inputId) {
       return
@@ -239,7 +403,20 @@ export function WeeklyCheckInPage({
   }
 
   function confirmWarnings() {
-    confirmWarningValues()
+    const keys =
+      warningConfirmation
+        ?.warnings?.map(
+          (warning) => warning.key,
+        ) ?? []
+
+    setConfirmedWarningKeys(
+      (current) =>
+        new Set([
+          ...current,
+          ...keys,
+        ]),
+    )
+    setWarningConfirmation(null)
     advanceOneStep()
   }
 
@@ -266,7 +443,10 @@ export function WeeklyCheckInPage({
   function startOver() {
     resetPreview()
     setReviewing(false)
-    resetWarningConfirmations()
+    setWarningConfirmation(null)
+    setConfirmedWarningKeys(
+      new Set(),
+    )
     setStepIndex(0)
   }
 
@@ -354,6 +534,11 @@ export function WeeklyCheckInPage({
             weekNumber={weekNumber}
             plan={plan}
             photos={photos}
+            settings={settings}
+            photosRequired={
+              photosRequired
+            }
+            unitSystem={unitSystem}
           />
 
           <div className="wizard-actions">
@@ -442,6 +627,7 @@ export function WeeklyCheckInPage({
           onSkipBodyFat={
             advanceAfterBodyFatSkip
           }
+          unitSystem={unitSystem}
           validationByField={
             validationByField
           }

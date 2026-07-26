@@ -260,6 +260,10 @@ export function WizardNumberField(props) {
   return (
     <WizardInputField
       {...props}
+      inputClassName={joinWizardClasses(
+        'wizard-number-control',
+        props.inputClassName,
+      )}
       type="number"
       inputMode={
         props.inputMode ?? 'decimal'

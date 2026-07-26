@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useDashboard } from './hooks/useDashboard'
 import { CreatePlanPage } from './pages/CreatePlanPage'
+import { CheckInSettingsPage } from './pages/CheckInSettingsPage'
 import { DailyCheckInPage } from './pages/DailyCheckInPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
@@ -16,6 +17,7 @@ const PAGE_DAILY_CHECK_IN = 'daily-check-in'
 const PAGE_WEEKLY_CHECK_IN = 'weekly-check-in'
 const PAGE_START_CHECK_IN = 'start-check-in'
 const PAGE_HISTORY = 'history'
+const PAGE_SETTINGS = 'settings'
 
 function App() {
   const [currentPage, setCurrentPage] =
@@ -157,6 +159,7 @@ function App() {
         cardioCompleted={
           dashboard?.cardioCompleted ?? 0
         }
+        settings={dashboard?.settings}
         onSaved={refreshDashboard}
         onBack={returnToDashboard}
       />
@@ -173,6 +176,7 @@ function App() {
         cardioCompleted={
           dashboard?.cardioCompleted ?? 0
         }
+        settings={dashboard?.settings}
         weekSummary={
           dashboard?.weekAtAGlance ?? null
         }
@@ -186,6 +190,19 @@ function App() {
       <StartCheckInPage
         key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
         plan={dashboard?.plan}
+        onSaved={refreshDashboard}
+        onBack={returnToDashboard}
+      />
+    )
+  }
+
+  if (currentPage === PAGE_SETTINGS) {
+    return (
+      <CheckInSettingsPage
+        userId={user.id}
+        initialSettings={
+          dashboard?.settings
+        }
         onSaved={refreshDashboard}
         onBack={returnToDashboard}
       />
@@ -231,6 +248,9 @@ function App() {
       }
       onOpenHistory={() =>
         setCurrentPage(PAGE_HISTORY)
+      }
+      onOpenSettings={() =>
+        setCurrentPage(PAGE_SETTINGS)
       }
       onSignOut={handleSignOut}
     />

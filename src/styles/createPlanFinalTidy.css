@@ -1,0 +1,65 @@
+/*
+ * Final Create Plan field cleanup.
+ *
+ * The question copy and field labels sit directly on the page.
+ * Only the actual input carries a border, glow, or validation state.
+ */
+.create-plan-page .create-plan-number-field {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Preserve comfortable spacing after removing the outer cards. */
+.create-plan-page .create-plan-field-grid,
+.create-plan-page .nutrition-macro-grid {
+  gap: 1.35rem;
+}
+
+/*
+ * Restore the calculated calorie summary as a distinct read-only card.
+ * Both class names are supported so this remains compatible with the
+ * earlier Create Plan styling.
+ */
+.create-plan-page .daily-calorie-total,
+.create-plan-page .calculated-calorie-target {
+  display: grid;
+  gap: 0.3rem;
+  margin: 1rem 0 1.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-accent-soft);
+  text-align: center;
+}
+
+.create-plan-page .daily-calorie-total > span,
+.create-plan-page .calculated-calorie-target > span {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.create-plan-page .daily-calorie-total > strong,
+.create-plan-page .calculated-calorie-target > strong {
+  color: var(--color-primary-dark);
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  line-height: 1;
+}
+
+.create-plan-page .daily-calorie-total > small,
+.create-plan-page .calculated-calorie-target > small {
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
+
+.create-plan-page .create-plan-field-feedback {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--color-danger, #a52a2a);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.35;
+}

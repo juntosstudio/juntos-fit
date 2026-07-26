@@ -24,165 +24,122 @@
 }
 
 .weekly-preview-note {
+  margin: 0 0 1rem;
   border-left: 4px solid #ff9a3d;
   padding: 0.75rem 0.9rem;
   background: rgb(255 154 61 / 10%);
 }
 
-.weekly-score-buttons {
-  display: grid;
-  grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.weekly-score-buttons label {
-  position: relative;
-  display: grid;
-  min-height: 3rem;
-  place-items: center;
-  border: 2px solid
-    var(--color-border, #d9e0e2);
-  border-radius:
-    var(--radius-md, 0.75rem);
-  background:
-    var(--color-surface, #fff);
-  cursor: pointer;
-}
-
-.weekly-score-buttons label:has(
-    input:checked
-  ) {
-  border-color: #ff9a3d;
-  background: rgb(255 154 61 / 12%);
-  box-shadow:
-    0 0 0 2px rgb(255 154 61 / 12%),
-    0 4px 12px rgb(255 154 61 / 16%);
-}
-
-.weekly-score-buttons input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.weekly-score-buttons span {
-  font-size: 1.05rem;
-  font-weight: 750;
-}
-
-.weekly-score-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.35rem;
-  color: var(
-    --color-text-muted,
-    #59666a
-  );
-  font-size: 0.8rem;
-}
-
 .weekly-recovery-list {
   display: grid;
-  gap: 1rem;
+  gap: 1.3rem;
 }
 
 .weekly-recovery-list section {
-  border: 1px solid
+  display: grid;
+  gap: 0.65rem;
+  border-bottom: 1px solid
     var(--color-border, #d9e0e2);
-  border-radius:
-    var(--radius-lg, 1rem);
-  padding: 1rem;
-  background:
-    var(--color-background, #fff);
+  padding-bottom: 1.25rem;
+}
+
+.weekly-recovery-list section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .weekly-recovery-list h2 {
-  margin: 0 0 0.9rem;
+  margin: 0;
   font-size: 1rem;
+  line-height: 1.35;
 }
 
-.weekly-measurement-grid {
+/* Weekly measurements match the cleaned Start Day
+   layout: only the actual input has a border or glow. */
+.weekly-checkin-page
+  .weekly-measurement-field {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.weekly-side-measurements {
   display: grid;
-  gap: 1rem;
+  gap: 1.35rem;
 }
 
-.weekly-measurement-field,
-.weekly-body-fat-field {
+.weekly-photo-tips {
   display: grid;
-  gap: 0.55rem;
-  border: 1px solid
-    var(--color-border, #d9e0e2);
-  border-radius:
-    var(--radius-lg, 1rem);
-  padding: 1rem;
-  background:
-    var(--color-background, #fff);
-  font-weight: 700;
+  gap: 0.9rem;
 }
 
-.weekly-measurement-tips {
-  margin: 0 0 1rem;
-  border-radius:
-    var(--radius-md, 0.75rem);
-  padding: 0.85rem 1rem;
-  background: rgb(255 154 61 / 10%);
-}
-
-.weekly-measurement-tips summary {
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.weekly-photo-grid {
-  display: grid;
-  gap: 1rem;
+.weekly-photo-tips p {
+  margin: 0;
+  line-height: 1.55;
 }
 
 .weekly-photo-card {
-  border: 1px solid
+  display: grid;
+  overflow: hidden;
+  border: 2px solid
     var(--color-border, #d9e0e2);
   border-radius:
     var(--radius-lg, 1rem);
-  padding: 1rem;
   background:
     var(--color-background, #fff);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.weekly-photo-card h2 {
-  margin-top: 0;
-  font-size: 1rem;
+.weekly-photo-card.needs-answer {
+  border-color: rgb(255 154 61 / 72%);
+}
+
+.weekly-photo-card.has-answer {
+  border-color: #ff9a3d;
+  box-shadow:
+    0 0 0 2px rgb(255 154 61 / 12%),
+    0 8px 20px rgb(255 154 61 / 16%);
+}
+
+.weekly-photo-card:hover {
+  transform: translateY(-1px);
 }
 
 .weekly-photo-card img,
 .weekly-photo-placeholder {
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius:
-    var(--radius-md, 0.75rem);
   object-fit: cover;
 }
 
 .weekly-photo-placeholder {
   display: grid;
   place-items: center;
+  padding: 1.25rem;
   background:
     var(--color-surface, #f5f7f7);
   color: var(
     --color-text-muted,
     #59666a
   );
+  text-align: center;
 }
 
-.weekly-photo-picker {
+.weekly-photo-action {
   display: block;
-  margin-top: 0.75rem;
-  font-weight: 700;
-}
-
-.weekly-photo-picker input {
-  width: 100%;
-  margin-top: 0.45rem;
+  padding: 0.9rem 1rem;
+  color: var(
+    --color-primary,
+    #002a35
+  );
+  font-weight: 800;
+  text-align: center;
 }
 
 .weekly-checkin-review {
@@ -212,13 +169,11 @@
 }
 
 @media (min-width: 40rem) {
-  .weekly-measurement-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+  .weekly-side-measurements {
+    grid-template-columns: 1fr;
   }
 
-  .weekly-photo-grid {
-    grid-template-columns:
-      repeat(3, minmax(0, 1fr));
+  .weekly-photo-card {
+    max-width: 28rem;
   }
 }

@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { createCoachingPlan } from '../services/createPlanService'
+import {
+  saveCheckInSettings,
+} from '../services/checkInSettingsService'
 import { getTodayDateKey } from '../utils/dates'
 import {
   validateCreatePlan,
@@ -9,16 +12,21 @@ import {
   getErrorMessage,
   logDevelopmentError,
 } from '../utils/errors'
+import {
+  calculateCaloriesFromMacros,
+} from '../utils/nutritionTargets'
 
 const EMPTY_FORM = {
   goal: '',
   unit_system: 'imperial',
   body_fat_source: '',
+  track_water: null,
+  track_alcohol: null,
   start_date: '',
   program_length_weeks: '12',
   checkin_day: '',
   nutrition_target_method: '',
-  calorie_target: '0',
+  calorie_target: '',
   protein_grams: '',
   carb_grams: '',
   fat_grams: '',
@@ -28,30 +36,6 @@ const EMPTY_FORM = {
   measurement_frequency_weeks: '1',
   photo_frequency_weeks: '4',
   time_zone: getBrowserTimeZone(),
-}
-
-function macroNumber(value) {
-  if (
-    value === '' ||
-    value === null ||
-    value === undefined
-  ) {
-    return 0
-  }
-
-  const number = Number(value)
-
-  return Number.isFinite(number) && number >= 0
-    ? number
-    : 0
-}
-
-function calculateCaloriesFromMacros(form) {
-  return String(
-    macroNumber(form.protein_grams) * 4 +
-      macroNumber(form.carb_grams) * 4 +
-      macroNumber(form.fat_grams) * 9,
-  )
 }
 
 // Owns the Create Plan form, validation, and save.
@@ -152,6 +136,14 @@ export function useCreatePlan(
     setError('')
 
     try {
+      await saveCheckInSettings(
+        userId,
+        {
+          track_water: form.track_water,
+          track_alcohol: form.track_alcohol,
+        },
+      )
+
       const planId = await createCoachingPlan(
         userId,
         form,

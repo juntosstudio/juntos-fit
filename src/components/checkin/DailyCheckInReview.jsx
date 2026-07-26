@@ -7,6 +7,9 @@ import {
 import {
   MEAL_PLAN_DEVIATION_TYPES as DEVIATION,
 } from '../../utils/dailyCheckInFlow'
+import {
+  normalizeCheckInSettings,
+} from '../../utils/checkInTracking'
 
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow the plan',
@@ -71,7 +74,13 @@ export function DailyCheckInReview({
   form,
   target,
   today,
+  settings,
+  showCoachNotes = true,
 }) {
+  const {
+    track_water: trackWater,
+    track_alcohol: trackAlcohol,
+  } = normalizeCheckInSettings(settings)
   const mealPlanScore = Number(
     form.meal_plan_score,
   )
@@ -228,20 +237,25 @@ export function DailyCheckInReview({
             value={`${form.cardio_minutes} minutes`}
           />
 
-          <ReviewItem
-            label="Water"
-            value={waterAnswer}
-          />
+          {trackWater && (
+            <ReviewItem
+              label="Water"
+              value={waterAnswer}
+            />
+          )}
 
-          <ReviewItem
-            label="Alcohol"
-            value={yesNo(
-              form.alcohol_consumed,
-            )}
-          />
+          {trackAlcohol && (
+            <ReviewItem
+              label="Alcohol"
+              value={yesNo(
+                form.alcohol_consumed,
+              )}
+            />
+          )}
 
-          {form.alcohol_consumed ===
-            true && (
+          {trackAlcohol &&
+            form.alcohol_consumed ===
+              true && (
             <ReviewItem
               label="What and how much"
               value={
@@ -252,18 +266,20 @@ export function DailyCheckInReview({
         </dl>
       </section>
 
-      <section>
-        <h2>Coach Notes</h2>
+      {showCoachNotes && (
+        <section>
+          <h2>Coach Notes</h2>
 
-        <dl>
-          <ReviewItem
-            label="Questions or notes for coach"
-            value={
-              form.coach_notes
-            }
-          />
-        </dl>
-      </section>
+          <dl>
+            <ReviewItem
+              label="Questions or notes for coach"
+              value={
+                form.coach_notes
+              }
+            />
+          </dl>
+        </section>
+      )}
     </div>
   )
 }

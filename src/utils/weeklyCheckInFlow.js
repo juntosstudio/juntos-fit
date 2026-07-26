@@ -15,19 +15,37 @@ const MILLISECONDS_PER_DAY =
   24 * 60 * 60 * 1000
 
 export const WEEKLY_CHECKIN_STEP_IDS = {
-  RECOVERY: 'weekly:recovery',
-  MEASUREMENTS: 'weekly:measurements',
   BODY_FAT: 'weekly:body-fat',
-  MENSTRUAL_CONTEXT: 'weekly:menstrual-context',
-  PHOTOS: 'weekly:photos',
+  WAIST: 'weekly:waist',
+  RECOVERY: 'weekly:recovery',
+  MENSTRUAL_CONTEXT:
+    'weekly:menstrual-context',
+  NECK: 'weekly:neck',
+  CHEST: 'weekly:chest',
+  HIPS: 'weekly:hips',
+  SIDE_MEASUREMENTS:
+    'weekly:side-measurements',
+  PHOTO_TIPS: 'weekly:photo-tips',
+  FRONT_PHOTO: 'weekly:front-photo',
+  SIDE_PHOTO: 'weekly:side-photo',
+  BACK_PHOTO: 'weekly:back-photo',
   REFLECTION: 'weekly:reflection',
+
+  // Legacy aliases retained temporarily so an
+  // older import does not crash during the merge.
+  MEASUREMENTS: 'weekly:measurements',
+  PHOTOS: 'weekly:photos',
 }
 
-export function toWeeklyDailyStep(dailyStep) {
+export function toWeeklyDailyStep(
+  dailyStep,
+) {
   return `daily:${dailyStep}`
 }
 
-export function fromWeeklyDailyStep(step) {
+export function fromWeeklyDailyStep(
+  step,
+) {
   return step?.startsWith('daily:')
     ? step.slice('daily:'.length)
     : null
@@ -53,7 +71,9 @@ export function getWeeklyCheckInNumber(
   }
 
   const daysSinceFirst = Math.floor(
-    (dateKeyToUtcMilliseconds(checkinDate) -
+    (dateKeyToUtcMilliseconds(
+      checkinDate,
+    ) -
       dateKeyToUtcMilliseconds(
         firstWeeklyDate,
       )) /
@@ -64,7 +84,9 @@ export function getWeeklyCheckInNumber(
     return null
   }
 
-  return Math.floor(daysSinceFirst / 7) + 1
+  return (
+    Math.floor(daysSinceFirst / 7) + 1
+  )
 }
 
 export function getWeeklyCheckInSteps(
@@ -73,66 +95,100 @@ export function getWeeklyCheckInSteps(
     bodyFatSource,
     sex,
     photosRequired,
+    trackingSettings,
   } = {},
 ) {
-  const dailySteps =
-    getDailyCheckInSteps(form).map(
-      toWeeklyDailyStep,
+  const dailyStepIds =
+    getDailyCheckInSteps(
+      form,
+      trackingSettings,
+    ).filter(
+      (step) =>
+        step !==
+        DAILY_CHECKIN_STEP_IDS.COACH_NOTES,
     )
 
-  if (bodyFatSource === 'scale') {
-    const weightStep =
-      toWeeklyDailyStep(
-        DAILY_CHECKIN_STEP_IDS.WEIGHT,
-      )
-
-    const weightStepIndex =
-      dailySteps.indexOf(weightStep)
-
-    dailySteps.splice(
-      weightStepIndex + 1,
-      0,
-      WEEKLY_CHECKIN_STEP_IDS.BODY_FAT,
+  const weightIndex =
+    dailyStepIds.indexOf(
+      DAILY_CHECKIN_STEP_IDS.WEIGHT,
     )
-  }
 
-  const weeklySteps = [
-    WEEKLY_CHECKIN_STEP_IDS.RECOVERY,
-    WEEKLY_CHECKIN_STEP_IDS.MEASUREMENTS,
+  const steps = [
+    toWeeklyDailyStep(
+      DAILY_CHECKIN_STEP_IDS.WEIGHT,
+    ),
   ]
 
   if (
-    bodyFatSource === 'juntos_estimate'
+    bodyFatSource &&
+    bodyFatSource !== 'none'
   ) {
-    weeklySteps.push(
+    steps.push(
       WEEKLY_CHECKIN_STEP_IDS.BODY_FAT,
     )
   }
 
+  // Waist appears near the beginning on regular
+  // weeks. On photo/full-measurement weeks it moves
+  // into the measurement sequence below.
+  if (!photosRequired) {
+    steps.push(
+      WEEKLY_CHECKIN_STEP_IDS.WAIST,
+    )
+  }
+
+  const remainingDailySteps =
+    weightIndex >= 0
+      ? dailyStepIds.slice(weightIndex + 1)
+      : dailyStepIds
+
+  steps.push(
+    ...remainingDailySteps.map(
+      toWeeklyDailyStep,
+    ),
+    WEEKLY_CHECKIN_STEP_IDS.RECOVERY,
+  )
+
   if (sex === 'female') {
-    weeklySteps.push(
+    steps.push(
       WEEKLY_CHECKIN_STEP_IDS
         .MENSTRUAL_CONTEXT,
     )
   }
 
   if (photosRequired) {
-    weeklySteps.push(
-      WEEKLY_CHECKIN_STEP_IDS.PHOTOS,
+    steps.push(
+      WEEKLY_CHECKIN_STEP_IDS.NECK,
+      WEEKLY_CHECKIN_STEP_IDS.CHEST,
+      WEEKLY_CHECKIN_STEP_IDS.WAIST,
+      WEEKLY_CHECKIN_STEP_IDS.HIPS,
+      WEEKLY_CHECKIN_STEP_IDS
+        .SIDE_MEASUREMENTS,
+      WEEKLY_CHECKIN_STEP_IDS
+        .PHOTO_TIPS,
+      WEEKLY_CHECKIN_STEP_IDS
+        .FRONT_PHOTO,
+      WEEKLY_CHECKIN_STEP_IDS
+        .SIDE_PHOTO,
+      WEEKLY_CHECKIN_STEP_IDS
+        .BACK_PHOTO,
     )
   }
 
-  weeklySteps.push(
+  steps.push(
     WEEKLY_CHECKIN_STEP_IDS.REFLECTION,
   )
 
-  return [...dailySteps, ...weeklySteps]
+  return steps
 }
 
 function isPositiveNumber(value) {
   const number = Number(value)
 
-  return Number.isFinite(number) && number > 0
+  return (
+    Number.isFinite(number) &&
+    number > 0
+  )
 }
 
 function isScore(value) {
@@ -143,6 +199,77 @@ function isScore(value) {
     number >= 1 &&
     number <= 5
   )
+}
+
+export function getWeeklyStepMeasurementFields(
+  step,
+) {
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.WAIST
+  ) {
+    return ['waist_inches']
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.NECK
+  ) {
+    return ['neck_inches']
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.CHEST
+  ) {
+    return ['chest_inches']
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.HIPS
+  ) {
+    return ['hips_inches']
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS
+      .SIDE_MEASUREMENTS
+  ) {
+    return [
+      'bicep_inches',
+      'thigh_inches',
+      'calf_inches',
+    ]
+  }
+
+  return []
+}
+
+function getPhotoPoseForStep(step) {
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.FRONT_PHOTO
+  ) {
+    return 'front'
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.SIDE_PHOTO
+  ) {
+    return 'side'
+  }
+
+  if (
+    step ===
+    WEEKLY_CHECKIN_STEP_IDS.BACK_PHOTO
+  ) {
+    return 'back'
+  }
+
+  return null
 }
 
 export function canContinueWeeklyStep(
@@ -179,32 +306,23 @@ export function canContinueWeeklyStep(
     ].every(isScore)
   }
 
-  if (
-    step ===
-    WEEKLY_CHECKIN_STEP_IDS.MEASUREMENTS
-  ) {
-    const fields = [
-      'neck_inches',
-      'waist_inches',
-      'hips_inches',
-      'bicep_inches',
-      'thigh_inches',
-      'calf_inches',
-    ]
+  const measurementFields =
+    getWeeklyStepMeasurementFields(step)
 
+  if (measurementFields.length > 0) {
     if (
-      fields.every(
+      measurementFields.every(
         (field) =>
           validationByField[field],
       )
     ) {
       return canContinueMeasurementFields(
-        fields,
+        measurementFields,
         validationByField,
       )
     }
 
-    return fields.every(
+    return measurementFields.every(
       (field) =>
         isPositiveNumber(form[field]),
     )
@@ -233,11 +351,10 @@ export function canContinueWeeklyStep(
         return false
       }
 
-      const validation =
+      if (
         validationByField
           .scale_body_fat_percent
-
-      if (validation) {
+      ) {
         return canContinueMeasurementFields(
           ['scale_body_fat_percent'],
           validationByField,
@@ -254,23 +371,23 @@ export function canContinueWeeklyStep(
       )
     }
 
+    // Juntos estimate remains a preview placeholder
+    // until the formula is finalized.
     return true
   }
 
-  if (
-    step ===
-    WEEKLY_CHECKIN_STEP_IDS.PHOTOS
-  ) {
+  const photoPose =
+    getPhotoPoseForStep(step)
+
+  if (photoPose) {
     if (!photosRequired || previewMode) {
       return true
     }
 
-    return Boolean(
-      photos?.front &&
-        photos?.side &&
-        photos?.back,
-    )
+    return Boolean(photos?.[photoPose])
   }
 
+  // Menstrual context, photo tips, and the final
+  // reflection are optional/informational.
   return true
 }
