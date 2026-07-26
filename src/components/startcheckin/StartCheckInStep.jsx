@@ -260,7 +260,6 @@ function PhotoField({
         className="visually-hidden"
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-        capture="environment"
         disabled={disabled || isUploading}
         onChange={handleChange}
       />

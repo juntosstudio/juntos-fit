@@ -539,7 +539,6 @@ function PhotoQuestion({
         className="visually-hidden"
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-        capture="environment"
         onChange={handleChange}
       />
     </WizardQuestion>
