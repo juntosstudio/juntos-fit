@@ -1,4 +1,8 @@
 import {
+  useEffect,
+  useRef,
+} from 'react'
+import {
   addDays,
   dateKeyToUtcMilliseconds,
   getTodayDateKey,
@@ -132,6 +136,54 @@ export function PlanPage({
   const settings =
     dashboard?.settings ?? null
 
+  const planSelectorRef = useRef(null)
+
+  useEffect(() => {
+    function closePlanSelector() {
+      if (planSelectorRef.current?.open) {
+        planSelectorRef.current.open = false
+      }
+    }
+
+    function handlePointerDown(event) {
+      const selector =
+        planSelectorRef.current
+
+      if (
+        selector?.open &&
+        !selector.contains(event.target)
+      ) {
+        closePlanSelector()
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        closePlanSelector()
+      }
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      handlePointerDown,
+    )
+    document.addEventListener(
+      'keydown',
+      handleKeyDown,
+    )
+
+    return () => {
+      document.removeEventListener(
+        'pointerdown',
+        handlePointerDown,
+      )
+      document.removeEventListener(
+        'keydown',
+        handleKeyDown,
+      )
+    }
+  }, [])
+
   if (!plan) {
     return (
       <main className="container plan-page">
@@ -215,7 +267,10 @@ export function PlanPage({
 
   return (
     <main className="container plan-page">
-      <details className="plan-selector">
+      <details
+        ref={planSelectorRef}
+        className="plan-selector"
+      >
         <summary>{planTitle}</summary>
 
         <div className="plan-selector-menu">
