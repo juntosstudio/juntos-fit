@@ -1,0 +1,21 @@
+/* Check-In Settings as a main app section */
+
+.checkin-settings-page {
+  padding-bottom: 7.5rem;
+}
+
+.settings-save-action {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.settings-save-action button {
+  width: min(100%, 18rem);
+}
+
+@media (min-width: 40rem) {
+  .checkin-settings-page {
+    padding-bottom: 8rem;
+  }
+}

@@ -3,7 +3,6 @@ import {
   useState,
 } from 'react'
 import {
-  WizardActions,
   WizardChoiceGroup,
   WizardPage,
   WizardQuestion,
@@ -22,6 +21,7 @@ import {
   logDevelopmentError,
 } from '../utils/errors'
 import '../styles/wizard.css'
+import '../styles/checkInSettings.css'
 
 const YES_NO_OPTIONS = [
   { value: true, label: 'Yes' },
@@ -32,7 +32,9 @@ export function CheckInSettingsPage({
   userId,
   initialSettings,
   onSaved,
-  onBack,
+  onOpenToday,
+  onOpenHistory,
+  onOpenPlan,
 }) {
   const normalizedInitial =
     normalizeCheckInSettings(
@@ -118,35 +120,36 @@ export function CheckInSettingsPage({
     JSON.stringify(savedForm)
 
   return (
-    <WizardPage
-      className="checkin-settings-page"
-      title="Check-In Settings"
-      subtitle="Choose what Juntos Fit asks you to track."
-      onBack={onBack}
-      status={
-        error || success ? (
-          <p
-            role={error ? 'alert' : 'status'}
-          >
-            {error || success}
-          </p>
-        ) : null
-      }
-      actions={
-        <WizardActions
-          backLabel="Back"
-          nextLabel={
-            saving
-              ? 'Saving...'
-              : 'Save Settings'
-          }
-          busy={saving}
-          nextDisabled={!isDirty}
-          onBack={onBack}
-          onNext={saveSettings}
-        />
-      }
-    >
+    <>
+      <WizardPage
+        className="checkin-settings-page"
+        title="Check-In Settings"
+        subtitle="Choose what Juntos Fit asks you to track."
+        status={
+          error || success ? (
+            <p
+              role={error ? 'alert' : 'status'}
+            >
+              {error || success}
+            </p>
+          ) : null
+        }
+        actions={
+          <div className="settings-save-action">
+            <button
+              type="button"
+              disabled={
+                saving || !isDirty
+              }
+              onClick={saveSettings}
+            >
+              {saving
+                ? 'Saving...'
+                : 'Save Settings'}
+            </button>
+          </div>
+        }
+      >
       <WizardQuestion
         title="Do you want to track water in your check-ins?"
         helper="Turn this off and future Daily and Weekly Check-Ins will stop asking whether you met your water goal."
@@ -198,10 +201,52 @@ export function CheckInSettingsPage({
         />
       </WizardQuestion>
 
-      <p className="wizard-question-helper">
-        Changing these settings never deletes answers
-        from earlier check-ins.
-      </p>
-    </WizardPage>
+        <p className="wizard-question-helper">
+          Changing these settings never deletes answers
+          from earlier check-ins.
+        </p>
+      </WizardPage>
+
+      <nav
+        className="bottom-navigation"
+        aria-label="Main navigation"
+      >
+        <button
+          type="button"
+          onClick={onOpenToday}
+        >
+          Today
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenHistory}
+        >
+          Progress
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenPlan}
+        >
+          Plan
+        </button>
+
+        <button
+          type="button"
+          disabled
+        >
+          Coach
+        </button>
+
+        <button
+          type="button"
+          className="is-active"
+          aria-current="page"
+        >
+          Settings
+        </button>
+      </nav>
+    </>
   )
 }

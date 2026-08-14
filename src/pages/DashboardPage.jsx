@@ -278,9 +278,6 @@ export function DashboardPage({
           </div>
         )}
 
-        <p className="dashboard-update-test">
-          PWA refresh test 3 ✓
-        </p>
       </header>
 
       {error && <p role="alert">{error}</p>}

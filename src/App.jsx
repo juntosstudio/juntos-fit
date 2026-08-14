@@ -207,7 +207,13 @@ function App() {
           dashboard?.settings
         }
         onSaved={refreshDashboard}
-        onBack={returnToDashboard}
+        onOpenToday={returnToDashboard}
+        onOpenHistory={() =>
+          setCurrentPage(PAGE_HISTORY)
+        }
+        onOpenPlan={() =>
+          setCurrentPage(PAGE_PLAN)
+        }
       />
     )
   }
