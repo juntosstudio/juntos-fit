@@ -6,6 +6,7 @@ import { CheckInSettingsPage } from './pages/CheckInSettingsPage'
 import { DailyCheckInPage } from './pages/DailyCheckInPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
+import { PlanPage } from './pages/PlanPage'
 import { StartCheckInPage } from './pages/StartCheckInPage'
 import { WeeklyCheckInPage } from './pages/WeeklyCheckInPage'
 import { getTodayDateKey } from './utils/dates'
@@ -17,6 +18,7 @@ const PAGE_DAILY_CHECK_IN = 'daily-check-in'
 const PAGE_WEEKLY_CHECK_IN = 'weekly-check-in'
 const PAGE_START_CHECK_IN = 'start-check-in'
 const PAGE_HISTORY = 'history'
+const PAGE_PLAN = 'plan'
 const PAGE_SETTINGS = 'settings'
 
 function App() {
@@ -210,6 +212,24 @@ function App() {
     )
   }
 
+  if (currentPage === PAGE_PLAN) {
+    return (
+      <PlanPage
+        dashboard={dashboard}
+        onOpenToday={returnToDashboard}
+        onOpenHistory={() =>
+          setCurrentPage(PAGE_HISTORY)
+        }
+        onOpenSettings={() =>
+          setCurrentPage(PAGE_SETTINGS)
+        }
+        onCreatePlan={() =>
+          setCurrentPage(PAGE_CREATE_PLAN)
+        }
+      />
+    )
+  }
+
   if (currentPage === PAGE_HISTORY) {
     return (
       <main className="container">
@@ -249,6 +269,9 @@ function App() {
       }
       onOpenHistory={() =>
         setCurrentPage(PAGE_HISTORY)
+      }
+      onOpenPlan={() =>
+        setCurrentPage(PAGE_PLAN)
       }
       onOpenSettings={() =>
         setCurrentPage(PAGE_SETTINGS)

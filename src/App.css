@@ -826,6 +826,298 @@ fieldset textarea {
   background: var(--color-accent-soft);
 }
 
+
+/* Plan page */
+
+.plan-page {
+  padding-bottom: 7.5rem;
+}
+
+.plan-selector {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.plan-selector summary {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-inline: auto;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: 0.7rem 1rem;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  list-style: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.plan-selector summary:hover {
+  background: var(--color-accent-soft);
+}
+
+.plan-selector summary:focus-visible {
+  outline: 3px solid rgb(108 91 212 / 28%);
+  outline-offset: 2px;
+}
+
+.plan-selector summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-selector summary::after {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  content: '▼';
+  transition: transform 150ms ease;
+}
+
+.plan-selector[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.plan-selector-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  width: min(100%, 28rem);
+  transform: translateX(-50%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.55rem;
+  background: var(--color-surface);
+  box-shadow:
+    0 14px 35px rgb(33 31 44 / 18%);
+}
+
+.plan-selector-option {
+  display: grid;
+  width: 100%;
+  gap: 0.2rem;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  text-align: left;
+}
+
+.plan-selector-option span {
+  font-weight: 800;
+}
+
+.plan-selector-option small {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.plan-overview {
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.plan-overview-goal {
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-size: clamp(1.3rem, 5vw, 1.7rem);
+  font-weight: 850;
+}
+
+.plan-overview-week {
+  margin: 0.25rem 0 0;
+  color: var(--color-primary);
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+.plan-overview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1.25rem;
+  margin-top: 0.85rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.plan-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.plan-card {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 0.85rem;
+  background: var(--color-background);
+}
+
+.plan-card h2 {
+  margin: 0 0 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.plan-primary-stat {
+  display: grid;
+  justify-items: center;
+  gap: 0.08rem;
+  text-align: center;
+}
+
+.plan-primary-stat strong {
+  color: var(--color-primary-dark);
+  font-size: clamp(1.35rem, 6vw, 1.85rem);
+  line-height: 1.05;
+}
+
+.plan-primary-stat span {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.plan-macro-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+
+.plan-macro-row > div {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 0.12rem;
+}
+
+.plan-macro-row strong {
+  color: var(--color-primary-dark);
+  font-size: clamp(0.92rem, 3.7vw, 1.08rem);
+}
+
+.plan-macro-row span {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.plan-card-footnote {
+  margin: 0.9rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.plan-activity-stats {
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+}
+
+.plan-card dl {
+  margin: 0;
+}
+
+.plan-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.42rem;
+}
+
+.plan-detail-row + .plan-detail-row {
+  border-top: 1px solid rgb(221 217 232 / 65%);
+}
+
+.plan-detail-row dt {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.plan-detail-row dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.plan-settings-button {
+  display: block;
+  width: min(100%, 18rem);
+  margin: 1.4rem auto 0;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.plan-settings-button:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+.plan-read-only-note {
+  margin: 0.65rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* Preserve the same two-column feel as Week at a Glance.
+   Only the wordier detail cards stack when the effective
+   viewport becomes extremely narrow. */
+@media (max-width: 20rem) {
+  .plan-card-grid-secondary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 40rem) {
+  .plan-page {
+    padding-bottom: 8rem;
+  }
+
+  .plan-card {
+    padding: 1.15rem 1rem;
+  }
+
+  .plan-detail-row dt,
+  .plan-detail-row dd {
+    font-size: 0.82rem;
+  }
+}
+
 /* Sign out */
 
 .dashboard-sign-out {

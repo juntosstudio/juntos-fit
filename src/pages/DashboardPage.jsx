@@ -130,6 +130,7 @@ export function DashboardPage({
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
   onOpenHistory,
+  onOpenPlan,
   onOpenSettings,
   onSignOut,
 }) {
@@ -568,9 +569,10 @@ export function DashboardPage({
         <button
           type="button"
           onClick={
-            plan ? undefined : onCreatePlan
+            plan
+              ? onOpenPlan
+              : onCreatePlan
           }
-          disabled={Boolean(plan)}
         >
           Plan
         </button>
