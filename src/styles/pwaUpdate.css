@@ -1,0 +1,64 @@
+/* In-app PWA update prompt */
+
+.pwa-update-toast {
+  position: fixed;
+  z-index: 300;
+  right: 1rem;
+  bottom:
+    calc(5.4rem + env(safe-area-inset-bottom));
+  left: 1rem;
+  width: min(calc(100% - 2rem), 28rem);
+  margin-inline: auto;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  padding: 1rem;
+  background: var(--color-surface);
+  box-shadow:
+    0 16px 42px rgb(33 31 44 / 24%);
+}
+
+.pwa-update-copy h2 {
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-size: 1.05rem;
+  text-align: left;
+}
+
+.pwa-update-copy p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.pwa-update-actions {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 0.7fr);
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.pwa-update-actions button {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.pwa-update-later {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.pwa-update-later:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+@media (min-width: 40rem) {
+  .pwa-update-toast {
+    bottom: 6.7rem;
+  }
+}

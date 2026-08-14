@@ -611,6 +611,15 @@ fieldset textarea {
   font-weight: 750;
 }
 
+/* Temporary PWA refresh test marker */
+
+.dashboard-update-test {
+  margin: 0.55rem 0 0;
+  color: var(--color-success);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
 /* Daily check-in button */
 
 .dashboard-check-in {
