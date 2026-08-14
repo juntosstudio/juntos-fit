@@ -279,7 +279,7 @@ export function DashboardPage({
         )}
 
         <p className="dashboard-update-test">
-          PWA refresh test ✓
+          PWA refresh test 2 ✓
         </p>
       </header>
 
