@@ -9,17 +9,18 @@ import {
 } from '../utils/formatters'
 import { PlanEmptyState } from '../components/plan/PlanEmptyState'
 import { PlanStartStatus } from '../components/plan/PlanStartStatus'
+import '../styles/weeklySummary.css'
 
 const MILLISECONDS_PER_DAY =
   24 * 60 * 60 * 1000
 
-function getPlanProgressLabel(plan, today) {
+function getPlanWeekNumber(plan, today) {
   if (
     !plan?.start_date ||
     !plan?.program_length_weeks ||
     today < plan.start_date
   ) {
-    return ''
+    return null
   }
 
   const daysSinceStart = Math.floor(
@@ -30,10 +31,24 @@ function getPlanProgressLabel(plan, today) {
       MILLISECONDS_PER_DAY,
   )
 
-  const currentWeek = Math.min(
+  return Math.min(
     Math.floor(daysSinceStart / 7) + 1,
-    plan.program_length_weeks,
+    Number(
+      plan.program_length_weeks,
+    ),
   )
+}
+
+function getPlanProgressLabel(plan, today) {
+  const currentWeek =
+    getPlanWeekNumber(
+      plan,
+      today,
+    )
+
+  if (!currentWeek) {
+    return ''
+  }
 
   return `Week ${currentWeek} of ${plan.program_length_weeks}`
 }
@@ -129,6 +144,7 @@ export function DashboardPage({
   onOpenStartCheckIn,
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
+  onOpenWeeklySummary,
   onOpenHistory,
   onOpenPlan,
   onOpenSettings,
@@ -159,6 +175,28 @@ export function DashboardPage({
 
   const startCheckIn =
     dashboard?.startCheckIn ?? null
+
+  const currentWeekNumber =
+    getPlanWeekNumber(
+      plan,
+      today,
+    )
+
+  const latestCompletedWeeklyCheckIn =
+    dashboard
+      ?.latestCompletedWeeklyCheckIn ??
+    null
+
+  const previousWeekSummaryAvailable =
+    Boolean(
+      currentWeekNumber &&
+      currentWeekNumber > 1 &&
+      Number(
+        latestCompletedWeeklyCheckIn
+          ?.week_number,
+      ) ===
+        currentWeekNumber - 1,
+    )
 
   const workoutsGoalMet =
     isWeeklyGoalMet(
@@ -416,7 +454,9 @@ export function DashboardPage({
               aria-labelledby="week-at-a-glance-heading"
             >
               <h2 id="week-at-a-glance-heading">
-                Week at a Glance
+                {currentWeekNumber
+                  ? `Week ${currentWeekNumber} at a Glance`
+                  : 'Week at a Glance'}
               </h2>
 
               <dl className="weekly-score-list">
@@ -524,13 +564,22 @@ export function DashboardPage({
                 )}
               </dl>
 
-              <button
-                type="button"
-                className="weekly-summary-link"
-                onClick={onOpenHistory}
-              >
-                View Weekly Summary
-              </button>
+              {previousWeekSummaryAvailable ? (
+                <button
+                  type="button"
+                  className="weekly-summary-link"
+                  onClick={onOpenWeeklySummary}
+                >
+                  View Previous Week Summary
+                </button>
+              ) : (
+                <p className="weekly-summary-unavailable">
+                  {currentWeekNumber &&
+                  currentWeekNumber > 1
+                    ? 'Complete the previous week’s Weekly Check-In to unlock its summary.'
+                    : 'Complete your first Weekly Check-In to unlock your first Weekly Summary.'}
+                </p>
+              )}
             </section>
           )}
         </>

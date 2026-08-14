@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage'
 import { PlanPage } from './pages/PlanPage'
 import { StartCheckInPage } from './pages/StartCheckInPage'
 import { WeeklyCheckInPage } from './pages/WeeklyCheckInPage'
+import { WeeklySummaryPage } from './pages/WeeklySummaryPage'
 import { getTodayDateKey } from './utils/dates'
 import './App.css'
 
@@ -16,6 +17,7 @@ const PAGE_DASHBOARD = 'dashboard'
 const PAGE_CREATE_PLAN = 'create-plan'
 const PAGE_DAILY_CHECK_IN = 'daily-check-in'
 const PAGE_WEEKLY_CHECK_IN = 'weekly-check-in'
+const PAGE_WEEKLY_SUMMARY = 'weekly-summary'
 const PAGE_START_CHECK_IN = 'start-check-in'
 const PAGE_HISTORY = 'history'
 const PAGE_PLAN = 'plan'
@@ -199,6 +201,16 @@ function App() {
     )
   }
 
+  if (currentPage === PAGE_WEEKLY_SUMMARY) {
+    return (
+      <WeeklySummaryPage
+        plan={dashboard?.plan}
+        profile={dashboard?.profile}
+        onBack={returnToDashboard}
+      />
+    )
+  }
+
   if (currentPage === PAGE_SETTINGS) {
     return (
       <CheckInSettingsPage
@@ -269,6 +281,9 @@ function App() {
       }
       onOpenWeeklyCheckIn={() =>
         setCurrentPage(PAGE_WEEKLY_CHECK_IN)
+      }
+      onOpenWeeklySummary={() =>
+        setCurrentPage(PAGE_WEEKLY_SUMMARY)
       }
       onOpenStartCheckIn={() =>
         setCurrentPage(PAGE_START_CHECK_IN)

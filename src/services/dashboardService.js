@@ -180,6 +180,38 @@ async function loadTodayWeeklyCheckIn(
   return weeklyCheckIn
 }
 
+// Loads the most recent completed Weekly Check-In.
+async function loadLatestCompletedWeeklyCheckIn(
+  coachingPlanId,
+) {
+  if (!coachingPlanId) {
+    return null
+  }
+
+  const { data, error } =
+    await supabase
+      .from('weekly_checkins')
+      .select(
+        'id, checkin_date, week_number, status, submitted_at',
+      )
+      .eq(
+        'coaching_plan_id',
+        coachingPlanId,
+      )
+      .eq('status', 'completed')
+      .order('week_number', {
+        ascending: false,
+      })
+      .limit(1)
+      .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
 // Loads the daily check-ins submitted during the current program week.
 async function loadWeeklyCheckIns(
   coachingPlanId,
@@ -365,6 +397,7 @@ export async function loadDashboardData(userId) {
       startCheckIn: null,
       todayCheckIn: null,
       todayWeeklyCheckIn: null,
+      latestCompletedWeeklyCheckIn: null,
       cardioCompleted: 0,
       cardioWeekStart: null,
       cardioWeekEnd: null,
@@ -386,6 +419,7 @@ export async function loadDashboardData(userId) {
     startCheckIn,
     todayCheckIn,
     todayWeeklyCheckIn,
+    latestCompletedWeeklyCheckIn,
     weeklyCheckIns,
     checkInDates,
   ] = await Promise.all([
@@ -400,11 +434,21 @@ export async function loadDashboardData(userId) {
       today,
     ),
 
+    loadLatestCompletedWeeklyCheckIn(
+      plan.id,
+    ),
+
     today >= plan.start_date
       ? loadWeeklyCheckIns(
           plan.id,
-          cardioWeekStart,
-          cardioWeekEnd,
+          addDays(
+            cardioWeekStart,
+            1,
+          ),
+          addDays(
+            cardioWeekEnd,
+            1,
+          ),
         )
       : Promise.resolve([]),
 
@@ -433,6 +477,7 @@ export async function loadDashboardData(userId) {
     startCheckIn,
     todayCheckIn,
     todayWeeklyCheckIn,
+    latestCompletedWeeklyCheckIn,
 
     cardioCompleted:
       weekAtAGlance.cardioMinutes,
