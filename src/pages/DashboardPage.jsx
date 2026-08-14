@@ -39,9 +39,17 @@ function getPlanProgressLabel(plan, today) {
 }
 
 function formatPercent(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return '0%'
+  }
+
   return Number.isFinite(Number(value))
     ? `${Math.round(Number(value))}%`
-    : '—'
+    : '0%'
 }
 
 function formatCount(
@@ -70,6 +78,14 @@ function formatWeight(value) {
 }
 
 function hasNumericValue(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return false
+  }
+
   return Number.isFinite(Number(value))
 }
 
