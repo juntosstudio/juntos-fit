@@ -12,9 +12,6 @@ const UPDATE_CHECK_INTERVAL_MS =
 const UPDATE_CHECK_THROTTLE_MS =
   60 * 1000
 
-const REMIND_LATER_MS =
-  60 * 60 * 1000
-
 export function PwaUpdatePrompt() {
   const [showPrompt, setShowPrompt] =
     useState(false)
@@ -27,9 +24,6 @@ export function PwaUpdatePrompt() {
 
   const updateAvailableRef =
     useRef(false)
-
-  const remindAfterRef =
-    useRef(0)
 
   useEffect(() => {
     let registration = null
@@ -85,27 +79,16 @@ export function PwaUpdatePrompt() {
       }
     }
 
-    function maybeShowReminder() {
-      if (
-        updateAvailableRef.current &&
-        Date.now() >= remindAfterRef.current
-      ) {
-        setShowPrompt(true)
-      }
-    }
-
     function handleVisibilityChange() {
       if (
         document.visibilityState ===
         'visible'
       ) {
-        maybeShowReminder()
         checkForUpdate()
       }
     }
 
     function handlePageShow() {
-      maybeShowReminder()
       checkForUpdate()
     }
 
@@ -121,7 +104,6 @@ export function PwaUpdatePrompt() {
           updateAvailableRef.current =
             true
 
-          remindAfterRef.current = 0
           setShowPrompt(true)
         },
 
@@ -135,6 +117,10 @@ export function PwaUpdatePrompt() {
           if (!registration) {
             return
           }
+
+          // Check immediately on launch/registration instead
+          // of waiting for the next foreground event or timer.
+          checkForUpdate()
 
           intervalId =
             window.setInterval(
@@ -180,14 +166,7 @@ export function PwaUpdatePrompt() {
     }
   }, [])
 
-  function handleLater() {
-    remindAfterRef.current =
-      Date.now() + REMIND_LATER_MS
-
-    setShowPrompt(false)
-  }
-
-  async function handleRefresh() {
+  function handleRefresh() {
     if (!updateServiceWorkerRef.current) {
       window.location.reload()
       return
@@ -195,18 +174,42 @@ export function PwaUpdatePrompt() {
 
     setRefreshing(true)
 
-    try {
-      await updateServiceWorkerRef.current(
-        true,
-      )
-    } catch (error) {
+    let reloadStarted = false
+
+    function reloadOnce() {
+      if (reloadStarted) {
+        return
+      }
+
+      reloadStarted = true
+      window.location.reload()
+    }
+
+    // Desktop browsers normally reload through updateSW(true).
+    // iOS standalone PWAs can occasionally leave that promise
+    // pending even after the new worker is ready. Reload as soon
+    // as the new worker takes control, with a short fallback so
+    // the UI can never sit on "Refreshing…" forever.
+    navigator.serviceWorker?.addEventListener(
+      'controllerchange',
+      reloadOnce,
+      { once: true },
+    )
+
+    Promise.resolve(
+      updateServiceWorkerRef.current(true),
+    ).catch((error) => {
       console.error(
         'Juntos Fit refresh failed.',
         error,
       )
+      reloadOnce()
+    })
 
-      window.location.reload()
-    }
+    window.setTimeout(
+      reloadOnce,
+      2500,
+    )
   }
 
   if (!showPrompt) {
@@ -240,15 +243,6 @@ export function PwaUpdatePrompt() {
           {refreshing
             ? 'Refreshing…'
             : 'Refresh Now'}
-        </button>
-
-        <button
-          type="button"
-          className="pwa-update-later"
-          onClick={handleLater}
-          disabled={refreshing}
-        >
-          Later
         </button>
       </div>
     </section>
