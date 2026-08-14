@@ -772,6 +772,47 @@ fieldset textarea {
   overflow-wrap: anywhere;
 }
 
+
+/* Weekly goal feedback */
+
+.weekly-score-list > div.is-goal-met {
+  border-color: var(--color-success);
+  box-shadow: 0 0 10px rgb(40 122 91 / 10%);
+}
+
+.weekly-score-list > div.is-goal-met dt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+}
+
+.weekly-goal-check {
+  display: inline-grid;
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: 0 0 1.3rem;
+  place-items: center;
+  border: 2px solid var(--color-success);
+  border-radius: 50%;
+  color: var(--color-success);
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weekly-score-list dd.is-adherence-good {
+  color: var(--color-success);
+}
+
+.weekly-score-list dd.is-adherence-watch {
+  color: var(--color-interaction);
+}
+
+.weekly-score-list dd.is-adherence-low {
+  color: var(--color-error);
+}
+
 .weekly-summary-link {
   display: block;
   width: min(100%, 18rem);

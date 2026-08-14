@@ -8,6 +8,7 @@ const SETTINGS_FIELDS = `
   user_id,
   track_water,
   track_alcohol,
+  body_fat_source,
   created_at,
   updated_at
 `

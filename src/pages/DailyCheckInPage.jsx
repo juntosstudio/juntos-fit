@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -122,6 +123,39 @@ export function DailyCheckInPage({
 
   const activeStep =
     steps[safeStepIndex] ?? STEP.WEIGHT
+
+  useEffect(() => {
+    if (activeStep !== STEP.CARDIO) {
+      return undefined
+    }
+
+    const input =
+      document.getElementById(
+        'daily-cardio-minutes',
+      )
+
+    if (!input) {
+      return undefined
+    }
+
+    function selectDefaultZero() {
+      if (input.value === '0') {
+        input.select?.()
+      }
+    }
+
+    input.addEventListener(
+      'focus',
+      selectDefaultZero,
+    )
+
+    return () => {
+      input.removeEventListener(
+        'focus',
+        selectDefaultZero,
+      )
+    }
+  }, [activeStep])
 
   const {
     markForwardNavigation,

@@ -105,6 +105,8 @@ export function WeeklyCheckInReview({
   settings,
   photosRequired,
   unitSystem,
+  bodyFatSource,
+  estimatedBodyFat,
 }) {
   const sideLabel =
     (
@@ -115,11 +117,9 @@ export function WeeklyCheckInReview({
       : 'Right'
 
   let bodyFatAnswer =
-    'Body fat is not tracked for this plan'
+    'Body fat is not tracked'
 
-  if (
-    plan?.body_fat_source === 'scale'
-  ) {
+  if (bodyFatSource === 'scale') {
     bodyFatAnswer =
       form.body_fat_status === 'recorded'
         ? `${formatNumber(
@@ -129,11 +129,14 @@ export function WeeklyCheckInReview({
   }
 
   if (
-    plan?.body_fat_source ===
+    bodyFatSource ===
     'juntos_estimate'
   ) {
-    bodyFatAnswer =
-      'Juntos Fit estimate pending calculation'
+    bodyFatAnswer = estimatedBodyFat
+      ? `${estimatedBodyFat.percent.toFixed(
+          1,
+        )}% — Juntos Fit estimate (RFM)`
+      : 'Juntos Fit estimate unavailable'
   }
 
   return (
@@ -150,7 +153,7 @@ export function WeeklyCheckInReview({
         />
       </section>
 
-      {plan?.body_fat_source !==
+      {bodyFatSource !==
         'none' && (
         <section>
           <h2>Body Fat</h2>
@@ -302,7 +305,9 @@ export function WeeklyCheckInReview({
               label="Front"
               value={
                 photos.front?.name ??
-                'Not selected in preview'
+                (photos.front
+                  ? 'Saved'
+                  : 'Not selected')
               }
             />
 
@@ -310,7 +315,9 @@ export function WeeklyCheckInReview({
               label={`${sideLabel} side`}
               value={
                 photos.side?.name ??
-                'Not selected in preview'
+                (photos.side
+                  ? 'Saved'
+                  : 'Not selected')
               }
             />
 
@@ -318,7 +325,9 @@ export function WeeklyCheckInReview({
               label="Back"
               value={
                 photos.back?.name ??
-                'Not selected in preview'
+                (photos.back
+                  ? 'Saved'
+                  : 'Not selected')
               }
             />
           </dl>

@@ -8,8 +8,18 @@ import {
   getTodayDateKey,
 } from '../utils/dates'
 import {
-  getWeeklyCheckInNumber,
+  getPreviewWeeklyCheckInNumber,
+  isFullWeeklyMeasurementCheckIn,
 } from '../utils/weeklyCheckInFlow'
+import {
+  calculateRfmBodyFatEstimate,
+} from '../utils/bodyFat'
+import {
+  toCanonicalMeasurement,
+} from '../utils/measurementUnits'
+import {
+  loadWeeklyBodyFatProfile,
+} from '../services/weeklyCheckInPreviewService'
 
 const EMPTY_FORM = {
   morning_weight: '',
@@ -67,17 +77,17 @@ function getSavedMeasurementSide(plan) {
   )
 }
 
-function getInitialBodyFatStatus(plan) {
+function getInitialBodyFatStatus(
+  bodyFatSource,
+) {
   if (
-    plan?.body_fat_source ===
+    bodyFatSource ===
     'juntos_estimate'
   ) {
-    return 'pending_estimate'
+    return 'estimated'
   }
 
-  if (
-    plan?.body_fat_source === 'none'
-  ) {
+  if (bodyFatSource === 'none') {
     return 'not_tracked'
   }
 
@@ -86,6 +96,10 @@ function getInitialBodyFatStatus(plan) {
 
 export function useWeeklyCheckInPreview(
   plan,
+  {
+    bodyFatSource,
+    unitSystem,
+  } = {},
 ) {
   const today = getTodayDateKey()
 
@@ -95,34 +109,154 @@ export function useWeeklyCheckInPreview(
       measurement_side:
         getSavedMeasurementSide(plan),
       body_fat_status:
-        getInitialBodyFatStatus(plan),
+        getInitialBodyFatStatus(
+          bodyFatSource,
+        ),
     }),
   )
 
   const [photos, setPhotos] = useState({
     ...EMPTY_PHOTOS,
   })
+  const [
+    bodyFatProfile,
+    setBodyFatProfile,
+  ] = useState(null)
 
-  const weekNumber = useMemo(
-    () =>
-      getWeeklyCheckInNumber(
+  const weekNumber = useMemo(() => {
+    const previewNumber =
+      getPreviewWeeklyCheckInNumber(
         plan?.start_date,
         plan?.checkin_day,
         today,
-      ) ?? 4,
+      )
+
+    const planLength = Number(
+      plan?.program_length_weeks,
+    )
+
+    if (
+      Number.isInteger(planLength) &&
+      planLength > 0 &&
+      previewNumber
+    ) {
+      return Math.min(
+        previewNumber,
+        planLength,
+      )
+    }
+
+    return previewNumber ?? 1
+  }, [
+    plan?.start_date,
+    plan?.checkin_day,
+    plan?.program_length_weeks,
+    today,
+  ])
+
+  const photosRequired = useMemo(
+    () =>
+      isFullWeeklyMeasurementCheckIn({
+        weekNumber,
+        programLengthWeeks:
+          plan?.program_length_weeks,
+        photoFrequencyWeeks:
+          plan?.photo_frequency_weeks ?? 4,
+      }),
     [
-      plan?.start_date,
-      plan?.checkin_day,
-      today,
+      weekNumber,
+      plan?.program_length_weeks,
+      plan?.photo_frequency_weeks,
     ],
   )
 
-  // Weekly remains a DEV front-end preview. It
-  // intentionally shows a Week 4/full-measurement
-  // example so every measurement and photo screen
-  // can be reviewed before database submission is
-  // connected.
-  const photosRequired = true
+  const isFinalWeekly =
+    Number(weekNumber) ===
+    Number(plan?.program_length_weeks)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadProfile() {
+      try {
+        const loaded =
+          await loadWeeklyBodyFatProfile(
+            plan?.user_id,
+          )
+
+        if (active) {
+          setBodyFatProfile(loaded)
+        }
+      } catch {
+        if (active) {
+          setBodyFatProfile(null)
+        }
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      active = false
+    }
+  }, [plan?.user_id])
+
+  useEffect(() => {
+    setForm((current) => {
+      const nextStatus =
+        getInitialBodyFatStatus(
+          bodyFatSource,
+        )
+
+      if (
+        bodyFatSource === 'scale'
+      ) {
+        return {
+          ...current,
+          body_fat_status:
+            ['recorded', 'no_reading'].includes(
+              current.body_fat_status,
+            )
+              ? current.body_fat_status
+              : '',
+        }
+      }
+
+      return {
+        ...current,
+        body_fat_status: nextStatus,
+        scale_body_fat_percent: '',
+      }
+    })
+  }, [bodyFatSource])
+
+  const estimatedBodyFat = useMemo(() => {
+    if (
+      bodyFatSource !==
+      'juntos_estimate'
+    ) {
+      return null
+    }
+
+    const canonicalWaist =
+      toCanonicalMeasurement(
+        'waist_inches',
+        form.waist_inches,
+        unitSystem,
+      )
+
+    return calculateRfmBodyFatEstimate({
+      waistInches: canonicalWaist,
+      heightCm:
+        bodyFatProfile?.height_cm,
+      sex: bodyFatProfile?.sex,
+    })
+  }, [
+    bodyFatSource,
+    bodyFatProfile,
+    form.waist_inches,
+    unitSystem,
+  ])
 
   const photosRef = useRef(photos)
 
@@ -189,7 +323,9 @@ export function useWeeklyCheckInPreview(
       measurement_side:
         getSavedMeasurementSide(plan),
       body_fat_status:
-        getInitialBodyFatStatus(plan),
+        getInitialBodyFatStatus(
+          bodyFatSource,
+        ),
     })
     setPhotos({ ...EMPTY_PHOTOS })
   }
@@ -198,6 +334,8 @@ export function useWeeklyCheckInPreview(
     today,
     weekNumber,
     photosRequired,
+    isFinalWeekly,
+    estimatedBodyFat,
     form,
     photos,
     setField,

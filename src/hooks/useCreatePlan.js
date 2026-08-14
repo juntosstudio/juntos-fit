@@ -141,6 +141,8 @@ export function useCreatePlan(
         {
           track_water: form.track_water,
           track_alcohol: form.track_alcohol,
+          body_fat_source:
+            form.body_fat_source,
         },
       )
 

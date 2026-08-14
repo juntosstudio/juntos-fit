@@ -15,6 +15,9 @@ import {
   normalizeCheckInSettings,
 } from '../utils/checkInTracking'
 import {
+  BODY_FAT_SOURCE_OPTIONS,
+} from '../utils/createPlanFlow'
+import {
   getErrorMessage,
   logDevelopmentError,
 } from '../utils/errors'
@@ -59,6 +62,7 @@ export function CheckInSettingsPage({
   }, [
     initialSettings?.track_water,
     initialSettings?.track_alcohol,
+    initialSettings?.body_fat_source,
   ])
 
   function setField(field, value) {
@@ -171,6 +175,23 @@ export function CheckInSettingsPage({
           onChange={(value) =>
             setField(
               'track_alcohol',
+              value,
+            )
+          }
+        />
+      </WizardQuestion>
+
+      <WizardQuestion
+        title="How should body fat be tracked?"
+        helper="This choice applies to future Weekly Check-Ins. Changing it later never rewrites earlier body-fat values or their original source."
+      >
+        <WizardChoiceGroup
+          name="body-fat-source"
+          value={form.body_fat_source}
+          options={BODY_FAT_SOURCE_OPTIONS}
+          onChange={(value) =>
+            setField(
+              'body_fat_source',
               value,
             )
           }

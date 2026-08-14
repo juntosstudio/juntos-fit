@@ -255,6 +255,10 @@ export function validateCreatePlanStep(
       return 'Weekly cardio must be between 0 and 3,000 minutes.'
     }
 
+    if (form.track_water !== true) {
+      return ''
+    }
+
     return hasWholeNumber(
       form.daily_water_goal_oz,
       1,

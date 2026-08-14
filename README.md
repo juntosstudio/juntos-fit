@@ -1,14 +1,16 @@
-# Photo Camera Roll Choice
+# Weekly Cardio Default-Zero Highlight
 
-Removes `capture="environment"` from the Start Check-In and Weekly
-photo inputs.
+Fixes Weekly Check-In so the default cardio value `0` is selected when
+the field is tapped/clicked.
 
-On mobile, tapping a photo card will now use the device's normal image
-picker, allowing the user to either:
+Safari can place the caret after the initial focus event, so Weekly now
+re-selects the default zero after focus/click/pointer handling completes.
 
-- take a new photo
-- choose an existing photo from the camera roll / photo library
+Expected result:
 
-The accepted file types remain unchanged.
+- Weekly cardio opens as `0`.
+- Tap/click the field.
+- `0` highlights.
+- Type `30` -> `30`, not `030`.
 
-No database migration or Supabase push is required.
+This does not affect Daily Check-In and requires no database migration.

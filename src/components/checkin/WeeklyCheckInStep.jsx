@@ -323,28 +323,9 @@ function SideMeasurementsStep({
 function BodyFatStep({
   form,
   setField,
-  bodyFatSource,
   validationByField,
   onSkipBodyFat,
 }) {
-  if (
-    bodyFatSource === 'juntos_estimate'
-  ) {
-    return (
-      <WizardQuestion
-        title="Body Fat Estimate"
-        helper="The calculation will be connected only after the Juntos Fit estimation method is finalized and validated."
-      >
-        <p>
-          Juntos Fit will use the appropriate
-          profile and measurement data to estimate
-          your body-fat trend. No estimate is being
-          invented in this preview.
-        </p>
-      </WizardQuestion>
-    )
-  }
-
   return (
     <BodyFatQuestion
       id="weekly-scale-body-fat"
@@ -481,7 +462,9 @@ function PhotoQuestion({
   title,
   helper,
   photo,
-  addPreviewPhoto,
+  uploadPhoto,
+  uploading,
+  persistenceEnabled,
 }) {
   const inputId =
     `weekly-${pose}-photo`
@@ -491,11 +474,15 @@ function PhotoQuestion({
       event.target.files?.[0]
 
     if (file) {
-      addPreviewPhoto(pose, file)
+      await uploadPhoto(pose, file)
     }
 
     event.target.value = ''
   }
+
+  const imageUrl =
+    photo?.signed_url ??
+    photo?.preview_url
 
   return (
     <WizardQuestion
@@ -503,9 +490,9 @@ function PhotoQuestion({
       helper={helper}
     >
       <p className="weekly-preview-note">
-        DEV preview: the selected photo stays
-        only in this browser preview. Nothing is
-        uploaded or saved.
+        {persistenceEnabled
+          ? 'Your photo saves as soon as you select it, so it will still be here if you Save & Exit.'
+          : 'DEV preview: photos are not uploaded or saved outside the real Weekly Check-In date.'}
       </p>
 
       <label
@@ -516,21 +503,25 @@ function PhotoQuestion({
         }`}
         htmlFor={inputId}
       >
-        {photo?.preview_url ? (
+        {imageUrl ? (
           <img
-            src={photo.preview_url}
-            alt={`${pose} Weekly Check-In preview`}
+            src={imageUrl}
+            alt={`${pose} Weekly Check-In`}
           />
         ) : (
           <span className="weekly-photo-placeholder">
-            Tap to take or choose a photo
+            {uploading
+              ? 'Saving photo...'
+              : 'Tap to take or choose a photo'}
           </span>
         )}
 
         <span className="weekly-photo-action">
-          {photo
-            ? 'Replace Photo'
-            : 'Add Photo'}
+          {uploading
+            ? 'Saving...'
+            : photo
+              ? 'Replace Photo'
+              : 'Add Photo'}
         </span>
       </label>
 
@@ -539,6 +530,7 @@ function PhotoQuestion({
         className="visually-hidden"
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        disabled={uploading}
         onChange={handleChange}
       />
     </WizardQuestion>
@@ -553,11 +545,66 @@ export function WeeklyCheckInStep({
   cardioCompleted,
   plan,
   photos,
-  addPreviewPhoto,
+  uploadPhoto,
+  uploadingPose,
+  persistenceEnabled,
   onSkipBodyFat,
   unitSystem,
   validationByField = {},
 }) {
+  if (step === STEP.GET_STARTED) {
+    return (
+      <WizardQuestion title="Let’s Get Started">
+        <p className="weekly-prep-intro">
+          Before you begin, have these ready:
+        </p>
+
+        <div className="weekly-prep-list">
+          <div>
+            <span aria-hidden="true">✓</span>
+            <p>
+              <strong>A scale</strong>
+              <small>
+                Use the same scale whenever possible.
+              </small>
+            </p>
+          </div>
+
+          <div>
+            <span aria-hidden="true">✓</span>
+            <p>
+              <strong>
+                A flexible body-measuring tape
+              </strong>
+              <small>
+                Use a non-stretch tape made for body
+                measurements.
+              </small>
+            </p>
+          </div>
+
+          <div>
+            <span aria-hidden="true">✓</span>
+            <p>
+              <strong>Your phone or camera</strong>
+              <small>
+                You may need progress photos during
+                this Weekly Check-In.
+              </small>
+            </p>
+          </div>
+        </div>
+
+        <p className="weekly-prep-note">
+          For the most consistent comparison, complete
+          your check-in under similar conditions each
+          week. On progress-photo weeks, keep the same
+          or a similar fitted outfit available.
+        </p>
+      </WizardQuestion>
+    )
+  }
+
   const dailyStep =
     fromWeeklyDailyStep(step)
 
@@ -583,9 +630,6 @@ export function WeeklyCheckInStep({
       <BodyFatStep
         form={form}
         setField={setField}
-        bodyFatSource={
-          plan?.body_fat_source
-        }
         onSkipBodyFat={onSkipBodyFat}
         validationByField={
           validationByField
@@ -672,8 +716,12 @@ export function WeeklyCheckInStep({
         title="Add your FRONT progress photo."
         helper="Stand naturally facing the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
         photo={photos.front}
-        addPreviewPhoto={
-          addPreviewPhoto
+        uploadPhoto={uploadPhoto}
+        uploading={
+          uploadingPose === 'front'
+        }
+        persistenceEnabled={
+          persistenceEnabled
         }
       />
     )
@@ -691,8 +739,12 @@ export function WeeklyCheckInStep({
         title={`Add your ${side.toUpperCase()} SIDE progress photo.`}
         helper={`Stand naturally with your ${side} side facing the camera, your body relaxed, and your arms resting at your sides. Keep your full body visible from head to feet.`}
         photo={photos.side}
-        addPreviewPhoto={
-          addPreviewPhoto
+        uploadPhoto={uploadPhoto}
+        uploading={
+          uploadingPose === 'side'
+        }
+        persistenceEnabled={
+          persistenceEnabled
         }
       />
     )
@@ -705,8 +757,12 @@ export function WeeklyCheckInStep({
         title="Add your BACK progress photo."
         helper="Stand naturally facing away from the camera with your body relaxed and your arms resting at your sides. Keep your full body visible from head to feet."
         photo={photos.back}
-        addPreviewPhoto={
-          addPreviewPhoto
+        uploadPhoto={uploadPhoto}
+        uploading={
+          uploadingPose === 'back'
+        }
+        persistenceEnabled={
+          persistenceEnabled
         }
       />
     )

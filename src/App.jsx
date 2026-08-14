@@ -180,6 +180,7 @@ function App() {
         weekSummary={
           dashboard?.weekAtAGlance ?? null
         }
+        onSaved={refreshDashboard}
         onBack={returnToDashboard}
       />
     )

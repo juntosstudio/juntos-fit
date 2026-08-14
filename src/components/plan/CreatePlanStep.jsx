@@ -251,8 +251,10 @@ export function CreatePlanStep({
         </legend>
 
         <p className="question-helper">
-          Use one method for the entire plan so your
-          progress stays comparable.
+          Choose how Juntos Fit should track body fat
+          when your plan begins. You can change this
+          later in Check-In Settings; earlier readings
+          keep their original source.
         </p>
 
         <ChoiceGroup
@@ -543,21 +545,23 @@ export function CreatePlanStep({
           }
         />
 
-        <NumberField
-          label="Daily water"
-          name="daily-water"
-          value={form.daily_water_goal_oz}
-          suffix="oz/day"
-          min="1"
-          max="500"
-          rangeMessage="Daily water must be between 1 and 500 ounces."
-          onChange={(value) =>
-            setField(
-              'daily_water_goal_oz',
-              value,
-            )
-          }
-        />
+        {form.track_water === true && (
+          <NumberField
+            label="Daily water"
+            name="daily-water"
+            value={form.daily_water_goal_oz}
+            suffix="oz/day"
+            min="1"
+            max="500"
+            rangeMessage="Daily water must be between 1 and 500 ounces."
+            onChange={(value) =>
+              setField(
+                'daily_water_goal_oz',
+                value,
+              )
+            }
+          />
+        )}
       </div>
     </fieldset>
   )

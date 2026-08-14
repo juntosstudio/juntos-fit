@@ -115,6 +115,7 @@ export function WizardInputField({
   placeholder,
   disabled = false,
   readOnly = false,
+  selectAllOnFocus = false,
   onBlur,
   onChange,
 }) {
@@ -163,6 +164,19 @@ export function WizardInputField({
     onBlur?.(event)
   }
 
+  function selectInputValue(event) {
+    if (!selectAllOnFocus) {
+      return
+    }
+
+    const input = event.currentTarget
+
+    // Run after the browser's own tap/click caret placement.
+    requestAnimationFrame(() => {
+      input.select?.()
+    })
+  }
+
   return (
     <label
       className={joinWizardClasses(
@@ -206,6 +220,8 @@ export function WizardInputField({
           placeholder={placeholder}
           disabled={disabled}
           readOnly={readOnly}
+          onFocus={selectInputValue}
+          onClick={selectInputValue}
           onBlur={handleBlur}
           onChange={(event) => {
             const nextValue =

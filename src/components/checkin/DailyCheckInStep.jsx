@@ -342,6 +342,9 @@ export function DailyCheckInStep({
           step="1"
           inputMode="numeric"
           integerOnly
+          selectAllOnFocus={
+            String(form.cardio_minutes) === '0'
+          }
           feedback={
             validationByField
               .cardio_minutes?.message

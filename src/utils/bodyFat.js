@@ -83,3 +83,49 @@ export function calculateJuntosBodyFatEstimate({
       BODY_FAT_FORMULA_VERSION,
   }
 }
+
+export const RFM_BODY_FAT_FORMULA_VERSION =
+  'rfm_v1'
+
+// Relative Fat Mass (RFM) for adults.
+// Formula: 64 - 20 * (height / waist) + 12 * sex
+// where sex is 0 for male and 1 for female, and
+// height and waist use the same units.
+export function calculateRfmBodyFatEstimate({
+  waistInches,
+  heightCm,
+  sex,
+}) {
+  const waist = Number(waistInches)
+  const height = Number(heightCm)
+
+  if (
+    !Number.isFinite(waist) ||
+    waist <= 0 ||
+    !Number.isFinite(height) ||
+    height <= 0 ||
+    !['male', 'female'].includes(sex)
+  ) {
+    return null
+  }
+
+  const waistCm = waist * 2.54
+  const sexValue = sex === 'female' ? 1 : 0
+
+  const estimate =
+    64 -
+    20 * (height / waistCm) +
+    12 * sexValue
+
+  if (!Number.isFinite(estimate)) {
+    return null
+  }
+
+  return {
+    percent:
+      Math.round(estimate * 10) / 10,
+    formulaVersion:
+      RFM_BODY_FAT_FORMULA_VERSION,
+  }
+}
+

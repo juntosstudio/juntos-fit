@@ -150,12 +150,13 @@ async function loadTodayCheckIn(
   return todayCheckIn
 }
 
-// Loads today's weekly check-in when the linked
-// daily record has already been created.
+// Loads today's Weekly Check-In directly by plan/date.
+// Drafts do not have a linked Daily Check-In yet.
 async function loadTodayWeeklyCheckIn(
-  dailyCheckInId,
+  coachingPlanId,
+  today,
 ) {
-  if (!dailyCheckInId) {
+  if (!coachingPlanId) {
     return null
   }
 
@@ -163,12 +164,13 @@ async function loadTodayWeeklyCheckIn(
     await supabase
       .from('weekly_checkins')
       .select(
-        'id, daily_checkin_id, week_number, submitted_at',
+        'id, daily_checkin_id, checkin_date, week_number, status, resume_step, submitted_at',
       )
       .eq(
-        'daily_checkin_id',
-        dailyCheckInId,
+        'coaching_plan_id',
+        coachingPlanId,
       )
+      .eq('checkin_date', today)
       .maybeSingle()
 
   if (error) {
@@ -329,7 +331,7 @@ export async function loadDashboardData(userId) {
   const { data: profile, error: profileError } =
     await supabase
       .from('profiles')
-      .select('id, display_name, unit_system, time_zone')
+      .select('id, display_name, unit_system, time_zone, sex, height_cm, date_of_birth')
       .eq('id', userId)
       .single()
 
@@ -383,6 +385,7 @@ export async function loadDashboardData(userId) {
     target,
     startCheckIn,
     todayCheckIn,
+    todayWeeklyCheckIn,
     weeklyCheckIns,
     checkInDates,
   ] = await Promise.all([
@@ -391,6 +394,11 @@ export async function loadDashboardData(userId) {
     loadStartCheckIn(plan.id),
 
     loadTodayCheckIn(plan.id, today),
+
+    loadTodayWeeklyCheckIn(
+      plan.id,
+      today,
+    ),
 
     today >= plan.start_date
       ? loadWeeklyCheckIns(
@@ -406,11 +414,6 @@ export async function loadDashboardData(userId) {
       today,
     ),
   ])
-
-  const todayWeeklyCheckIn =
-    await loadTodayWeeklyCheckIn(
-      todayCheckIn?.id,
-    )
 
  const weekAtAGlance = buildWeekAtAGlance(
    weeklyCheckIns,

@@ -10,8 +10,8 @@ import {
   WeeklyCheckInReview,
 } from '../components/checkin/WeeklyCheckInReview'
 import {
-  useWeeklyCheckInPreview,
-} from '../hooks/useWeeklyCheckInPreview'
+  useWeeklyCheckIn,
+} from '../hooks/useWeeklyCheckIn'
 import {
   DAILY_CHECKIN_STEP_IDS,
 } from '../utils/dailyCheckInFlow'
@@ -84,23 +84,58 @@ export function WeeklyCheckInPage({
   target,
   cardioCompleted,
   settings,
+  onSaved,
   onBack,
 }) {
+  const unitSystem =
+    normalizeUnitSystem(
+      profile?.unit_system,
+    )
+
+  const bodyFatSource =
+    settings?.user_id
+      ? settings.body_fat_source
+      : plan?.body_fat_source ?? 'none'
+
   const {
     today,
     weekNumber,
     photosRequired,
+    isFinalWeekly,
+    persistenceEnabled,
+    isCompleted,
+    resumeStep,
     form,
     photos,
+    estimatedBodyFat,
+    reviewBodyFatSource,
+    reviewEstimatedBodyFat,
+    loading,
+    saving,
+    uploadingPose,
+    error,
+    saveMessage,
     setField,
-    addPreviewPhoto,
+    saveDraft,
+    uploadPhoto,
+    submitCheckIn,
     resetPreview,
-  } = useWeeklyCheckInPreview(plan)
+  } = useWeeklyCheckIn(
+    plan,
+    {
+      bodyFatSource,
+      unitSystem,
+      settings,
+      onSaved,
+    },
+  )
 
   const [stepIndex, setStepIndex] =
     useState(0)
   const [reviewing, setReviewing] =
     useState(false)
+  const [pageError, setPageError] =
+    useState('')
   const [
     confirmedWarningKeys,
     setConfirmedWarningKeys,
@@ -109,11 +144,6 @@ export function WeeklyCheckInPage({
     warningConfirmation,
     setWarningConfirmation,
   ] = useState(null)
-
-  const unitSystem =
-    normalizeUnitSystem(
-      profile?.unit_system,
-    )
 
   const rawValidationByField =
     useMemo(
@@ -204,21 +234,49 @@ export function WeeklyCheckInPage({
   const steps = useMemo(
     () =>
       getWeeklyCheckInSteps(form, {
-        bodyFatSource:
-          plan?.body_fat_source,
+        bodyFatSource,
         sex: profile?.sex,
         photosRequired,
         trackingSettings: settings,
       }),
     [
       form,
-      plan?.body_fat_source,
+      bodyFatSource,
       profile?.sex,
       photosRequired,
       settings?.track_water,
       settings?.track_alcohol,
     ],
   )
+
+  useEffect(() => {
+    if (loading || steps.length === 0) {
+      return
+    }
+
+    if (
+      isCompleted ||
+      resumeStep === 'review'
+    ) {
+      setReviewing(true)
+      return
+    }
+
+    const resumedIndex =
+      steps.indexOf(resumeStep)
+
+    setReviewing(false)
+    setStepIndex(
+      resumedIndex >= 0
+        ? resumedIndex
+        : 0,
+    )
+  }, [
+    loading,
+    isCompleted,
+    resumeStep,
+    steps,
+  ])
 
   const safeStepIndex = Math.min(
     stepIndex,
@@ -232,18 +290,17 @@ export function WeeklyCheckInPage({
       activeStep,
       form,
       {
-        bodyFatSource:
-          plan?.body_fat_source,
+        bodyFatSource,
         photosRequired,
         photos,
-        previewMode: true,
+        previewMode:
+          !persistenceEnabled,
         validationByField,
       },
     )
 
-  // Weekly begins cardio at zero. Tapping the field
-  // selects that zero so the first typed digit replaces
-  // it instead of being appended.
+  // Keep the known Weekly cardio behavior aligned
+  // with Daily while we finish the browser polish.
   useEffect(() => {
     const dailyStep =
       fromWeeklyDailyStep(activeStep)
@@ -265,19 +322,39 @@ export function WeeklyCheckInPage({
     }
 
     function selectDefaultZero() {
-      if (input.value === '0') {
-        input.select?.()
+      if (input.value !== '0') {
+        return
       }
+
+      requestAnimationFrame(() => {
+        input.select?.()
+      })
     }
 
     input.addEventListener(
       'focus',
       selectDefaultZero,
     )
+    input.addEventListener(
+      'click',
+      selectDefaultZero,
+    )
+    input.addEventListener(
+      'pointerup',
+      selectDefaultZero,
+    )
 
     return () => {
       input.removeEventListener(
         'focus',
+        selectDefaultZero,
+      )
+      input.removeEventListener(
+        'click',
+        selectDefaultZero,
+      )
+      input.removeEventListener(
+        'pointerup',
         selectDefaultZero,
       )
     }
@@ -346,11 +423,31 @@ export function WeeklyCheckInPage({
       )
   }
 
-  function advanceOneStep() {
+  function getNextStep() {
     if (
       safeStepIndex >=
       steps.length - 1
     ) {
+      return 'review'
+    }
+
+    return steps[safeStepIndex + 1]
+  }
+
+  async function saveAndAdvance(
+    formToSave = form,
+  ) {
+    const nextStep = getNextStep()
+    const saved = await saveDraft(
+      nextStep,
+      formToSave,
+    )
+
+    if (!saved) {
+      return
+    }
+
+    if (nextStep === 'review') {
       setReviewing(true)
       return
     }
@@ -360,12 +457,10 @@ export function WeeklyCheckInPage({
     )
   }
 
-  function advanceAfterBodyFatSkip() {
-    advanceOneStep()
-  }
+  async function handleNext() {
+    setPageError('')
 
-  function handleNext() {
-    if (!canContinue) {
+    if (!canContinue || saving) {
       return
     }
 
@@ -379,7 +474,30 @@ export function WeeklyCheckInPage({
       return
     }
 
-    advanceOneStep()
+    await saveAndAdvance()
+  }
+
+  async function handleBodyFatSkip() {
+    if (saving) {
+      return
+    }
+
+    const nextForm = {
+      ...form,
+      body_fat_status: 'no_reading',
+      scale_body_fat_percent: '',
+    }
+
+    setField(
+      'body_fat_status',
+      'no_reading',
+    )
+    setField(
+      'scale_body_fat_percent',
+      '',
+    )
+
+    await saveAndAdvance(nextForm)
   }
 
   function editWarningValue() {
@@ -402,7 +520,7 @@ export function WeeklyCheckInPage({
     input?.select?.()
   }
 
-  function confirmWarnings() {
+  async function confirmWarnings() {
     const keys =
       warningConfirmation
         ?.warnings?.map(
@@ -417,27 +535,130 @@ export function WeeklyCheckInPage({
         ]),
     )
     setWarningConfirmation(null)
-    advanceOneStep()
+    await saveAndAdvance()
   }
 
-  function handleBack() {
+  async function handleBack() {
+    setPageError('')
+
+    if (saving) {
+      return
+    }
+
     if (reviewing) {
-      setReviewing(false)
-      setStepIndex(
+      const previousIndex =
         Math.max(
           steps.length - 1,
           0,
-        ),
+        )
+      const previousStep =
+        steps[previousIndex]
+
+      const saved = await saveDraft(
+        previousStep,
+      )
+
+      if (saved) {
+        setReviewing(false)
+        setStepIndex(previousIndex)
+      }
+      return
+    }
+
+    const previousIndex =
+      Math.max(
+        safeStepIndex - 1,
+        0,
+      )
+    const previousStep =
+      steps[previousIndex]
+
+    const saved = await saveDraft(
+      previousStep,
+    )
+
+    if (saved) {
+      setStepIndex(previousIndex)
+    }
+  }
+
+  async function handleSaveAndExit() {
+    if (saving) {
+      return
+    }
+
+    const resumeAt =
+      reviewing
+        ? 'review'
+        : activeStep
+
+    const saved = await saveDraft(
+      resumeAt,
+    )
+
+    if (!saved) {
+      return
+    }
+
+    await onSaved?.()
+    onBack?.()
+  }
+
+  function validateSubmission() {
+    for (
+      let index = 0;
+      index < steps.length;
+      index += 1
+    ) {
+      const step = steps[index]
+      const valid =
+        canContinueWeeklyStep(
+          step,
+          form,
+          {
+            bodyFatSource,
+            photosRequired,
+            photos,
+            previewMode: false,
+            validationByField,
+          },
+        )
+
+      if (!valid) {
+        return {
+          valid: false,
+          index,
+        }
+      }
+    }
+
+    return {
+      valid: true,
+      index: -1,
+    }
+  }
+
+  async function handleSubmit() {
+    setPageError('')
+
+    const validation =
+      validateSubmission()
+
+    if (!validation.valid) {
+      setReviewing(false)
+      setStepIndex(validation.index)
+      setPageError(
+        'One answer still needs attention before this Weekly Check-In can be submitted.',
       )
       return
     }
 
-    setStepIndex(
-      Math.max(
-        safeStepIndex - 1,
-        0,
-      ),
-    )
+    const submitted =
+      await submitCheckIn()
+
+    if (submitted) {
+      onBack?.()
+    }
   }
 
   function startOver() {
@@ -481,6 +702,7 @@ export function WeeklyCheckInPage({
 
             <button
               type="button"
+              disabled={saving}
               onClick={confirmWarnings}
             >
               Use This Value
@@ -503,9 +725,18 @@ export function WeeklyCheckInPage({
         <h1>Weekly Check-In</h1>
 
         <p role="alert">
-          Create a plan before previewing the
-          Weekly Check-In wizard.
+          Create a plan before opening the
+          Weekly Check-In.
         </p>
+      </main>
+    )
+  }
+
+  if (loading) {
+    return (
+      <main className="container weekly-checkin-page">
+        <h1>Weekly Check-In</h1>
+        <p>Loading your check-in...</p>
       </main>
     )
   }
@@ -516,16 +747,50 @@ export function WeeklyCheckInPage({
         <main className="container weekly-checkin-page">
           <button
             type="button"
-            onClick={onBack}
+            disabled={saving}
+            onClick={
+              persistenceEnabled &&
+              !isCompleted
+                ? handleSaveAndExit
+                : onBack
+            }
           >
-            Back to Dashboard
+            {persistenceEnabled &&
+            !isCompleted
+              ? 'Save & Exit'
+              : 'Back to Dashboard'}
           </button>
 
-          <p className="weekly-preview-badge">
-            DEV Preview · Nothing will be saved
-          </p>
+          {!persistenceEnabled && (
+            <p className="weekly-preview-badge">
+              DEV Preview · Nothing will be saved
+            </p>
+          )}
 
-          <h1>Review Weekly Check-In</h1>
+          {persistenceEnabled &&
+          !isCompleted && (
+            <p
+              className="weekly-preview-badge"
+              role="status"
+            >
+              Autosave is on
+              {saveMessage
+                ? ` · ${saveMessage}`
+                : ''}
+            </p>
+          )}
+
+          <h1>
+            {isCompleted
+              ? `Week ${weekNumber} Check-In`
+              : 'Review Weekly Check-In'}
+          </h1>
+
+          {(error || pageError) && (
+            <p role="alert">
+              {error || pageError}
+            </p>
+          )}
 
           <WeeklyCheckInReview
             form={form}
@@ -539,32 +804,78 @@ export function WeeklyCheckInPage({
               photosRequired
             }
             unitSystem={unitSystem}
+            bodyFatSource={
+              isCompleted
+                ? reviewBodyFatSource
+                : bodyFatSource
+            }
+            estimatedBodyFat={
+              isCompleted
+                ? reviewEstimatedBodyFat
+                : estimatedBodyFat
+            }
           />
 
-          <div className="wizard-actions">
+          {!isCompleted &&
+          persistenceEnabled && (
+            <div className="wizard-actions">
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleBack}
+              >
+                Edit Answers
+              </button>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleSubmit}
+              >
+                {saving
+                  ? 'Saving...'
+                  : 'Submit Weekly Check-In'}
+              </button>
+            </div>
+          )}
+
+          {!persistenceEnabled && (
+            <>
+              <div className="wizard-actions">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                >
+                  Edit Answers
+                </button>
+
+                <button
+                  type="button"
+                  disabled
+                  title="Real submission is available only on the scheduled Weekly Check-In date."
+                >
+                  Submit Weekly Check-In
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="text-button"
+                onClick={startOver}
+              >
+                Restart Preview
+              </button>
+            </>
+          )}
+
+          {isCompleted && (
             <button
               type="button"
-              onClick={handleBack}
+              onClick={onBack}
             >
-              Edit Answers
+              Back to Dashboard
             </button>
-
-            <button
-              type="button"
-              disabled
-              title="Submission will be enabled after the database merge."
-            >
-              Submit Weekly Check-In
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="text-button"
-            onClick={startOver}
-          >
-            Restart Preview
-          </button>
+          )}
         </main>
 
         {warningDialog}
@@ -584,21 +895,53 @@ export function WeeklyCheckInPage({
       <main className="container weekly-checkin-page">
         <button
           type="button"
-          onClick={onBack}
+          disabled={saving}
+          onClick={
+            persistenceEnabled
+              ? handleSaveAndExit
+              : onBack
+          }
         >
-          Back to Dashboard
+          {persistenceEnabled
+            ? 'Save & Exit'
+            : 'Back to Dashboard'}
         </button>
 
-        <p className="weekly-preview-badge">
-          DEV Preview · Week 4 Example · Nothing
-          will be saved
-        </p>
+        {!persistenceEnabled && (
+          <p className="weekly-preview-badge">
+            DEV Preview · Weekly #{weekNumber}
+            {isFinalWeekly
+              ? ' · Final Check-In'
+              : photosRequired
+                ? ' · Full Measurements + Photos'
+                : ' · Waist Check-In'}
+            {' · '}Nothing will be saved
+          </p>
+        )}
+
+        {persistenceEnabled && (
+          <p
+            className="weekly-preview-badge"
+            role="status"
+          >
+            Autosave is on
+            {saveMessage
+              ? ` · ${saveMessage}`
+              : ''}
+          </p>
+        )}
 
         <h1>
           Week {weekNumber} Check-In
         </h1>
 
         <p>{formatDate(today)}</p>
+
+        {(error || pageError) && (
+          <p role="alert">
+            {error || pageError}
+          </p>
+        )}
 
         <progress
           max="100"
@@ -621,11 +964,15 @@ export function WeeklyCheckInPage({
           }
           plan={plan}
           photos={photos}
-          addPreviewPhoto={
-            addPreviewPhoto
+          uploadPhoto={uploadPhoto}
+          uploadingPose={
+            uploadingPose
+          }
+          persistenceEnabled={
+            persistenceEnabled
           }
           onSkipBodyFat={
-            advanceAfterBodyFatSkip
+            handleBodyFatSkip
           }
           unitSystem={unitSystem}
           validationByField={
@@ -636,7 +983,10 @@ export function WeeklyCheckInPage({
         <div className="wizard-actions">
           <button
             type="button"
-            disabled={safeStepIndex === 0}
+            disabled={
+              safeStepIndex === 0 ||
+              saving
+            }
             onClick={handleBack}
           >
             Back
@@ -644,13 +994,19 @@ export function WeeklyCheckInPage({
 
           <button
             type="button"
-            disabled={!canContinue}
+            disabled={
+              !canContinue ||
+              saving ||
+              Boolean(uploadingPose)
+            }
             onClick={handleNext}
           >
-            {safeStepIndex ===
-            steps.length - 1
-              ? 'Review Answers'
-              : 'Next'}
+            {saving
+              ? 'Saving...'
+              : safeStepIndex ===
+                  steps.length - 1
+                ? 'Review Answers'
+                : 'Next'}
           </button>
         </div>
       </main>

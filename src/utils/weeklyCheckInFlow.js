@@ -15,6 +15,7 @@ const MILLISECONDS_PER_DAY =
   24 * 60 * 60 * 1000
 
 export const WEEKLY_CHECKIN_STEP_IDS = {
+  GET_STARTED: 'weekly:get-started',
   BODY_FAT: 'weekly:body-fat',
   WAIST: 'weekly:waist',
   RECOVERY: 'weekly:recovery',
@@ -89,6 +90,80 @@ export function getWeeklyCheckInNumber(
   )
 }
 
+export function getPreviewWeeklyCheckInNumber(
+  startDate,
+  checkinDay,
+  currentDate,
+) {
+  const exactNumber =
+    getWeeklyCheckInNumber(
+      startDate,
+      checkinDay,
+      currentDate,
+    )
+
+  if (exactNumber) {
+    return exactNumber
+  }
+
+  const firstWeeklyDate =
+    getFirstWeeklyCheckInDate(
+      startDate,
+      checkinDay,
+    )
+
+  if (!firstWeeklyDate || !currentDate) {
+    return null
+  }
+
+  if (currentDate < firstWeeklyDate) {
+    return 1
+  }
+
+  const daysSinceFirst = Math.floor(
+    (dateKeyToUtcMilliseconds(
+      currentDate,
+    ) -
+      dateKeyToUtcMilliseconds(
+        firstWeeklyDate,
+      )) /
+      MILLISECONDS_PER_DAY,
+  )
+
+  return (
+    Math.floor(daysSinceFirst / 7) +
+    (daysSinceFirst % 7 === 0 ? 1 : 2)
+  )
+}
+
+export function isFullWeeklyMeasurementCheckIn({
+  weekNumber,
+  programLengthWeeks,
+  photoFrequencyWeeks = 4,
+}) {
+  const week = Number(weekNumber)
+  const length = Number(programLengthWeeks)
+  const frequency =
+    Number(photoFrequencyWeeks) || 4
+
+  if (
+    !Number.isInteger(week) ||
+    week < 1
+  ) {
+    return false
+  }
+
+  const isFinal =
+    Number.isInteger(length) &&
+    length > 0 &&
+    week >= length
+
+  return (
+    isFinal ||
+    week % frequency === 0
+  )
+}
+
 export function getWeeklyCheckInSteps(
   form,
   {
@@ -114,15 +189,13 @@ export function getWeeklyCheckInSteps(
     )
 
   const steps = [
+    WEEKLY_CHECKIN_STEP_IDS.GET_STARTED,
     toWeeklyDailyStep(
       DAILY_CHECKIN_STEP_IDS.WEIGHT,
     ),
   ]
 
-  if (
-    bodyFatSource &&
-    bodyFatSource !== 'none'
-  ) {
+  if (bodyFatSource === 'scale') {
     steps.push(
       WEEKLY_CHECKIN_STEP_IDS.BODY_FAT,
     )
@@ -371,8 +444,6 @@ export function canContinueWeeklyStep(
       )
     }
 
-    // Juntos estimate remains a preview placeholder
-    // until the formula is finalized.
     return true
   }
 

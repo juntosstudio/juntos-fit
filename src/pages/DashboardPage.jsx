@@ -69,6 +69,40 @@ function formatWeight(value) {
     : '—'
 }
 
+function hasNumericValue(value) {
+  return Number.isFinite(Number(value))
+}
+
+function isWeeklyGoalMet(value, target) {
+  const numericValue = Number(value)
+  const numericTarget = Number(target)
+
+  return (
+    Number.isFinite(numericValue) &&
+    Number.isFinite(numericTarget) &&
+    numericTarget > 0 &&
+    numericValue >= numericTarget
+  )
+}
+
+function getAdherenceState(value) {
+  if (!hasNumericValue(value)) {
+    return ''
+  }
+
+  const percent = Number(value)
+
+  if (percent >= 80) {
+    return 'is-adherence-good'
+  }
+
+  if (percent >= 60) {
+    return 'is-adherence-watch'
+  }
+
+  return 'is-adherence-low'
+}
+
 // Displays the user's current plan, check-in action, and weekly snapshot.
 export function DashboardPage({
   dashboard,
@@ -109,6 +143,23 @@ export function DashboardPage({
   const startCheckIn =
     dashboard?.startCheckIn ?? null
 
+  const workoutsGoalMet =
+    isWeeklyGoalMet(
+      weekly?.workoutsCompleted,
+      weekly?.workoutsTarget,
+    )
+
+  const cardioGoalMet =
+    isWeeklyGoalMet(
+      dashboard?.cardioCompleted,
+      target?.weekly_cardio_target_minutes,
+    )
+
+  const adherenceState =
+    getAdherenceState(
+      weekly?.mealPlanAdherencePercent,
+    )
+
   // Keep the Start Check-In card visible before and on
   // the plan start date. Hide it beginning the next day.
   const showStartCheckIn =
@@ -139,8 +190,16 @@ export function DashboardPage({
       today,
     )
 
+  const todayWeeklyCheckIn =
+    dashboard?.todayWeeklyCheckIn ?? null
+
   const hasCompletedWeeklyCheckIn =
-    Boolean(dashboard?.todayWeeklyCheckIn)
+    todayWeeklyCheckIn?.status ===
+    'completed'
+
+  const hasWeeklyDraft =
+    todayWeeklyCheckIn?.status ===
+    'draft'
 
   const hasCheckedInToday =
     dashboard?.todayCheckIn?.checkin_date ===
@@ -162,7 +221,9 @@ export function DashboardPage({
   const weeklyCheckInLabel =
     hasCompletedWeeklyCheckIn
       ? 'View This Week’s Check-In ✓'
-      : 'Weekly Check-In'
+      : hasWeeklyDraft
+        ? 'Resume Weekly Check-In'
+        : 'Weekly Check-In'
 
   const startCheckInState = startCheckInCompleted
     ? 'is-complete'
@@ -343,15 +404,34 @@ export function DashboardPage({
               <dl className="weekly-score-list">
                 <div>
                   <dt>Meal Plan Adherence</dt>
-                  <dd>
+                  <dd
+                    className={adherenceState}
+                  >
                     {formatPercent(
                       weekly?.mealPlanAdherencePercent,
                     )}
                   </dd>
                 </div>
 
-                <div>
-                  <dt>Workouts Complete</dt>
+                <div
+                  className={
+                    workoutsGoalMet
+                      ? 'is-goal-met'
+                      : undefined
+                  }
+                >
+                  <dt>
+                    {workoutsGoalMet && (
+                      <span
+                        className="weekly-goal-check"
+                        aria-label="Workout goal met"
+                        title="Workout goal met"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    <span>Workouts Complete</span>
+                  </dt>
                   <dd>
                     {formatCount(
                       weekly?.workoutsCompleted,
@@ -361,8 +441,25 @@ export function DashboardPage({
                   </dd>
                 </div>
 
-                <div>
-                  <dt>Cardio</dt>
+                <div
+                  className={
+                    cardioGoalMet
+                      ? 'is-goal-met'
+                      : undefined
+                  }
+                >
+                  <dt>
+                    {cardioGoalMet && (
+                      <span
+                        className="weekly-goal-check"
+                        aria-label="Cardio goal met"
+                        title="Cardio goal met"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    <span>Cardio</span>
+                  </dt>
                   <dd>
                     {formatCount(
                       dashboard.cardioCompleted,

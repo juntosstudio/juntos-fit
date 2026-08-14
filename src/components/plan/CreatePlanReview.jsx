@@ -49,7 +49,7 @@ export function CreatePlanReview({ form }) {
           />
 
           <ReviewItem
-            label="Body fat"
+            label="Initial body-fat tracking"
             value={getOptionLabel(
               BODY_FAT_SOURCE_OPTIONS,
               form.body_fat_source,
@@ -75,37 +75,18 @@ export function CreatePlanReview({ form }) {
           />
 
           <ReviewItem
-            label="Measurements"
-            value="Every week"
+            label="Waist"
+            value="Every weekly check-in"
+          />
+
+          <ReviewItem
+            label="Full measurements"
+            value={`Every ${form.photo_frequency_weeks} weeks and final check-in`}
           />
 
           <ReviewItem
             label="Progress photos"
-            value="Every 4 weeks"
-          />
-        </dl>
-      </section>
-
-      <section>
-        <h2>Check-In Tracking</h2>
-
-        <dl>
-          <ReviewItem
-            label="Water"
-            value={
-              form.track_water
-                ? 'Included'
-                : 'Not included'
-            }
-          />
-
-          <ReviewItem
-            label="Alcohol"
-            value={
-              form.track_alcohol
-                ? 'Included'
-                : 'Not included'
-            }
+            value={`Every ${form.photo_frequency_weeks} weeks and final check-in`}
           />
         </dl>
       </section>
@@ -152,10 +133,12 @@ export function CreatePlanReview({ form }) {
             value={`${form.weekly_cardio_target_minutes} min/week`}
           />
 
-          <ReviewItem
-            label="Water"
-            value={`${form.daily_water_goal_oz} oz/day`}
-          />
+          {form.track_water === true && (
+            <ReviewItem
+              label="Water"
+              value={`${form.daily_water_goal_oz} oz/day`}
+            />
+          )}
         </dl>
       </section>
     </div>
