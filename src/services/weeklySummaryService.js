@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase'
 import {
+  loadWeeklyCoachReview,
+} from './weeklyCoachService'
+import {
   addDays,
 } from '../utils/dates'
 
@@ -277,6 +280,11 @@ export async function loadWeeklySummary(
     throw prescriptionError
   }
 
+  const coachReview =
+    await loadWeeklyCoachReview(
+      weeklyResult.data.id,
+    )
+
   return {
     week: weeklyResult.data,
     weekRange,
@@ -288,6 +296,7 @@ export async function loadWeeklySummary(
       startResult.data,
     prescriptions:
       prescriptions ?? [],
+    coachReview,
   }
 }
 
@@ -534,5 +543,6 @@ loadWeeklySummaryPreview(
     startCheckIn:
       startResult.data,
     prescriptions,
+    coachReview: null,
   }
 }

@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import {
@@ -8,6 +9,9 @@ import {
   loadWeeklySummary,
   loadWeeklySummaryPreview,
 } from '../services/weeklySummaryService'
+import {
+  generateWeeklyCoachReview,
+} from '../services/weeklyCoachService'
 import {
   formatDate,
 } from '../utils/formatters'
@@ -21,6 +25,7 @@ import {
   normalizeUnitSystem,
 } from '../utils/measurementUnits'
 import '../styles/weeklySummary.css'
+import '../styles/weeklyCoachReview.css'
 
 const RECOVERY_LABELS = {
   sleep_quality: {
@@ -488,6 +493,97 @@ function PrescriptionCard({
   )
 }
 
+function formatCoachAssessment(value) {
+  if (value === 'on_track') {
+    return 'On Track'
+  }
+
+  if (value === 'needs_attention') {
+    return 'Needs Attention'
+  }
+
+  return 'Watch'
+}
+
+function formatCoachConfidence(value) {
+  if (value === 'high') {
+    return 'High Confidence'
+  }
+
+  if (value === 'low') {
+    return 'Low Confidence'
+  }
+
+  return 'Medium Confidence'
+}
+
+function CoachReviewCard({ review }) {
+  return (
+    <section className="weekly-coach-review">
+      <div className="weekly-coach-review-header">
+        <h2>Coach Review</h2>
+
+        <div className="weekly-coach-review-meta">
+          <span className="weekly-coach-pill">
+            {formatCoachAssessment(
+              review.assessment,
+            )}
+          </span>
+
+          <span className="weekly-coach-pill">
+            {formatCoachConfidence(
+              review.confidence,
+            )}
+          </span>
+        </div>
+      </div>
+
+      <div className="weekly-coach-block">
+        <h3>How Your Week Went</h3>
+        <p>{review.how_your_week_went}</p>
+      </div>
+
+      <div className="weekly-coach-block">
+        <h3>What I’m Seeing</h3>
+        <p>{review.what_im_seeing}</p>
+      </div>
+
+      <div className="weekly-coach-block">
+        <h3>This Week’s Focus</h3>
+        <ul className="weekly-coach-focus-list">
+          {(review.this_weeks_focus ?? []).map(
+            (item, index) => (
+              <li key={`${index}-${item}`}>
+                {item}
+              </li>
+            ),
+          )}
+        </ul>
+      </div>
+
+      {(review.watch_items ?? []).length > 0 && (
+        <div className="weekly-coach-block">
+          <h3>Watch Item</h3>
+          <ul className="weekly-coach-watch-list">
+            {review.watch_items.map(
+              (item, index) => (
+                <li key={`${index}-${item}`}>
+                  {item}
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      )}
+
+      <p className="weekly-coach-footnote">
+        Brain Lite · {review.protocol_version}
+        {' · '}Current prescription held
+      </p>
+    </section>
+  )
+}
+
 function getDevPreviewWeekNumber(plan) {
   if (
     !import.meta.env.DEV ||
@@ -544,6 +640,13 @@ export function WeeklySummaryPage({
     useState(true)
   const [error, setError] =
     useState('')
+  const [coachReview, setCoachReview] =
+    useState(null)
+  const [coachLoading, setCoachLoading] =
+    useState(false)
+  const [coachError, setCoachError] =
+    useState('')
+  const coachAttempts = useRef(new Set())
 
   const unitSystem =
     normalizeUnitSystem(
@@ -620,6 +723,9 @@ export function WeeklySummaryPage({
 
       setLoading(true)
       setError('')
+      setCoachReview(null)
+      setCoachError('')
+      setCoachLoading(false)
 
       try {
         const hasCompletedWeek =
@@ -646,6 +752,10 @@ export function WeeklySummaryPage({
 
         if (!cancelled) {
           setSummary(nextSummary)
+          setCoachReview(
+            nextSummary?.coachReview ?? null,
+          )
+          setCoachError('')
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -671,6 +781,118 @@ export function WeeklySummaryPage({
     selectedWeek,
     completedWeeks,
   ])
+
+  useEffect(() => {
+    const weeklyCheckInId =
+      summary?.week?.id
+
+    if (
+      !weeklyCheckInId ||
+      summary?.preview ||
+      summary?.coachReview
+    ) {
+      setCoachLoading(false)
+      return undefined
+    }
+
+    if (
+      coachAttempts.current.has(
+        weeklyCheckInId,
+      )
+    ) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    coachAttempts.current.add(
+      weeklyCheckInId,
+    )
+    setCoachLoading(true)
+    setCoachError('')
+
+    generateWeeklyCoachReview(
+      weeklyCheckInId,
+    )
+      .then((review) => {
+        if (cancelled) {
+          return
+        }
+
+        setCoachReview(review)
+        setSummary((current) =>
+          current
+            ? {
+                ...current,
+                coachReview: review,
+              }
+            : current,
+        )
+      })
+      .catch((generationError) => {
+        if (cancelled) {
+          return
+        }
+
+        setCoachError(
+          generationError?.message ||
+            'Juntos Coach could not generate this review right now.',
+        )
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCoachLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    summary?.week?.id,
+    summary?.preview,
+    summary?.coachReview,
+  ])
+
+  async function retryCoachReview() {
+    const weeklyCheckInId =
+      summary?.week?.id
+
+    if (
+      !weeklyCheckInId ||
+      summary?.preview ||
+      coachLoading
+    ) {
+      return
+    }
+
+    setCoachLoading(true)
+    setCoachError('')
+
+    try {
+      const review =
+        await generateWeeklyCoachReview(
+          weeklyCheckInId,
+        )
+
+      setCoachReview(review)
+      setSummary((current) =>
+        current
+          ? {
+              ...current,
+              coachReview: review,
+            }
+          : current,
+      )
+    } catch (generationError) {
+      setCoachError(
+        generationError?.message ||
+          'Juntos Coach could not generate this review right now.',
+      )
+    } finally {
+      setCoachLoading(false)
+    }
+  }
 
   const calculations = useMemo(() => {
     if (!summary) {
@@ -1582,16 +1804,54 @@ export function WeeklySummaryPage({
             )}
           </section>
 
-          <section className="weekly-coach-placeholder">
-            <h2>Coach Review</h2>
+          {summary.preview ? (
+            <section className="weekly-coach-placeholder">
+              <h2>Coach Review</h2>
 
-            <p>
-              Your saved Juntos coaching review will
-              live here. For now, this page preserves
-              the report card and the data the coach
-              will use.
-            </p>
-          </section>
+              <p>
+                Brain Lite generates from a completed
+                Weekly Check-In. DEV Summary Preview
+                stays read-only and does not create a
+                saved coaching review.
+              </p>
+            </section>
+          ) : coachReview ? (
+            <CoachReviewCard
+              review={coachReview}
+            />
+          ) : coachLoading ? (
+            <section
+              className="weekly-coach-loading"
+              aria-live="polite"
+            >
+              <h2>Coach Review</h2>
+              <p>
+                Juntos Coach is reviewing your week…
+              </p>
+            </section>
+          ) : coachError ? (
+            <section className="weekly-coach-error">
+              <h2>Coach Review</h2>
+              <p>{coachError}</p>
+              <p>
+                Your Weekly Check-In and Weekly Summary
+                are already saved.
+              </p>
+              <button
+                type="button"
+                onClick={retryCoachReview}
+              >
+                Try Coach Review Again
+              </button>
+            </section>
+          ) : (
+            <section className="weekly-coach-loading">
+              <h2>Coach Review</h2>
+              <p>
+                Your coaching review is getting ready.
+              </p>
+            </section>
+          )}
         </>
       )}
       </main>
