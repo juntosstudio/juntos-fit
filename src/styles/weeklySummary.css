@@ -1,7 +1,8 @@
 /* Weekly Summary / completed-week report card */
 
 .weekly-summary-page {
-  padding-bottom: 4rem;
+  /* Keep the end of this long report clear of the fixed app nav. */
+  padding-bottom: 8rem;
 }
 
 .weekly-summary-header {

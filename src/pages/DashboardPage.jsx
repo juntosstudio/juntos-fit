@@ -572,6 +572,20 @@ export function DashboardPage({
                 >
                   View Previous Week Summary
                 </button>
+              ) : import.meta.env.DEV ? (
+                <>
+                  <button
+                    type="button"
+                    className="weekly-summary-link"
+                    onClick={onOpenWeeklySummary}
+                  >
+                    Preview Previous Week Summary · DEV
+                  </button>
+
+                  <p className="weekly-summary-unavailable">
+                    DEV preview only · Nothing will be saved.
+                  </p>
+                </>
               ) : (
                 <p className="weekly-summary-unavailable">
                   {currentWeekNumber &&

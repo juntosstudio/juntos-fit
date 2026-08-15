@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:4173",
+      "localStorage": [
+        {
+          "name": "sb-voxdwqyhrhiobgwofgeg-auth-token",
+          "value": "{\"access_token\":\"eyJhbGciOiJFUzI1NiIsImtpZCI6IjJjNDdmNzFjLTVjYzktNGNiNy1iYzFhLTIxZjcwMjc0NmZjMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3ZveGR3cXlocmhpb2Jnd29mZ2VnLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI3NDIwODdhMi1lMDhhLTQyYmMtOGQ4NC04OTdlOTRiMzA0ZTkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzg2ODE3MDAzLCJpYXQiOjE3ODY4MTM0MDMsImVtYWlsIjoibW9vY2gxMTdAeWFob28uY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3ODY4MTM0MDN9XSwic2Vzc2lvbl9pZCI6IjdlOTBlZDcwLTBmMDItNDIyNy05NzExLTU0ZjU0NmJjYTZiOCIsImlzX2Fub255bW91cyI6ZmFsc2V9.ikCRg-8DIXyou99dvBS7lvbfNBu21-U6m6up-QDxARzuq5regiAhne8_VQqZ4McSE6oKXTbUy5BlSX4JDKUrgw\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1786817003,\"refresh_token\":\"nbcjzn4jzqyl\",\"user\":{\"id\":\"742087a2-e08a-42bc-8d84-897e94b304e9\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"mooch117@yahoo.com\",\"email_confirmed_at\":\"2026-07-20T15:02:18.294631Z\",\"phone\":\"\",\"confirmed_at\":\"2026-07-20T15:02:18.294631Z\",\"last_sign_in_at\":\"2026-08-15T17:03:23.701218879Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email_verified\":true},\"identities\":[{\"identity_id\":\"6c0e3759-fda3-4f13-954f-4f3c0104da6d\",\"id\":\"742087a2-e08a-42bc-8d84-897e94b304e9\",\"user_id\":\"742087a2-e08a-42bc-8d84-897e94b304e9\",\"identity_data\":{\"email\":\"mooch117@yahoo.com\",\"email_verified\":false,\"phone_verified\":false,\"sub\":\"742087a2-e08a-42bc-8d84-897e94b304e9\"},\"provider\":\"email\",\"last_sign_in_at\":\"2026-07-20T15:02:18.285537Z\",\"created_at\":\"2026-07-20T15:02:18.285629Z\",\"updated_at\":\"2026-07-20T15:02:18.285629Z\",\"email\":\"mooch117@yahoo.com\"}],\"created_at\":\"2026-07-20T15:02:18.237182Z\",\"updated_at\":\"2026-08-15T17:03:23.711119Z\",\"is_anonymous\":false},\"weak_password\":null}"
+        }
+      ]
+    }
+  ]
+}

@@ -6,10 +6,15 @@ import {
 import {
   loadCompletedWeeklyCheckIns,
   loadWeeklySummary,
+  loadWeeklySummaryPreview,
 } from '../services/weeklySummaryService'
 import {
   formatDate,
 } from '../utils/formatters'
+import {
+  dateKeyToUtcMilliseconds,
+  getTodayDateKey,
+} from '../utils/dates'
 import {
   fromCanonicalMeasurement,
   getMeasurementUnit,
@@ -483,10 +488,51 @@ function PrescriptionCard({
   )
 }
 
+function getDevPreviewWeekNumber(plan) {
+  if (
+    !import.meta.env.DEV ||
+    !plan?.start_date
+  ) {
+    return null
+  }
+
+  const today =
+    getTodayDateKey()
+
+  if (today < plan.start_date) {
+    return 1
+  }
+
+  const daysSinceStart =
+    Math.floor(
+      (dateKeyToUtcMilliseconds(
+        today,
+      ) -
+        dateKeyToUtcMilliseconds(
+          plan.start_date,
+        )) /
+        86400000,
+    )
+
+  const currentWeek =
+    Math.floor(
+      daysSinceStart / 7,
+    ) + 1
+
+  return Math.max(
+    currentWeek - 1,
+    1,
+  )
+}
+
 export function WeeklySummaryPage({
   plan,
   profile,
   onBack,
+  onOpenToday,
+  onOpenHistory,
+  onOpenPlan,
+  onOpenSettings,
 }) {
   const [completedWeeks, setCompletedWeeks] =
     useState([])
@@ -503,6 +549,9 @@ export function WeeklySummaryPage({
     normalizeUnitSystem(
       profile?.unit_system,
     )
+
+  const devPreviewWeekNumber =
+    getDevPreviewWeekNumber(plan)
 
   useEffect(() => {
     let cancelled = false
@@ -530,6 +579,7 @@ export function WeeklySummaryPage({
 
         setSelectedWeek(
           weeks[0]?.week_number ??
+            devPreviewWeekNumber ??
             null,
         )
       } catch (loadError) {
@@ -551,7 +601,10 @@ export function WeeklySummaryPage({
     return () => {
       cancelled = true
     }
-  }, [plan?.id])
+  }, [
+    plan?.id,
+    devPreviewWeekNumber,
+  ])
 
   useEffect(() => {
     let cancelled = false
@@ -569,11 +622,27 @@ export function WeeklySummaryPage({
       setError('')
 
       try {
-        const nextSummary =
-          await loadWeeklySummary(
-            plan,
-            selectedWeek,
+        const hasCompletedWeek =
+          completedWeeks.some(
+            (week) =>
+              Number(
+                week.week_number,
+              ) ===
+              Number(
+                selectedWeek,
+              ),
           )
+
+        const nextSummary =
+          hasCompletedWeek
+            ? await loadWeeklySummary(
+                plan,
+                selectedWeek,
+              )
+            : await loadWeeklySummaryPreview(
+                plan,
+                selectedWeek,
+              )
 
         if (!cancelled) {
           setSummary(nextSummary)
@@ -600,6 +669,7 @@ export function WeeklySummaryPage({
   }, [
     plan,
     selectedWeek,
+    completedWeeks,
   ])
 
   const calculations = useMemo(() => {
@@ -900,7 +970,8 @@ export function WeeklySummaryPage({
 
   if (
     !loading &&
-    completedWeeks.length === 0
+    completedWeeks.length === 0 &&
+    !devPreviewWeekNumber
   ) {
     return (
       <main className="container weekly-summary-page">
@@ -927,14 +998,15 @@ export function WeeklySummaryPage({
   }
 
   return (
-    <main className="container weekly-summary-page">
-      <button
-        type="button"
-        className="text-button"
-        onClick={onBack}
-      >
-        ← Back to Today
-      </button>
+    <>
+      <main className="container weekly-summary-page">
+        <button
+          type="button"
+          className="text-button"
+          onClick={onBack}
+        >
+          ← Back to Today
+        </button>
 
       <header className="weekly-summary-header">
         <label
@@ -966,6 +1038,26 @@ export function WeeklySummaryPage({
               </option>
             ),
           )}
+
+          {import.meta.env.DEV &&
+            devPreviewWeekNumber &&
+            !completedWeeks.some(
+              (week) =>
+                Number(
+                  week.week_number,
+                ) ===
+                Number(
+                  devPreviewWeekNumber,
+                ),
+            ) && (
+              <option
+                value={
+                  devPreviewWeekNumber
+                }
+              >
+                Week {devPreviewWeekNumber} Summary · DEV Preview
+              </option>
+            )}
         </select>
 
         {summary && (
@@ -980,6 +1072,22 @@ export function WeeklySummaryPage({
           </p>
         )}
       </header>
+
+      {summary?.preview && (
+        <p className="weekly-preview-badge">
+          DEV Preview · Nothing will be saved
+        </p>
+      )}
+
+      {summary?.preview && (
+        <p className="weekly-data-note">
+          This preview uses your real plan prescription
+          and available Daily Check-In data. Weekly-only
+          answers such as waist, sleep, recovery, stress,
+          body fat, and reflection stay blank until a
+          real Weekly Check-In is submitted.
+        </p>
+      )}
 
       {error && (
         <p role="alert">{error}</p>
@@ -1486,6 +1594,49 @@ export function WeeklySummaryPage({
           </section>
         </>
       )}
-    </main>
+      </main>
+
+      <nav
+        className="bottom-navigation"
+        aria-label="Main navigation"
+      >
+        <button
+          type="button"
+          className="is-active"
+          aria-current="page"
+          onClick={onOpenToday}
+        >
+          Today
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenHistory}
+        >
+          Progress
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenPlan}
+        >
+          Plan
+        </button>
+
+        <button
+          type="button"
+          disabled
+        >
+          Coach
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenSettings}
+        >
+          Settings
+        </button>
+      </nav>
+    </>
   )
 }

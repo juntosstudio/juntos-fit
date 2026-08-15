@@ -207,6 +207,16 @@ function App() {
         plan={dashboard?.plan}
         profile={dashboard?.profile}
         onBack={returnToDashboard}
+        onOpenToday={returnToDashboard}
+        onOpenHistory={() =>
+          setCurrentPage(PAGE_HISTORY)
+        }
+        onOpenPlan={() =>
+          setCurrentPage(PAGE_PLAN)
+        }
+        onOpenSettings={() =>
+          setCurrentPage(PAGE_SETTINGS)
+        }
       />
     )
   }
