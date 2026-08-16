@@ -235,7 +235,6 @@ Deno.serve(async (req) => {
       .from('weekly_checkins')
       .select(`
         id,
-        user_id,
         coaching_plan_id,
         checkin_date,
         week_number,
@@ -268,7 +267,27 @@ Deno.serve(async (req) => {
       )
     }
 
-    if (weeklyCheckIn.user_id !== user.id) {
+    // weekly_checkins no longer stores user_id.
+    // Resolve ownership through its coaching plan instead.
+    const {
+      data: ownerPlan,
+      error: ownerPlanError,
+    } = await admin
+      .from('coaching_plans')
+      .select('id, user_id')
+      .eq('id', weeklyCheckIn.coaching_plan_id)
+      .maybeSingle()
+
+    if (ownerPlanError) {
+      throw ownerPlanError
+    }
+
+    // The function has already authenticated the caller
+    // with userClient.auth.getUser(). Use the service-role
+    // client for this server-side ownership lookup so the
+    // Edge Function does not depend on direct SELECT grants
+    // for authenticated users on coaching_plans.
+    if (!ownerPlan || ownerPlan.user_id !== user.id) {
       return jsonResponse(
         { error: 'Weekly Check-In not found.' },
         404,
@@ -354,6 +373,7 @@ Deno.serve(async (req) => {
       inputSnapshot,
       review: validated,
       aiMeta: aiResult.meta,
+      userId: ownerPlan.user_id,
     })
 
     return jsonResponse({

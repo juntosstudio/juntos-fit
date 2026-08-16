@@ -464,14 +464,6 @@ export async function buildCoachingPacket({
     throw planError
   }
 
-  if (
-    plan.user_id !== weeklyCheckIn.user_id
-  ) {
-    throw new Error(
-      'Weekly Check-In ownership does not match its coaching plan.',
-    )
-  }
-
   const weekRange = getWeekRange(
     plan.start_date,
     weekNumber,
@@ -507,7 +499,7 @@ export async function buildCoachingPacket({
     admin
       .from('profiles')
       .select('id, sex, date_of_birth')
-      .eq('id', weeklyCheckIn.user_id)
+      .eq('id', plan.user_id)
       .single(),
 
     admin
@@ -517,7 +509,7 @@ export async function buildCoachingPacket({
         track_alcohol,
         body_fat_source
       `)
-      .eq('user_id', weeklyCheckIn.user_id)
+      .eq('user_id', plan.user_id)
       .maybeSingle(),
 
     admin

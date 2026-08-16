@@ -28,6 +28,7 @@ export async function saveCoachReview({
   inputSnapshot,
   review,
   aiMeta,
+  userId,
 }: {
   admin: any
   existing: any
@@ -38,12 +39,13 @@ export async function saveCoachReview({
   inputSnapshot: any
   review: any
   aiMeta: any
+  userId: string
 }) {
   const now = new Date().toISOString()
 
   const row = {
     id: existing?.id,
-    user_id: weeklyCheckIn.user_id,
+    user_id: userId,
     coaching_plan_id:
       weeklyCheckIn.coaching_plan_id,
     weekly_checkin_id:
