@@ -1,0 +1,89 @@
+/*
+  Juntos Fit bottom navigation polish
+  - Floats the nav above the device edge / home indicator.
+  - Adds enough page-bottom breathing room so content can scroll fully above it.
+  - Adds dependency-free monochrome icons that inherit active/disabled colors.
+*/
+
+body:has(.bottom-navigation) .container {
+  padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+}
+
+.bottom-navigation {
+  right: 0.5rem;
+  bottom: calc(0.65rem + env(safe-area-inset-bottom));
+  left: 0.5rem;
+  width: min(calc(100% - 1rem), 44rem);
+  border: 1px solid var(--color-border);
+  border-radius: 1.35rem;
+  padding: 0.5rem 0.45rem;
+  box-shadow:
+    0 -4px 18px rgb(33 31 44 / 8%),
+    0 10px 30px rgb(33 31 44 / 14%);
+}
+
+.bottom-navigation button {
+  display: grid;
+  min-height: 3.65rem;
+  grid-template-rows: 1.35rem auto;
+  align-content: center;
+  justify-items: center;
+  gap: 0.28rem;
+  padding: 0.45rem 0.15rem;
+  line-height: 1;
+}
+
+.bottom-navigation button::before {
+  width: 1.25rem;
+  height: 1.25rem;
+  background: currentColor;
+  content: '';
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.bottom-navigation button:nth-child(1)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M3%2011.5%2012%204l9%207.5%27%2F%3E%3Cpath%20d%3D%27M5.5%2010.5V20h13v-9.5%27%2F%3E%3Cpath%20d%3D%27M9.5%2020v-6h5v6%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M3%2011.5%2012%204l9%207.5%27%2F%3E%3Cpath%20d%3D%27M5.5%2010.5V20h13v-9.5%27%2F%3E%3Cpath%20d%3D%27M9.5%2020v-6h5v6%27%2F%3E%3C%2Fsvg%3E");
+}
+
+.bottom-navigation button:nth-child(2)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M4%2019V5%27%2F%3E%3Cpath%20d%3D%27M4%2019h16%27%2F%3E%3Cpath%20d%3D%27m7%2015%204-4%203%202%205-6%27%2F%3E%3Cpath%20d%3D%27M16%207h3v3%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M4%2019V5%27%2F%3E%3Cpath%20d%3D%27M4%2019h16%27%2F%3E%3Cpath%20d%3D%27m7%2015%204-4%203%202%205-6%27%2F%3E%3Cpath%20d%3D%27M16%207h3v3%27%2F%3E%3C%2Fsvg%3E");
+}
+
+.bottom-navigation button:nth-child(3)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%276%27%20y%3D%274%27%20width%3D%2712%27%20height%3D%2717%27%20rx%3D%272%27%2F%3E%3Cpath%20d%3D%27M9%204.5V3h6v1.5%27%2F%3E%3Cpath%20d%3D%27M9%209h6%27%2F%3E%3Cpath%20d%3D%27M9%2013h6%27%2F%3E%3Cpath%20d%3D%27M9%2017h4%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%276%27%20y%3D%274%27%20width%3D%2712%27%20height%3D%2717%27%20rx%3D%272%27%2F%3E%3Cpath%20d%3D%27M9%204.5V3h6v1.5%27%2F%3E%3Cpath%20d%3D%27M9%209h6%27%2F%3E%3Cpath%20d%3D%27M9%2013h6%27%2F%3E%3Cpath%20d%3D%27M9%2017h4%27%2F%3E%3C%2Fsvg%3E");
+}
+
+.bottom-navigation button:nth-child(4)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M5%205.5h14a2%202%200%200%201%202%202v8a2%202%200%200%201-2%202h-8l-5%203v-3H5a2%202%200%200%201-2-2v-8a2%202%200%200%201%202-2Z%27%2F%3E%3Cpath%20d%3D%27M8%2010h8%27%2F%3E%3Cpath%20d%3D%27M8%2013.5h5%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M5%205.5h14a2%202%200%200%201%202%202v8a2%202%200%200%201-2%202h-8l-5%203v-3H5a2%202%200%200%201-2-2v-8a2%202%200%200%201%202-2Z%27%2F%3E%3Cpath%20d%3D%27M8%2010h8%27%2F%3E%3Cpath%20d%3D%27M8%2013.5h5%27%2F%3E%3C%2Fsvg%3E");
+}
+
+.bottom-navigation button:nth-child(5)::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M4%207h10%27%2F%3E%3Cpath%20d%3D%27M18%207h2%27%2F%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272%27%2F%3E%3Cpath%20d%3D%27M4%2017h2%27%2F%3E%3Cpath%20d%3D%27M10%2017h10%27%2F%3E%3Ccircle%20cx%3D%278%27%20cy%3D%2717%27%20r%3D%272%27%2F%3E%3Cpath%20d%3D%27M4%2012h5%27%2F%3E%3Cpath%20d%3D%27M13%2012h7%27%2F%3E%3Ccircle%20cx%3D%2711%27%20cy%3D%2712%27%20r%3D%272%27%2F%3E%3C%2Fsvg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M4%207h10%27%2F%3E%3Cpath%20d%3D%27M18%207h2%27%2F%3E%3Ccircle%20cx%3D%2716%27%20cy%3D%277%27%20r%3D%272%27%2F%3E%3Cpath%20d%3D%27M4%2017h2%27%2F%3E%3Cpath%20d%3D%27M10%2017h10%27%2F%3E%3Ccircle%20cx%3D%278%27%20cy%3D%2717%27%20r%3D%272%27%2F%3E%3Cpath%20d%3D%27M4%2012h5%27%2F%3E%3Cpath%20d%3D%27M13%2012h7%27%2F%3E%3Ccircle%20cx%3D%2711%27%20cy%3D%2712%27%20r%3D%272%27%2F%3E%3C%2Fsvg%3E");
+}
+
+.bottom-navigation button.is-active {
+  box-shadow: inset 0 0 0 1px rgb(108 91 212 / 10%);
+}
+
+@media (min-width: 40rem) {
+  body:has(.bottom-navigation) .container {
+    padding-bottom: 9.5rem;
+  }
+
+  .bottom-navigation {
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: min(calc(100% - 2rem), 44rem);
+  }
+}
