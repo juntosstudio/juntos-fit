@@ -1323,55 +1323,6 @@ export function WeeklySummaryPage({
 
       {summary && calculations && (
         <>
-          {summary.preview ? (
-            <section className="weekly-coach-placeholder">
-              <h2>Coach Review</h2>
-
-              <p>
-                Brain Lite generates from a completed
-                Weekly Check-In. DEV Summary Preview
-                stays read-only and does not create a
-                saved coaching review.
-              </p>
-            </section>
-          ) : coachReview ? (
-            <CoachReviewCard
-              review={coachReview}
-            />
-          ) : coachLoading ? (
-            <section
-              className="weekly-coach-loading"
-              aria-live="polite"
-            >
-              <h2>Coach Review</h2>
-              <p>
-                Juntos Coach is reviewing your week…
-              </p>
-            </section>
-          ) : coachError ? (
-            <section className="weekly-coach-error">
-              <h2>Coach Review</h2>
-              <p>{coachError}</p>
-              <p>
-                Your Weekly Check-In and Weekly Summary
-                are already saved.
-              </p>
-              <button
-                type="button"
-                onClick={retryCoachReview}
-              >
-                Try Coach Review Again
-              </button>
-            </section>
-          ) : (
-            <section className="weekly-coach-loading">
-              <h2>Coach Review</h2>
-              <p>
-                Your coaching review is getting ready.
-              </p>
-            </section>
-          )}
-
           <section className="weekly-summary-section">
             <h2>Results</h2>
 
@@ -1511,6 +1462,55 @@ export function WeeklySummaryPage({
               </p>
             )}
           </section>
+
+          {summary.preview ? (
+            <section className="weekly-coach-placeholder">
+              <h2>Coach Review</h2>
+
+              <p>
+                Brain Lite generates from a completed
+                Weekly Check-In. DEV Summary Preview
+                stays read-only and does not create a
+                saved coaching review.
+              </p>
+            </section>
+          ) : coachReview ? (
+            <CoachReviewCard
+              review={coachReview}
+            />
+          ) : coachLoading ? (
+            <section
+              className="weekly-coach-loading"
+              aria-live="polite"
+            >
+              <h2>Coach Review</h2>
+              <p>
+                Juntos Coach is reviewing your week…
+              </p>
+            </section>
+          ) : coachError ? (
+            <section className="weekly-coach-error">
+              <h2>Coach Review</h2>
+              <p>{coachError}</p>
+              <p>
+                Your Weekly Check-In and Weekly Summary
+                are already saved.
+              </p>
+              <button
+                type="button"
+                onClick={retryCoachReview}
+              >
+                Try Coach Review Again
+              </button>
+            </section>
+          ) : (
+            <section className="weekly-coach-loading">
+              <h2>Coach Review</h2>
+              <p>
+                Your coaching review is getting ready.
+              </p>
+            </section>
+          )}
 
           <section className="weekly-summary-section">
             <h2>Your Prescription</h2>

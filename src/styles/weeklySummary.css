@@ -396,7 +396,7 @@
   }
 }
 
-/* Coach Review is the payoff: keep it visually first and centered. */
+/* Keep the Coach Review visually prominent while preserving Results first. */
 .weekly-coach-review-header {
   display: grid;
   justify-items: center;
