@@ -10,16 +10,21 @@ import { PlanPage } from './pages/PlanPage'
 import { StartCheckInPage } from './pages/StartCheckInPage'
 import { WeeklyCheckInPage } from './pages/WeeklyCheckInPage'
 import { WeeklySummaryPage } from './pages/WeeklySummaryPage'
+import { CheckInHistoryPage } from './pages/CheckInHistoryPage'
+import { WeeklyPreflightPage } from './pages/WeeklyPreflightPage'
+import { CatchUpDailyCheckInPage } from './pages/CatchUpDailyCheckInPage'
 import { getTodayDateKey } from './utils/dates'
 import './App.css'
 
 const PAGE_DASHBOARD = 'dashboard'
 const PAGE_CREATE_PLAN = 'create-plan'
 const PAGE_DAILY_CHECK_IN = 'daily-check-in'
+const PAGE_WEEKLY_PREFLIGHT = 'weekly-preflight'
 const PAGE_WEEKLY_CHECK_IN = 'weekly-check-in'
 const PAGE_WEEKLY_SUMMARY = 'weekly-summary'
 const PAGE_START_CHECK_IN = 'start-check-in'
 const PAGE_HISTORY = 'history'
+const PAGE_CATCH_UP_DAILY = 'catch-up-daily'
 const PAGE_PLAN = 'plan'
 const PAGE_SETTINGS = 'settings'
 
@@ -27,9 +32,17 @@ function App() {
   const [currentPage, setCurrentPage] =
     useState(PAGE_DASHBOARD)
 
+  const [weeklyReviewWeek, setWeeklyReviewWeek] =
+    useState(null)
+
   const [activeDate, setActiveDate] = useState(
     getTodayDateKey,
   )
+
+  const [catchUpDate, setCatchUpDate] =
+    useState(null)
+  const [catchUpReturnPage, setCatchUpReturnPage] =
+    useState(PAGE_HISTORY)
 
   const {
     user,
@@ -115,6 +128,29 @@ function App() {
     setCurrentPage(PAGE_DASHBOARD)
   }
 
+  function openWeeklyReview(weekNumber = null) {
+    setWeeklyReviewWeek(
+      Number.isFinite(Number(weekNumber))
+        ? Number(weekNumber)
+        : null,
+    )
+    setCurrentPage(PAGE_WEEKLY_SUMMARY)
+  }
+
+  function openCatchUpDaily(
+    date,
+    returnPage = PAGE_HISTORY,
+  ) {
+    setCatchUpDate(date)
+    setCatchUpReturnPage(returnPage)
+    setCurrentPage(PAGE_CATCH_UP_DAILY)
+  }
+
+  function returnFromCatchUp() {
+    setCatchUpDate(null)
+    setCurrentPage(catchUpReturnPage)
+  }
+
   async function handleSignOut() {
     returnToDashboard()
 
@@ -170,6 +206,46 @@ function App() {
     )
   }
 
+  if (currentPage === PAGE_CATCH_UP_DAILY) {
+    return (
+      <CatchUpDailyCheckInPage
+        key={`${catchUpDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        plan={dashboard?.plan}
+        target={dashboard?.target}
+        cardioCompleted={
+          dashboard?.cardioCompleted ?? 0
+        }
+        settings={dashboard?.settings}
+        checkinDate={catchUpDate}
+        onSaved={refreshDashboard}
+        onBack={returnFromCatchUp}
+      />
+    )
+  }
+
+  if (currentPage === PAGE_WEEKLY_PREFLIGHT) {
+    return (
+      <WeeklyPreflightPage
+        key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        userId={user.id}
+        plan={dashboard?.plan}
+        profile={dashboard?.profile}
+        onCompleteDay={(date) =>
+          openCatchUpDaily(
+            date,
+            PAGE_WEEKLY_PREFLIGHT,
+          )
+        }
+        onContinue={() =>
+          setCurrentPage(
+            PAGE_WEEKLY_CHECK_IN,
+          )
+        }
+        onBack={returnToDashboard}
+      />
+    )
+  }
+
   if (currentPage === PAGE_WEEKLY_CHECK_IN) {
     return (
       <WeeklyCheckInPage
@@ -206,6 +282,7 @@ function App() {
       <WeeklySummaryPage
         plan={dashboard?.plan}
         profile={dashboard?.profile}
+        initialWeekNumber={weeklyReviewWeek}
         onBack={returnToDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
@@ -260,20 +337,27 @@ function App() {
 
   if (currentPage === PAGE_HISTORY) {
     return (
-      <main className="container">
-        <button
-          type="button"
-          onClick={returnToDashboard}
-        >
-          Back to Dashboard
-        </button>
-
-        <h1>History</h1>
-
-        <p>
-          Daily check-in history will appear here.
-        </p>
-      </main>
+      <CheckInHistoryPage
+        userId={user.id}
+        plan={dashboard?.plan}
+        profile={dashboard?.profile}
+        onCompleteDay={(date) =>
+          openCatchUpDaily(
+            date,
+            PAGE_HISTORY,
+          )
+        }
+        onOpenWeeklySummary={() =>
+          openWeeklyReview()
+        }
+        onOpenToday={returnToDashboard}
+        onOpenPlan={() =>
+          setCurrentPage(PAGE_PLAN)
+        }
+        onOpenSettings={() =>
+          setCurrentPage(PAGE_SETTINGS)
+        }
+      />
     )
   }
 
@@ -290,11 +374,14 @@ function App() {
         setCurrentPage(PAGE_DAILY_CHECK_IN)
       }
       onOpenWeeklyCheckIn={() =>
-        setCurrentPage(PAGE_WEEKLY_CHECK_IN)
+        setCurrentPage(
+          PAGE_WEEKLY_PREFLIGHT,
+        )
       }
-      onOpenWeeklySummary={() =>
-        setCurrentPage(PAGE_WEEKLY_SUMMARY)
+      onOpenCurrentWeek={() =>
+        setCurrentPage(PAGE_HISTORY)
       }
+      onOpenWeeklyReview={openWeeklyReview}
       onOpenStartCheckIn={() =>
         setCurrentPage(PAGE_START_CHECK_IN)
       }

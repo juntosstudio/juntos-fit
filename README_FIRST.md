@@ -1,53 +1,53 @@
-# Juntos Fit — Visible Build Version
+# Juntos Fit — Check-In History + Weekly Preflight v0.1
 
-This adds a tiny version marker to every app screen.
+This patch adds the first real Check-In History and connects the already-defined missed-check-in rules to the Weekly flow.
 
-Example:
+## What changes
 
-`v0.0.1 · a1b2c3d`
-`Jul 21, 9:42 AM`
+- **Progress** now opens **Check-In History** instead of the placeholder page.
+- History is grouped by program week and shows real Daily and Weekly records, missing dates, no-data resolutions, today, and upcoming dates.
+- Completed historical check-ins are **read-only** and can be expanded to view the saved answers.
+- A missing Daily Check-In can be completed only while its program week is still eligible under the existing catch-up rules.
+- A missing Daily may instead be marked **I Don't Have This Data**. This is stored separately; it does **not** fabricate a Daily Check-In row.
+- On a real scheduled Weekly Check-In date, Juntos runs a **Before We Close Week N** preflight. Missing Daily dates must be completed or marked no-data before Weekly opens.
+- Historical catch-up saves the original `checkin_date` and original `review_date`; it does not pretend the answer was entered today.
+- Old closed missing dates remain visible but cannot be changed.
+- Expired Weekly dates with no Weekly record display as **Missed**; no fake Weekly record is created.
+- Older Daily rows that happened on a Weekly date before Weekly existed remain visible rather than being hidden.
 
-- `v0.0.1` is the app milestone version from `package.json`.
-- `a1b2c3d` is the exact Git commit used by the build.
-- The date/time is formatted in the phone or computer's local time.
+## Files added/replaced
 
-Cloudflare Pages supplies its current commit SHA automatically. Local builds
-fall back to the current local Git commit.
+- `src/App.jsx`
+- `src/hooks/useCatchUpDailyCheckIn.js`
+- `src/pages/CatchUpDailyCheckInPage.jsx`
+- `src/pages/CheckInHistoryPage.jsx`
+- `src/pages/WeeklyPreflightPage.jsx`
+- `src/services/checkInHistoryService.js`
+- `src/services/dailyCheckInService.js`
+- `src/styles/checkInHistory.css`
+- `supabase/migrations/20260815000200_checkin_day_resolutions.sql`
+
+This patch intentionally does **not** replace Weekly Summary, the Brain/coach review files, Dashboard, Weekly Check-In, or the existing catch-up rules/tests.
 
 ## Install
 
-Extract the entire ZIP into:
-
-`C:\FitnessCoach\App`
-
-Allow Windows to merge folders and replace files.
-
-No database migration is needed.
-
-## Test locally
+From `C:\FitnessCoach\App`:
 
 ```powershell
+Expand-Archive -Path .\juntos-fit-checkin-history-preflight-v01.zip -DestinationPath . -Force
+npx supabase db push
 npm run build
-npm run dev
 ```
 
-The label should appear in the bottom-right corner.
+Then run/deploy the app the same way you normally do.
 
-## Deploy
+## Expected behavior tomorrow
 
-```powershell
-.\buildPush.ps1 "Add visible build version"
-```
+When the scheduled Weekly button is tapped:
 
-At the end, the script prints the seven-character commit code to watch for.
-When the live app displays that same code, Cloudflare is serving the new build.
+1. If all prior Daily dates for that week are resolved, Weekly opens normally.
+2. If any prior Daily dates are missing, Juntos shows the preflight first.
+3. Each missing date can be completed with the Daily wizard or explicitly marked no-data.
+4. Once zero unresolved dates remain, Juntos opens the real Weekly Check-In.
 
-## Future milestone versions
-
-Change only the `version` value in `package.json`, for example:
-
-- `0.0.2`
-- `0.1.0`
-- `1.0.0`
-
-The commit code and build time update automatically on every deployment.
+The off-schedule DEV Weekly preview still bypasses the preflight so the existing preview workflow is not disturbed.

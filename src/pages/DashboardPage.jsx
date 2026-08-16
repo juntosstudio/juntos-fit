@@ -1,18 +1,13 @@
+import { useState } from 'react'
 import {
   dateKeyToUtcMilliseconds,
   getTodayDateKey,
   isWeeklyCheckInDate,
 } from '../utils/dates'
-import {
-  formatDate,
-  formatGoal,
-} from '../utils/formatters'
+import { formatGoal } from '../utils/formatters'
 import { PlanEmptyState } from '../components/plan/PlanEmptyState'
-import { PlanStartStatus } from '../components/plan/PlanStartStatus'
-import '../styles/weeklySummary.css'
 
-const MILLISECONDS_PER_DAY =
-  24 * 60 * 60 * 1000
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
 function getPlanWeekNumber(plan, today) {
   if (
@@ -25,32 +20,14 @@ function getPlanWeekNumber(plan, today) {
 
   const daysSinceStart = Math.floor(
     (dateKeyToUtcMilliseconds(today) -
-      dateKeyToUtcMilliseconds(
-        plan.start_date,
-      )) /
+      dateKeyToUtcMilliseconds(plan.start_date)) /
       MILLISECONDS_PER_DAY,
   )
 
   return Math.min(
     Math.floor(daysSinceStart / 7) + 1,
-    Number(
-      plan.program_length_weeks,
-    ),
+    Number(plan.program_length_weeks),
   )
-}
-
-function getPlanProgressLabel(plan, today) {
-  const currentWeek =
-    getPlanWeekNumber(
-      plan,
-      today,
-    )
-
-  if (!currentWeek) {
-    return ''
-  }
-
-  return `Week ${currentWeek} of ${plan.program_length_weeks}`
 }
 
 function formatPercent(value) {
@@ -67,23 +44,15 @@ function formatPercent(value) {
     : '0%'
 }
 
-function formatCount(
-  value,
-  target,
-  suffix = '',
-) {
-  const hasValue =
-    Number.isFinite(Number(value))
-  const hasTarget =
-    Number.isFinite(Number(target))
+function formatCount(value, target, suffix = '') {
+  const hasValue = Number.isFinite(Number(value))
+  const hasTarget = Number.isFinite(Number(target))
 
   if (!hasValue || !hasTarget) {
     return '—'
   }
 
-  return `${Number(value)} of ${Number(
-    target,
-  )}${suffix}`
+  return `${Number(value)} of ${Number(target)}${suffix}`
 }
 
 function formatWeight(value) {
@@ -131,10 +100,249 @@ function getAdherenceState(value) {
     return 'is-adherence-watch'
   }
 
-  return 'is-adherence-low'
+  // Keep a low week informative without turning the dashboard
+  // into a wall of red feedback.
+  return 'is-adherence-neutral'
 }
 
-// Displays the user's current plan, check-in action, and weekly snapshot.
+function getPlanProgressRows(
+  plan,
+  currentWeekNumber,
+  completedWeeks,
+) {
+  const programLength = Number(plan?.program_length_weeks)
+
+  if (!Number.isInteger(programLength) || programLength < 1) {
+    return []
+  }
+
+  const completedByWeek = new Map(
+    (completedWeeks ?? []).map((week) => [
+      Number(week.weekNumber),
+      week,
+    ]),
+  )
+
+  return Array.from({ length: programLength }, (_, index) => {
+    const weekNumber = index + 1
+    const completed = completedByWeek.get(weekNumber)
+
+    if (completed) {
+      return {
+        ...completed,
+        weekNumber,
+        status: 'completed',
+      }
+    }
+
+    if (weekNumber === currentWeekNumber) {
+      return {
+        weekNumber,
+        status: 'current',
+      }
+    }
+
+    if (
+      currentWeekNumber &&
+      weekNumber < currentWeekNumber
+    ) {
+      return {
+        weekNumber,
+        status: 'needs-review',
+      }
+    }
+
+    return {
+      weekNumber,
+      status: 'upcoming',
+    }
+  })
+}
+
+function PlanProgress({
+  plan,
+  currentWeekNumber,
+  completedWeeks,
+  onOpenCurrentWeek,
+  onOpenWeeklyReview,
+}) {
+  const [showAllWeeks, setShowAllWeeks] = useState(false)
+
+  const rows = getPlanProgressRows(
+    plan,
+    currentWeekNumber,
+    completedWeeks,
+  )
+
+  const defaultLastVisibleWeek = currentWeekNumber
+    ? Math.min(
+        Number(plan.program_length_weeks),
+        currentWeekNumber + 2,
+      )
+    : Math.min(Number(plan.program_length_weeks), 2)
+
+  const visibleRows = showAllWeeks
+    ? rows
+    : rows.filter(
+        (row) => row.weekNumber <= defaultLastVisibleWeek,
+      )
+
+  const hasHiddenWeeks = visibleRows.length < rows.length
+
+  function renderRowContent(row) {
+    if (row.status === 'completed') {
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>Week {row.weekNumber}</strong>
+            <span className="plan-progress-status is-complete">
+              Completed ✓
+            </span>
+          </div>
+
+          <div className="plan-progress-row-details">
+            {Number.isFinite(Number(row.consistencyPercent)) && (
+              <span>
+                Consistency{' '}
+                <strong>{Math.round(row.consistencyPercent)}%</strong>
+              </span>
+            )}
+
+            {Number.isFinite(Number(row.averageWeight)) && (
+              <span>
+                Avg Weight{' '}
+                <strong>{formatWeight(row.averageWeight)}</strong>
+              </span>
+            )}
+          </div>
+        </>
+      )
+    }
+
+    if (row.status === 'current') {
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>Week {row.weekNumber}</strong>
+            <span className="plan-progress-status is-current">
+              Current
+            </span>
+          </div>
+          <span className="plan-progress-subtext">In progress</span>
+        </>
+      )
+    }
+
+    if (row.status === 'needs-review') {
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>Week {row.weekNumber}</strong>
+            <span className="plan-progress-status is-needs-review">
+              Needs Review
+            </span>
+          </div>
+          <span className="plan-progress-subtext">
+            Weekly Check-In not finalized
+          </span>
+        </>
+      )
+    }
+
+    return (
+      <div className="plan-progress-row-topline">
+        <strong>Week {row.weekNumber}</strong>
+        <span className="plan-progress-status is-upcoming">
+          Upcoming
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <section
+      className="plan-progress-card"
+      aria-labelledby="plan-progress-heading"
+    >
+      <header className="plan-progress-header">
+        <h2 id="plan-progress-heading">Plan Progress</h2>
+        <p>
+          {formatGoal(plan.goal)}
+          {currentWeekNumber
+            ? ` · Week ${currentWeekNumber} of ${plan.program_length_weeks}`
+            : ` · ${plan.program_length_weeks}-Week Plan`}
+        </p>
+      </header>
+
+      <div className="plan-progress-list">
+        {visibleRows.map((row) => {
+          if (row.status === 'completed') {
+            return (
+              <button
+                type="button"
+                className="plan-progress-row is-clickable is-completed"
+                key={row.weekNumber}
+                onClick={() => onOpenWeeklyReview(row.weekNumber)}
+                aria-label={`Open Week ${row.weekNumber} Weekly Review`}
+              >
+                <span className="plan-progress-row-content">
+                  {renderRowContent(row)}
+                </span>
+                <span className="plan-progress-chevron" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            )
+          }
+
+          if (row.status === 'current') {
+            return (
+              <button
+                type="button"
+                className="plan-progress-row is-clickable is-current"
+                key={row.weekNumber}
+                onClick={onOpenCurrentWeek}
+                aria-label={`Open current Week ${row.weekNumber} Daily Check-Ins`}
+              >
+                <span className="plan-progress-row-content">
+                  {renderRowContent(row)}
+                </span>
+                <span className="plan-progress-chevron" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            )
+          }
+
+          return (
+            <div
+              className={`plan-progress-row is-${row.status}`}
+              key={row.weekNumber}
+            >
+              <span className="plan-progress-row-content">
+                {renderRowContent(row)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {(hasHiddenWeeks || showAllWeeks) && rows.length > 0 && (
+        <button
+          type="button"
+          className="text-button plan-progress-toggle"
+          onClick={() => setShowAllWeeks((current) => !current)}
+          aria-expanded={showAllWeeks}
+        >
+          {showAllWeeks ? 'Show Less' : '•••  Show All Weeks'}
+        </button>
+      )}
+    </section>
+  )
+}
+
+// Displays the user's current check-in action, weekly snapshot,
+// and progress through the active coaching plan.
 export function DashboardPage({
   dashboard,
   loading,
@@ -144,7 +352,8 @@ export function DashboardPage({
   onOpenStartCheckIn,
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
-  onOpenWeeklySummary,
+  onOpenCurrentWeek,
+  onOpenWeeklyReview,
   onOpenHistory,
   onOpenPlan,
   onOpenSettings,
@@ -153,10 +362,7 @@ export function DashboardPage({
   if (loading) {
     return (
       <main className="container dashboard-page">
-        <h1 className="dashboard-title">
-          Juntos Coach
-        </h1>
-
+        <h1 className="dashboard-title">Juntos Coach</h1>
         <p>Loading your plan...</p>
       </main>
     )
@@ -165,70 +371,37 @@ export function DashboardPage({
   const today = getTodayDateKey()
   const plan = dashboard?.plan ?? null
   const target = dashboard?.target ?? null
-  const weekly =
-    dashboard?.weekAtAGlance ?? null
-  const settings =
-    dashboard?.settings ?? {
-      track_water: true,
-      track_alcohol: true,
-    }
+  const weekly = dashboard?.weekAtAGlance ?? null
+  const settings = dashboard?.settings ?? {
+    track_water: true,
+    track_alcohol: true,
+  }
+  const startCheckIn = dashboard?.startCheckIn ?? null
+  const currentWeekNumber = getPlanWeekNumber(plan, today)
 
-  const startCheckIn =
-    dashboard?.startCheckIn ?? null
+  const workoutsGoalMet = isWeeklyGoalMet(
+    weekly?.workoutsCompleted,
+    weekly?.workoutsTarget,
+  )
 
-  const currentWeekNumber =
-    getPlanWeekNumber(
-      plan,
-      today,
-    )
+  const cardioGoalMet = isWeeklyGoalMet(
+    dashboard?.cardioCompleted,
+    target?.weekly_cardio_target_minutes,
+  )
 
-  const latestCompletedWeeklyCheckIn =
-    dashboard
-      ?.latestCompletedWeeklyCheckIn ??
-    null
-
-  const previousWeekSummaryAvailable =
-    Boolean(
-      currentWeekNumber &&
-      currentWeekNumber > 1 &&
-      Number(
-        latestCompletedWeeklyCheckIn
-          ?.week_number,
-      ) ===
-        currentWeekNumber - 1,
-    )
-
-  const workoutsGoalMet =
-    isWeeklyGoalMet(
-      weekly?.workoutsCompleted,
-      weekly?.workoutsTarget,
-    )
-
-  const cardioGoalMet =
-    isWeeklyGoalMet(
-      dashboard?.cardioCompleted,
-      target?.weekly_cardio_target_minutes,
-    )
-
-  const adherenceState =
-    getAdherenceState(
-      weekly?.mealPlanAdherencePercent,
-    )
+  const adherenceState = getAdherenceState(
+    weekly?.mealPlanAdherencePercent,
+  )
 
   // Keep the Start Check-In card visible before and on
   // the plan start date. Hide it beginning the next day.
   const showStartCheckIn =
-    Boolean(plan?.start_date) &&
-    today <= plan.start_date
+    Boolean(plan?.start_date) && today <= plan.start_date
 
-  // The Start Check-In may only be opened on the
-  // plan's actual start date.
   const startCheckInAvailable =
-    Boolean(plan?.start_date) &&
-    today === plan.start_date
+    Boolean(plan?.start_date) && today === plan.start_date
 
-  const startCheckInCompleted =
-    startCheckIn?.status === 'completed'
+  const startCheckInCompleted = startCheckIn?.status === 'completed'
 
   // Daily check-ins begin the morning after the plan starts,
   // but only after the Start Check-In is complete.
@@ -245,120 +418,99 @@ export function DashboardPage({
       today,
     )
 
-  const todayWeeklyCheckIn =
-    dashboard?.todayWeeklyCheckIn ?? null
-
+  const todayWeeklyCheckIn = dashboard?.todayWeeklyCheckIn ?? null
   const hasCompletedWeeklyCheckIn =
-    todayWeeklyCheckIn?.status ===
-    'completed'
-
-  const hasWeeklyDraft =
-    todayWeeklyCheckIn?.status ===
-    'draft'
+    todayWeeklyCheckIn?.status === 'completed'
+  const hasWeeklyDraft = todayWeeklyCheckIn?.status === 'draft'
 
   const hasCheckedInToday =
-    dashboard?.todayCheckIn?.checkin_date ===
-    today
+    dashboard?.todayCheckIn?.checkin_date === today
 
   const checkInState = hasCheckedInToday
     ? 'is-complete'
     : 'is-due'
-
   const checkInLabel = hasCheckedInToday
     ? 'View Today’s Check-In ✓'
     : 'Daily Check-In'
 
-  const weeklyCheckInState =
-    hasCompletedWeeklyCheckIn
-      ? 'is-complete'
-      : 'is-due'
-
-  const weeklyCheckInLabel =
-    hasCompletedWeeklyCheckIn
-      ? 'View This Week’s Check-In ✓'
-      : hasWeeklyDraft
-        ? 'Resume Weekly Check-In'
-        : 'Weekly Check-In'
+  const weeklyCheckInState = hasCompletedWeeklyCheckIn
+    ? 'is-complete'
+    : 'is-due'
+  const weeklyCheckInLabel = hasCompletedWeeklyCheckIn
+    ? 'View This Week’s Check-In ✓'
+    : hasWeeklyDraft
+      ? 'Resume Weekly Check-In'
+      : 'Weekly Check-In'
 
   const startCheckInState = startCheckInCompleted
     ? 'is-complete'
     : 'is-due'
-
   const startCheckInLabel = startCheckInCompleted
-  ? 'View Your Start Day Check-In ✓'
-  : startCheckInAvailable
-    ? 'Complete Your Start Day Check-In'
-    : 'Your Start Day Check-In'
+    ? 'View Your Start Day Check-In ✓'
+    : startCheckInAvailable
+      ? 'Complete Your Start Day Check-In'
+      : 'Your Start Day Check-In'
 
-  const streakDays = Number(
-    dashboard?.streakDays ?? 0,
-  )
+  const streakDays = Number(dashboard?.streakDays ?? 0)
 
   return (
     <main className="container dashboard-page">
       <header className="dashboard-header">
-        <h1 className="dashboard-title">
-          Juntos Coach
-        </h1>
+        <h1 className="dashboard-title">Juntos Coach</h1>
 
         {dashboard && (
           <div className="dashboard-welcome-row">
             <p>
-              Welcome back,{' '}
-              {dashboard.profile.display_name}.
+              Welcome back, {dashboard.profile.display_name}.
             </p>
 
             {streakDays > 0 && (
               <p className="dashboard-streak">
+                <span aria-hidden="true">🔥</span>{' '}
                 {streakDays} Day Streak!!!
               </p>
             )}
           </div>
         )}
-
       </header>
 
       {error && <p role="alert">{error}</p>}
 
       {dashboard && !plan && (
-        <PlanEmptyState
-          onCreatePlan={onCreatePlan}
-        />
+        <PlanEmptyState onCreatePlan={onCreatePlan} />
       )}
 
       {dashboard && plan && (
         <>
-          {canCheckIn &&
-            weeklyCheckInDue && (
-              <section
-                className="dashboard-check-in"
-                aria-label="This week’s check-in"
+          {canCheckIn && weeklyCheckInDue && (
+            <section
+              className="dashboard-check-in"
+              aria-label="This week’s check-in"
+            >
+              <button
+                type="button"
+                className={`daily-check-in-button ${weeklyCheckInState}`}
+                onClick={onOpenWeeklyCheckIn}
               >
-                <button
-                  type="button"
-                  className={`daily-check-in-button ${weeklyCheckInState}`}
-                  onClick={onOpenWeeklyCheckIn}
-                >
-                  {weeklyCheckInLabel}
-                </button>
-              </section>
-            )}
+                {weeklyCheckInLabel}
+              </button>
+            </section>
+          )}
 
-          {canCheckIn &&
-            !weeklyCheckInDue && (
-              <section
-                className="dashboard-check-in"
-                aria-label="Today’s daily check-in"
+          {canCheckIn && !weeklyCheckInDue && (
+            <section
+              className="dashboard-check-in"
+              aria-label="Today’s daily check-in"
+            >
+              <button
+                type="button"
+                className={`daily-check-in-button ${checkInState}`}
+                onClick={onOpenDailyCheckIn}
               >
-                <button
-                  type="button"
-                  className={`daily-check-in-button ${checkInState}`}
-                  onClick={onOpenDailyCheckIn}
-                >
-                  {checkInLabel}
-                </button>
-              </section>
-            )}
+                {checkInLabel}
+              </button>
+            </section>
+          )}
 
           {showStartCheckIn && (
             <section
@@ -376,78 +528,6 @@ export function DashboardPage({
             </section>
           )}
 
-          <section
-            className="dashboard-plan-summary"
-            aria-labelledby="current-plan-heading"
-          >
-            <h2
-              id="current-plan-heading"
-              className="visually-hidden"
-            >
-              Current Plan
-            </h2>
-
-            <p>
-              <strong>Current Plan:</strong>{' '}
-              {formatGoal(plan.goal)}
-            </p>
-
-            <p>
-              <strong>Plan Start Date:</strong>{' '}
-              {formatDate(plan.start_date)}
-            </p>
-
-            <PlanStartStatus
-              startDate={plan.start_date}
-              today={today}
-            />
-
-            {today >= plan.start_date && (
-              <p className="dashboard-plan-progress">
-                {getPlanProgressLabel(
-                  plan,
-                  today,
-                )}
-              </p>
-            )}
-
-            {import.meta.env.DEV && (
-              <div className="dashboard-dev-links">
-                <button
-                type="button"
-                className="text-button"
-                onClick={onCreatePlan}
-                >
-                Preview Create Plan Wizard
-                </button>
-
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={onOpenStartCheckIn}
-                >
-                  Preview Start Check-In Wizard
-                </button>
-
-                <button
-                type="button"
-                className="text-button"
-                onClick={onOpenDailyCheckIn}
-                >
-                Preview Daily Check-In Wizard
-                </button>
-
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={onOpenWeeklyCheckIn}
-                >
-                Preview Weekly Check-In Wizard
-                </button>
-              </div>
-            )}
-          </section>
-
           {canCheckIn && (
             <section
               className="week-at-a-glance"
@@ -462,22 +542,12 @@ export function DashboardPage({
               <dl className="weekly-score-list">
                 <div>
                   <dt>Meal Plan Adherence</dt>
-                  <dd
-                    className={adherenceState}
-                  >
-                    {formatPercent(
-                      weekly?.mealPlanAdherencePercent,
-                    )}
+                  <dd className={adherenceState}>
+                    {formatPercent(weekly?.mealPlanAdherencePercent)}
                   </dd>
                 </div>
 
-                <div
-                  className={
-                    workoutsGoalMet
-                      ? 'is-goal-met'
-                      : undefined
-                  }
-                >
+                <div className={workoutsGoalMet ? 'is-goal-met' : undefined}>
                   <dt>
                     {workoutsGoalMet && (
                       <span
@@ -499,13 +569,7 @@ export function DashboardPage({
                   </dd>
                 </div>
 
-                <div
-                  className={
-                    cardioGoalMet
-                      ? 'is-goal-met'
-                      : undefined
-                  }
-                >
+                <div className={cardioGoalMet ? 'is-goal-met' : undefined}>
                   <dt>
                     {cardioGoalMet && (
                       <span
@@ -521,8 +585,7 @@ export function DashboardPage({
                   <dd>
                     {formatCount(
                       dashboard.cardioCompleted,
-                      target
-                        ?.weekly_cardio_target_minutes,
+                      target?.weekly_cardio_target_minutes,
                       ' mins',
                     )}
                   </dd>
@@ -543,11 +606,7 @@ export function DashboardPage({
 
                 <div>
                   <dt>Weight Weekly Average</dt>
-                  <dd>
-                    {formatWeight(
-                      weekly?.averageWeight,
-                    )}
-                  </dd>
+                  <dd>{formatWeight(weekly?.averageWeight)}</dd>
                 </div>
 
                 {settings.track_alcohol && (
@@ -564,37 +623,62 @@ export function DashboardPage({
                 )}
               </dl>
 
-              {previousWeekSummaryAvailable ? (
+              <button
+                type="button"
+                className="dashboard-section-link"
+                onClick={onOpenCurrentWeek}
+              >
+                See Daily Check-Ins →
+              </button>
+            </section>
+          )}
+
+          <PlanProgress
+            plan={plan}
+            currentWeekNumber={currentWeekNumber}
+            completedWeeks={dashboard?.planProgress?.completedWeeks ?? []}
+            onOpenCurrentWeek={onOpenCurrentWeek}
+            onOpenWeeklyReview={onOpenWeeklyReview}
+          />
+
+          {import.meta.env.DEV && (
+            <details className="dashboard-dev-tools">
+              <summary>DEV Previews</summary>
+
+              <div>
                 <button
                   type="button"
-                  className="weekly-summary-link"
-                  onClick={onOpenWeeklySummary}
+                  className="text-button"
+                  onClick={onCreatePlan}
                 >
-                  View Previous Week Summary
+                  Preview Create Plan Wizard
                 </button>
-              ) : import.meta.env.DEV ? (
-                <>
-                  <button
-                    type="button"
-                    className="weekly-summary-link"
-                    onClick={onOpenWeeklySummary}
-                  >
-                    Preview Previous Week Summary · DEV
-                  </button>
 
-                  <p className="weekly-summary-unavailable">
-                    DEV preview only · Nothing will be saved.
-                  </p>
-                </>
-              ) : (
-                <p className="weekly-summary-unavailable">
-                  {currentWeekNumber &&
-                  currentWeekNumber > 1
-                    ? 'Complete the previous week’s Weekly Check-In to unlock its summary.'
-                    : 'Complete your first Weekly Check-In to unlock your first Weekly Summary.'}
-                </p>
-              )}
-            </section>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenStartCheckIn}
+                >
+                  Preview Start Check-In Wizard
+                </button>
+
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenDailyCheckIn}
+                >
+                  Preview Daily Check-In Wizard
+                </button>
+
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenWeeklyCheckIn}
+                >
+                  Preview Weekly Check-In Wizard
+                </button>
+              </div>
+            </details>
           )}
         </>
       )}
@@ -605,38 +689,21 @@ export function DashboardPage({
         onClick={onSignOut}
         disabled={signingOut}
       >
-        {signingOut
-          ? 'Signing Out...'
-          : 'Sign Out'}
+        {signingOut ? 'Signing Out...' : 'Sign Out'}
       </button>
 
-      <nav
-        className="bottom-navigation"
-        aria-label="Main navigation"
-      >
-        <button
-          type="button"
-          className="is-active"
-          aria-current="page"
-        >
+      <nav className="bottom-navigation" aria-label="Main navigation">
+        <button type="button" className="is-active" aria-current="page">
           Today
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenHistory}
-          disabled={!plan}
-        >
+        <button type="button" onClick={onOpenHistory} disabled={!plan}>
           Progress
         </button>
 
         <button
           type="button"
-          onClick={
-            plan
-              ? onOpenPlan
-              : onCreatePlan
-          }
+          onClick={plan ? onOpenPlan : onCreatePlan}
         >
           Plan
         </button>
@@ -645,10 +712,7 @@ export function DashboardPage({
           Coach
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenSettings}
-        >
+        <button type="button" onClick={onOpenSettings}>
           Settings
         </button>
       </nav>

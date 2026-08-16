@@ -624,6 +624,7 @@ function getDevPreviewWeekNumber(plan) {
 export function WeeklySummaryPage({
   plan,
   profile,
+  initialWeekNumber = null,
   onBack,
   onOpenToday,
   onOpenHistory,
@@ -680,10 +681,20 @@ export function WeeklySummaryPage({
 
         setCompletedWeeks(weeks)
 
+        const requestedWeek = Number(initialWeekNumber)
+        const requestedWeekExists =
+          Number.isFinite(requestedWeek) &&
+          weeks.some(
+            (week) =>
+              Number(week.week_number) === requestedWeek,
+          )
+
         setSelectedWeek(
-          weeks[0]?.week_number ??
-            devPreviewWeekNumber ??
-            null,
+          requestedWeekExists
+            ? requestedWeek
+            : weeks[0]?.week_number ??
+              devPreviewWeekNumber ??
+              null,
         )
       } catch (loadError) {
         if (!cancelled) {
@@ -707,6 +718,7 @@ export function WeeklySummaryPage({
   }, [
     plan?.id,
     devPreviewWeekNumber,
+    initialWeekNumber,
   ])
 
   useEffect(() => {

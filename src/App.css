@@ -560,8 +560,6 @@ fieldset textarea {
 
 /* Dashboard */
 
-/* Dashboard */
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -589,38 +587,30 @@ fieldset textarea {
 }
 
 .dashboard-welcome-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem 1rem;
-  margin-top: 0.65rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  text-align: center;
 }
 
 .dashboard-welcome-row p {
   margin: 0;
 }
 
-.dashboard-welcome-row>p:first-child {
+.dashboard-welcome-row > p:first-child {
   color: var(--color-text-muted);
+  font-size: 1rem;
 }
 
 .dashboard-streak {
   color: var(--color-primary);
-  font-size: 0.95rem;
-  font-weight: 750;
+  font-size: clamp(1.08rem, 4vw, 1.28rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
-/* Temporary PWA refresh test marker */
-
-.dashboard-update-test {
-  margin: 0.55rem 0 0;
-  color: var(--color-success);
-  font-size: 0.78rem;
-  font-weight: 750;
-}
-
-/* Daily check-in button */
+/* Daily / Weekly check-in button */
 
 .dashboard-check-in {
   display: flex;
@@ -646,7 +636,6 @@ fieldset textarea {
     transform 180ms ease;
 }
 
-/* Not eligible yet: purple with no glow. */
 .daily-check-in-button.is-locked,
 .daily-check-in-button.is-locked:disabled {
   border-color: var(--color-primary);
@@ -656,9 +645,7 @@ fieldset textarea {
   cursor: not-allowed;
 }
 
-/* Eligible but incomplete: purple with breathing orange glow. */
 @keyframes check-in-breathe {
-
   0%,
   100% {
     border-color: var(--color-interaction);
@@ -687,7 +674,6 @@ fieldset textarea {
   background: var(--color-primary-dark);
 }
 
-/* Completed: purple with steady orange confirmation glow. */
 .daily-check-in-button.is-complete {
   border-color: var(--color-interaction);
   background: var(--color-primary);
@@ -706,31 +692,10 @@ fieldset textarea {
     0 0 17px rgb(var(--color-interaction-rgb) / 36%);
 }
 
-/* Current plan */
-
-.dashboard-plan-summary {
-  margin-bottom: 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.15rem 1.25rem;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.dashboard-plan-summary p {
-  margin: 0.3rem 0;
-}
-
-.dashboard-plan-progress {
-  margin-top: 0.75rem !important;
-  color: var(--color-primary);
-  font-size: 1.05rem;
-  font-weight: 750;
-}
-
 /* Week at a Glance */
 
-.week-at-a-glance {
+.week-at-a-glance,
+.plan-progress-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: clamp(1.2rem, 5vw, 1.75rem);
@@ -738,9 +703,18 @@ fieldset textarea {
   box-shadow: var(--shadow-card);
 }
 
-.week-at-a-glance h2 {
-  margin: 0 0 1.25rem;
+.week-at-a-glance {
+  margin-bottom: 1rem;
+}
+
+.week-at-a-glance h2,
+.plan-progress-header h2 {
+  margin: 0;
   text-align: center;
+}
+
+.week-at-a-glance h2 {
+  margin-bottom: 1.25rem;
 }
 
 .weekly-score-list {
@@ -750,7 +724,7 @@ fieldset textarea {
   margin: 0;
 }
 
-.weekly-score-list>div {
+.weekly-score-list > div {
   display: grid;
   min-width: 0;
   min-height: 7.2rem;
@@ -780,9 +754,6 @@ fieldset textarea {
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
-
-
-/* Weekly goal feedback */
 
 .weekly-score-list > div.is-goal-met {
   border-color: var(--color-success);
@@ -818,23 +789,191 @@ fieldset textarea {
   color: var(--color-interaction);
 }
 
-.weekly-score-list dd.is-adherence-low {
-  color: var(--color-error);
+.weekly-score-list dd.is-adherence-neutral {
+  color: var(--color-primary);
 }
 
-.weekly-summary-link {
+.dashboard-section-link {
   display: block;
   width: min(100%, 18rem);
-  margin: 1.4rem auto 0;
+  min-height: 2.8rem;
+  margin: 1.35rem auto 0;
   border-color: var(--color-primary);
   background: var(--color-surface);
   color: var(--color-primary);
 }
 
-.weekly-summary-link:hover:not(:disabled) {
+.dashboard-section-link:hover:not(:disabled) {
   background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
 }
 
+/* Plan Progress */
+
+.plan-progress-header {
+  margin-bottom: 1rem;
+}
+
+.plan-progress-header p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.plan-progress-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.plan-progress-row {
+  display: grid;
+  width: 100%;
+  min-height: 4.4rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 0.95rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  text-align: left;
+}
+
+button.plan-progress-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  font: inherit;
+}
+
+button.plan-progress-row:hover:not(:disabled) {
+  border-color: rgb(108 91 212 / 38%);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.plan-progress-row.is-current {
+  border-color: var(--color-interaction);
+  box-shadow:
+    0 0 4px rgb(var(--color-interaction-rgb) / 36%),
+    0 0 12px rgb(var(--color-interaction-rgb) / 14%);
+}
+
+.plan-progress-row.is-completed {
+  border-color: rgb(40 122 91 / 28%);
+}
+
+.plan-progress-row.is-upcoming {
+  background: rgb(247 247 251 / 72%);
+}
+
+.plan-progress-row.is-needs-review {
+  border-color: rgb(var(--color-interaction-rgb) / 42%);
+}
+
+.plan-progress-row-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.plan-progress-row-topline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.plan-progress-row-topline > strong {
+  color: var(--color-primary-dark);
+  font-size: 0.98rem;
+}
+
+.plan-progress-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.plan-progress-status.is-complete {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.plan-progress-status.is-current {
+  background: rgb(var(--color-interaction-rgb) / 12%);
+  color: var(--color-primary-dark);
+}
+
+.plan-progress-status.is-needs-review {
+  background: rgb(var(--color-interaction-rgb) / 12%);
+  color: var(--color-primary-dark);
+}
+
+.plan-progress-status.is-upcoming {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.plan-progress-row-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.plan-progress-row-details strong {
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.plan-progress-subtext {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.plan-progress-chevron {
+  color: var(--color-primary);
+  font-size: 1.55rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.plan-progress-toggle {
+  display: block;
+  margin: 0.9rem auto 0;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* DEV-only wizard shortcuts no longer need a fake Current Plan card. */
+.dashboard-dev-tools {
+  margin-top: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.dashboard-dev-tools summary {
+  width: fit-content;
+  margin-inline: auto;
+  color: var(--color-text-muted);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.dashboard-dev-tools > div {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  margin-top: 0.4rem;
+}
 
 /* Plan page */
 
@@ -1211,10 +1350,6 @@ fieldset textarea {
     padding-bottom: 8rem;
   }
 
-  .dashboard-welcome-row {
-    justify-content: space-between;
-    text-align: left;
-  }
 
   .weekly-score-list>div {
     min-height: 8rem;
