@@ -54,7 +54,7 @@ const WEEKLY_CHECKIN_FIELDS = `
   alcohol_consumed
 `
 
-const COMPLETED_WEEK_FIELDS = `
+const PLAN_PROGRESS_WEEKLY_FIELDS = `
   id,
   week_number,
   status,
@@ -406,97 +406,275 @@ function calculateConsistencyScore(
   return Math.round(weightedTotal / totalWeight)
 }
 
-async function loadCompletedPlanProgress(plan) {
-  const { data: completedWeeks, error: completedError } =
-    await supabase
-      .from('weekly_checkins')
-      .select(COMPLETED_WEEK_FIELDS)
-      .eq('coaching_plan_id', plan.id)
-      .eq('status', 'completed')
-      .order('week_number', { ascending: true })
-
-  if (completedError) {
-    throw completedError
+function getPlanWeekNumberForDate(
+  plan,
+  date,
+) {
+  if (
+    !plan?.start_date ||
+    !date ||
+    date < plan.start_date
+  ) {
+    return null
   }
 
-  if (!completedWeeks?.length) {
+  const start = new Date(
+    `${plan.start_date}T00:00:00Z`,
+  )
+  const current = new Date(
+    `${date}T00:00:00Z`,
+  )
+
+  const elapsedDays = Math.floor(
+    (current.getTime() - start.getTime()) /
+      (24 * 60 * 60 * 1000),
+  )
+
+  return Math.min(
+    Math.floor(elapsedDays / 7) + 1,
+    Number(
+      plan.program_length_weeks,
+    ),
+  )
+}
+
+async function loadPlanProgress(
+  plan,
+  today,
+) {
+  const currentWeekNumber =
+    getPlanWeekNumberForDate(
+      plan,
+      today,
+    )
+
+  if (!currentWeekNumber) {
     return []
   }
 
-  const lastCompletedWeek = Math.max(
-    ...completedWeeks.map((week) => Number(week.week_number)),
-  )
+  const lastRelevantWeek =
+    Math.min(
+      Number(
+        plan.program_length_weeks,
+      ),
+      currentWeekNumber,
+    )
 
   const lastDailyDate = addDays(
     plan.start_date,
-    lastCompletedWeek * 7,
+    lastRelevantWeek * 7,
   )
 
-  const completedIds = completedWeeks.map((week) => week.id)
+  const [
+    weeklyResult,
+    dailyResult,
+  ] = await Promise.all([
+    supabase
+      .from('weekly_checkins')
+      .select(
+        PLAN_PROGRESS_WEEKLY_FIELDS,
+      )
+      .eq(
+        'coaching_plan_id',
+        plan.id,
+      )
+      .lte(
+        'week_number',
+        lastRelevantWeek,
+      )
+      .order(
+        'week_number',
+        {
+          ascending: true,
+        },
+      ),
 
-  const [dailyResult, prescriptionResult] = await Promise.all([
     supabase
       .from('daily_checkins')
-      .select(PLAN_PROGRESS_DAILY_FIELDS)
-      .eq('coaching_plan_id', plan.id)
-      .gte('checkin_date', addDays(plan.start_date, 1))
-      .lte('checkin_date', lastDailyDate)
-      .order('checkin_date', { ascending: true }),
-
-    supabase
-      .from('weekly_plan_prescriptions')
-      .select(PLAN_PROGRESS_PRESCRIPTION_FIELDS)
-      .in('weekly_checkin_id', completedIds)
-      .order('week_number', { ascending: true }),
+      .select(
+        PLAN_PROGRESS_DAILY_FIELDS,
+      )
+      .eq(
+        'coaching_plan_id',
+        plan.id,
+      )
+      .gte(
+        'checkin_date',
+        addDays(
+          plan.start_date,
+          1,
+        ),
+      )
+      .lte(
+        'checkin_date',
+        lastDailyDate,
+      )
+      .order(
+        'checkin_date',
+        {
+          ascending: true,
+        },
+      ),
   ])
+
+  if (weeklyResult.error) {
+    throw weeklyResult.error
+  }
 
   if (dailyResult.error) {
     throw dailyResult.error
   }
 
-  if (prescriptionResult.error) {
-    throw prescriptionResult.error
-  }
+  const weeklyRows =
+    weeklyResult.data ?? []
+  const dailyRows =
+    dailyResult.data ?? []
 
-  const dailyRows = dailyResult.data ?? []
-  const prescriptions = prescriptionResult.data ?? []
-
-  return completedWeeks.map((week) => {
-    const weekNumber = Number(week.week_number)
-    const weekStart = addDays(
-      plan.start_date,
-      (weekNumber - 1) * 7,
-    )
-    const dailyStart = addDays(weekStart, 1)
-    const dailyEnd = addDays(weekStart, 7)
-
-    const weekDailyRows = dailyRows.filter(
-      (row) =>
-        row.checkin_date >= dailyStart &&
-        row.checkin_date <= dailyEnd,
+  const weeklyByNumber =
+    new Map(
+      weeklyRows.map(
+        (row) => [
+          Number(
+            row.week_number,
+          ),
+          row,
+        ],
+      ),
     )
 
-    const weekPrescriptions = prescriptions.filter(
-      (item) => Number(item.week_number) === weekNumber,
-    )
-
-    const recordedWeights = weekDailyRows
-      .map((row) => Number(row.morning_weight))
+  const completedIds =
+    weeklyRows
       .filter(
-        (weight) => Number.isFinite(weight) && weight > 0,
+        (row) =>
+          row.status ===
+          'completed',
+      )
+      .map(
+        (row) => row.id,
       )
 
-    return {
-      weeklyCheckInId: week.id,
-      weekNumber,
-      consistencyPercent: calculateConsistencyScore(
-        weekDailyRows,
-        weekPrescriptions,
-      ),
-      averageWeight: average(recordedWeights),
-      submittedAt: week.submitted_at,
+  let prescriptions = []
+
+  if (completedIds.length > 0) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from(
+        'weekly_plan_prescriptions',
+      )
+      .select(
+        PLAN_PROGRESS_PRESCRIPTION_FIELDS,
+      )
+      .in(
+        'weekly_checkin_id',
+        completedIds,
+      )
+      .order(
+        'week_number',
+        {
+          ascending: true,
+        },
+      )
+
+    if (error) {
+      throw error
     }
-  })
+
+    prescriptions = data ?? []
+  }
+
+  return Array.from(
+    {
+      length: lastRelevantWeek,
+    },
+    (_, index) => {
+      const weekNumber =
+        index + 1
+
+      const weekStart =
+        addDays(
+          plan.start_date,
+          (weekNumber - 1) * 7,
+        )
+
+      const dailyStart =
+        addDays(
+          weekStart,
+          1,
+        )
+
+      const dailyEnd =
+        addDays(
+          weekStart,
+          7,
+        )
+
+      const weekDailyRows =
+        dailyRows.filter(
+          (row) =>
+            row.checkin_date >=
+              dailyStart &&
+            row.checkin_date <=
+              dailyEnd,
+        )
+
+      const weekly =
+        weeklyByNumber.get(
+          weekNumber,
+        ) ?? null
+
+      const weekPrescriptions =
+        prescriptions.filter(
+          (item) =>
+            Number(
+              item.week_number,
+            ) === weekNumber,
+        )
+
+      const recordedWeights =
+        weekDailyRows
+          .map(
+            (row) =>
+              Number(
+                row.morning_weight,
+              ),
+          )
+          .filter(
+            (weight) =>
+              Number.isFinite(
+                weight,
+              ) &&
+              weight > 0,
+          )
+
+      return {
+        weeklyCheckInId:
+          weekly?.id ?? null,
+        weekNumber,
+        weeklyStatus:
+          weekly?.status ??
+          'missing',
+        dailyCheckInCount:
+          weekDailyRows.length,
+        consistencyPercent:
+          weekly?.status ===
+          'completed'
+            ? calculateConsistencyScore(
+                weekDailyRows,
+                weekPrescriptions,
+              )
+            : null,
+        averageWeight:
+          average(
+            recordedWeights,
+          ),
+        submittedAt:
+          weekly?.submitted_at ??
+          null,
+      }
+    },
+  )
 }
 
 function calculateStreak(checkInDates, today) {
@@ -561,7 +739,7 @@ export async function loadDashboardData(userId) {
       cardioWeekStart: null,
       cardioWeekEnd: null,
       weekAtAGlance: null,
-      planProgress: { completedWeeks: [] },
+      planProgress: { weeks: [] },
       streakDays: 0,
     }
   }
@@ -578,7 +756,7 @@ export async function loadDashboardData(userId) {
     todayWeeklyCheckIn,
     weeklyCheckIns,
     checkInDates,
-    completedPlanWeeks,
+    planProgressWeeks,
   ] = await Promise.all([
     loadCurrentTarget(plan.id, today),
     loadStartCheckIn(plan.id),
@@ -594,7 +772,7 @@ export async function loadDashboardData(userId) {
       : Promise.resolve([]),
 
     loadCheckInDates(plan.id, plan.start_date, today),
-    loadCompletedPlanProgress(plan),
+    loadPlanProgress(plan, today),
   ])
 
   const weekAtAGlance = buildWeekAtAGlance(
@@ -617,7 +795,7 @@ export async function loadDashboardData(userId) {
     cardioWeekEnd,
     weekAtAGlance,
     planProgress: {
-      completedWeeks: completedPlanWeeks,
+      weeks: planProgressWeeks,
     },
     streakDays,
   }

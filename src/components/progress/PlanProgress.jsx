@@ -15,7 +15,7 @@ function formatWeight(value) {
 function getPlanProgressRows(
   plan,
   currentWeekNumber,
-  completedWeeks,
+  weeks,
 ) {
   const programLength = Number(
     plan?.program_length_weeks,
@@ -28,8 +28,8 @@ function getPlanProgressRows(
     return []
   }
 
-  const completedByWeek = new Map(
-    (completedWeeks ?? []).map(
+  const weekDataByNumber = new Map(
+    (weeks ?? []).map(
       (week) => [
         Number(week.weekNumber),
         week,
@@ -43,24 +43,17 @@ function getPlanProgressRows(
     },
     (_, index) => {
       const weekNumber = index + 1
-      const completed =
-        completedByWeek.get(
+      const weekData =
+        weekDataByNumber.get(
           weekNumber,
         )
-
-      if (completed) {
-        return {
-          ...completed,
-          weekNumber,
-          status: 'completed',
-        }
-      }
 
       if (
         weekNumber ===
         currentWeekNumber
       ) {
         return {
+          ...weekData,
           weekNumber,
           status: 'current',
         }
@@ -71,9 +64,32 @@ function getPlanProgressRows(
         weekNumber <
           currentWeekNumber
       ) {
+        if (
+          weekData?.weeklyStatus ===
+          'completed'
+        ) {
+          return {
+            ...weekData,
+            weekNumber,
+            status: 'completed',
+          }
+        }
+
+        if (
+          weekData?.weeklyStatus ===
+          'draft'
+        ) {
+          return {
+            ...weekData,
+            weekNumber,
+            status: 'needs-review',
+          }
+        }
+
         return {
+          ...weekData,
           weekNumber,
-          status: 'needs-review',
+          status: 'no-weekly',
         }
       }
 
@@ -88,7 +104,7 @@ function getPlanProgressRows(
 export function PlanProgress({
   plan,
   currentWeekNumber,
-  completedWeeks,
+  weeks,
   onOpenCurrentWeek,
   onOpenWeeklyReview,
   initialShowAll = false,
@@ -111,7 +127,7 @@ export function PlanProgress({
     getPlanProgressRows(
       plan,
       currentWeekNumber,
-      completedWeeks,
+      weeks,
     )
 
   const programLength = Number(
@@ -236,8 +252,60 @@ export function PlanProgress({
           </div>
 
           <span className="plan-progress-subtext">
-            Weekly Check-In not finalized
+            Weekly Check-In started but not finalized
           </span>
+        </>
+      )
+    }
+
+    if (
+      row.status ===
+      'no-weekly'
+    ) {
+      const hasDailyData =
+        Number(row.dailyCheckInCount) > 0
+
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>
+              Week {row.weekNumber}
+            </strong>
+
+            <span className="plan-progress-status is-no-weekly">
+              No Weekly Check-In
+            </span>
+          </div>
+
+          {hasDailyData ? (
+            <div className="plan-progress-row-details">
+              <span>
+                Daily Check-Ins{' '}
+                <strong>
+                  {Number(row.dailyCheckInCount)}
+                </strong>
+              </span>
+
+              {Number.isFinite(
+                Number(
+                  row.averageWeight,
+                ),
+              ) && (
+                <span>
+                  Avg Weight{' '}
+                  <strong>
+                    {formatWeight(
+                      row.averageWeight,
+                    )}
+                  </strong>
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="plan-progress-subtext">
+              No check-in data recorded
+            </span>
+          )}
         </>
       )
     }

@@ -284,8 +284,25 @@ export function DashboardPage({
               </h2>
 
               <dl className="weekly-score-list">
-                <div>
-                  <dt>Meal Plan Adherence</dt>
+                <div
+                  className={
+                    adherenceState === 'is-adherence-good'
+                      ? 'is-goal-met'
+                      : undefined
+                  }
+                >
+                  <dt>
+                    {adherenceState === 'is-adherence-good' && (
+                      <span
+                        className="weekly-goal-check"
+                        aria-label="Meal plan adherence goal met"
+                        title="Meal plan adherence goal met"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    <span>Meal Plan Adherence</span>
+                  </dt>
                   <dd className={adherenceState}>
                     {formatPercent(weekly?.mealPlanAdherencePercent)}
                   </dd>
@@ -380,7 +397,7 @@ export function DashboardPage({
           <PlanProgress
             plan={plan}
             currentWeekNumber={currentWeekNumber}
-            completedWeeks={dashboard?.planProgress?.completedWeeks ?? []}
+            weeks={dashboard?.planProgress?.weeks ?? []}
             onOpenCurrentWeek={onOpenCurrentWeek}
             onOpenWeeklyReview={onOpenWeeklyReview}
           />

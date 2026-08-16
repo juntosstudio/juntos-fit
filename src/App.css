@@ -878,6 +878,11 @@ button.plan-progress-row:hover:not(:disabled) {
   border-color: rgb(var(--color-interaction-rgb) / 42%);
 }
 
+.plan-progress-row.is-no-weekly {
+  border-color: var(--color-border);
+  background: rgb(247 247 251 / 82%);
+}
+
 .plan-progress-row-content {
   display: grid;
   min-width: 0;
@@ -922,6 +927,12 @@ button.plan-progress-row:hover:not(:disabled) {
 .plan-progress-status.is-needs-review {
   background: rgb(var(--color-interaction-rgb) / 12%);
   color: var(--color-primary-dark);
+}
+
+.plan-progress-status.is-no-weekly {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
 }
 
 .plan-progress-status.is-upcoming {

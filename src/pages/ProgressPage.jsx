@@ -51,10 +51,10 @@ export function ProgressPage({
             currentWeekNumber={
               currentWeekNumber
             }
-            completedWeeks={
+            weeks={
               dashboard
                 ?.planProgress
-                ?.completedWeeks ??
+                ?.weeks ??
               []
             }
             onOpenCurrentWeek={
