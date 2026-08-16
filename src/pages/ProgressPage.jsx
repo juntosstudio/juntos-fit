@@ -19,11 +19,15 @@ export function ProgressPage({
   const plan =
     dashboard?.plan ?? null
 
-  const currentWeekNumber =
+  const reportingWeekNumber =
     getPlanWeekNumber(
       plan,
       getTodayDateKey(),
     )
+
+  const currentWeekNumber =
+    dashboard?.planProgress?.currentWeekNumber ??
+    reportingWeekNumber
 
   return (
     <>
@@ -58,7 +62,10 @@ export function ProgressPage({
               []
             }
             onOpenCurrentWeek={
-              onOpenCurrentWeek
+              currentWeekNumber ===
+              reportingWeekNumber
+                ? onOpenCurrentWeek
+                : null
             }
             onOpenWeeklyReview={
               onOpenWeeklyReview

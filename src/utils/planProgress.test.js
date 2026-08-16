@@ -4,6 +4,7 @@ import {
   test,
 } from 'vitest'
 import {
+  getPlanProgressWeekNumber,
   getPlanWeekNumber,
 } from './planProgress'
 
@@ -55,6 +56,85 @@ describe('Plan Progress reporting week number', () => {
       getPlanWeekNumber(
         plan,
         '2027-01-01',
+      ),
+    ).toBe(12)
+  })
+})
+
+
+describe('Plan Progress program week after Weekly closeout', () => {
+  test('keeps Week 3 current while the Weekly is still due', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-08-16',
+        null,
+      ),
+    ).toBe(3)
+  })
+
+  test('keeps Week 3 current while its Weekly is only a draft', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-08-16',
+        {
+          week_number: 3,
+          checkin_date: '2026-08-16',
+          status: 'draft',
+        },
+      ),
+    ).toBe(3)
+  })
+
+  test('moves Plan Progress to Week 4 immediately after Week 3 Weekly completes', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-08-16',
+        {
+          week_number: 3,
+          checkin_date: '2026-08-16',
+          status: 'completed',
+        },
+      ),
+    ).toBe(4)
+  })
+
+  test('still reports Week 4 normally the next morning', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-08-17',
+        null,
+      ),
+    ).toBe(4)
+  })
+
+  test('does not advance for a completed Weekly from another date', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-08-16',
+        {
+          week_number: 2,
+          checkin_date: '2026-08-09',
+          status: 'completed',
+        },
+      ),
+    ).toBe(3)
+  })
+
+  test('does not create a Week 13 after the final Weekly', () => {
+    expect(
+      getPlanProgressWeekNumber(
+        plan,
+        '2026-10-18',
+        {
+          week_number: 12,
+          checkin_date: '2026-10-18',
+          status: 'completed',
+        },
       ),
     ).toBe(12)
   })

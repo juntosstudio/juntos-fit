@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useDashboard } from './hooks/useDashboard'
 import { CreatePlanPage } from './pages/CreatePlanPage'
@@ -36,6 +36,18 @@ function App() {
 
   const [weeklyReviewWeek, setWeeklyReviewWeek] =
     useState(null)
+
+  const [
+    weeklyReviewJustCompleted,
+    setWeeklyReviewJustCompleted,
+  ] = useState(false)
+
+  // Final Weekly submit refreshes the dashboard first, then
+  // routes directly to Weekly Review. The Weekly page still
+  // calls its normal onBack callback after submit, so this ref
+  // suppresses that one stale return-to-dashboard call.
+  const weeklyCompletionRedirectRef =
+    useRef(false)
 
   const [activeDate, setActiveDate] = useState(
     getTodayDateKey,
@@ -127,16 +139,66 @@ function App() {
   ])
 
   function returnToDashboard() {
+    setWeeklyReviewJustCompleted(false)
     setCurrentPage(PAGE_DASHBOARD)
   }
 
   function openWeeklyReview(weekNumber = null) {
+    setWeeklyReviewJustCompleted(false)
     setWeeklyReviewWeek(
       Number.isFinite(Number(weekNumber))
         ? Number(weekNumber)
         : null,
     )
     setCurrentPage(PAGE_WEEKLY_SUMMARY)
+  }
+
+  async function handleWeeklySaved() {
+    const refreshedDashboard =
+      await refreshDashboard()
+
+    const completedWeekly =
+      refreshedDashboard
+        ?.todayWeeklyCheckIn
+
+    if (
+      completedWeekly?.status ===
+        'completed' &&
+      Number.isFinite(
+        Number(
+          completedWeekly
+            ?.week_number,
+        ),
+      )
+    ) {
+      weeklyCompletionRedirectRef.current =
+        true
+
+      setWeeklyReviewWeek(
+        Number(
+          completedWeekly
+            .week_number,
+        ),
+      )
+      setWeeklyReviewJustCompleted(true)
+      setCurrentPage(
+        PAGE_WEEKLY_SUMMARY,
+      )
+    }
+
+    return refreshedDashboard
+  }
+
+  function handleWeeklyBack() {
+    if (
+      weeklyCompletionRedirectRef.current
+    ) {
+      weeklyCompletionRedirectRef.current =
+        false
+      return
+    }
+
+    returnToDashboard()
   }
 
   function openCatchUpDaily(
@@ -262,8 +324,8 @@ function App() {
         weekSummary={
           dashboard?.weekAtAGlance ?? null
         }
-        onSaved={refreshDashboard}
-        onBack={returnToDashboard}
+        onSaved={handleWeeklySaved}
+        onBack={handleWeeklyBack}
       />
     )
   }
@@ -285,6 +347,9 @@ function App() {
         plan={dashboard?.plan}
         profile={dashboard?.profile}
         initialWeekNumber={weeklyReviewWeek}
+        justCompleted={
+          weeklyReviewJustCompleted
+        }
         onBack={returnToDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>

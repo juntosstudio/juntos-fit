@@ -17,7 +17,7 @@ export function useDashboard(userId) {
       setDashboard(null)
       setLoading(false)
       setError('')
-      return
+      return null
     }
 
     setLoading(true)
@@ -27,6 +27,7 @@ export function useDashboard(userId) {
       const dashboardData = await loadDashboardData(userId)
 
       setDashboard(dashboardData)
+      return dashboardData
     } catch (loadError) {
       logDevelopmentError('useDashboard', loadError)
 
@@ -38,6 +39,7 @@ export function useDashboard(userId) {
       )
 
       setDashboard(null)
+      return null
     } finally {
       setLoading(false)
     }

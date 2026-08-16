@@ -7,6 +7,7 @@ import {
   getTodayDateKey,
 } from '../utils/dates'
 import {
+  getPlanProgressWeekNumber,
   getPlanWeekNumber,
 } from '../utils/planProgress'
 import {
@@ -451,14 +452,8 @@ function calculateConsistencyScore(
 
 async function loadPlanProgress(
   plan,
-  today,
+  currentWeekNumber,
 ) {
-  const currentWeekNumber =
-    getPlanWeekNumber(
-      plan,
-      today,
-    )
-
   if (!currentWeekNumber) {
     return []
   }
@@ -736,7 +731,11 @@ export async function loadDashboardData(userId) {
       cardioWeekStart: null,
       cardioWeekEnd: null,
       weekAtAGlance: null,
-      planProgress: { weeks: [] },
+      reportingWeekNumber: null,
+      planProgress: {
+        currentWeekNumber: null,
+        weeks: [],
+      },
       streakDays: 0,
     }
   }
@@ -761,7 +760,6 @@ export async function loadDashboardData(userId) {
     weeklyCheckIns,
     checkInDates,
     weeklyCheckInDates,
-    planProgressWeeks,
   ] = await Promise.all([
     loadCurrentTarget(plan.id, today),
     loadStartCheckIn(plan.id),
@@ -788,8 +786,26 @@ export async function loadDashboardData(userId) {
       plan.start_date,
       today,
     ),
-    loadPlanProgress(plan, today),
   ])
+
+  const reportingWeekNumber =
+    getPlanWeekNumber(
+      plan,
+      today,
+    )
+
+  const planProgressCurrentWeekNumber =
+    getPlanProgressWeekNumber(
+      plan,
+      today,
+      todayWeeklyCheckIn,
+    )
+
+  const planProgressWeeks =
+    await loadPlanProgress(
+      plan,
+      planProgressCurrentWeekNumber,
+    )
 
   const weekAtAGlance = buildWeekAtAGlance(
     weeklyCheckIns,
@@ -816,7 +832,10 @@ export async function loadDashboardData(userId) {
     cardioWeekStart,
     cardioWeekEnd,
     weekAtAGlance,
+    reportingWeekNumber,
     planProgress: {
+      currentWeekNumber:
+        planProgressCurrentWeekNumber,
       weeks: planProgressWeeks,
     },
     streakDays,

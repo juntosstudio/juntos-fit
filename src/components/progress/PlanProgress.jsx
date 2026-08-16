@@ -48,6 +48,19 @@ function getPlanProgressRows(
           weekNumber,
         )
 
+      // A finalized week is completed even if it is the
+      // last program week and there is no later "current" week.
+      if (
+        weekData?.weeklyStatus ===
+        'completed'
+      ) {
+        return {
+          ...weekData,
+          weekNumber,
+          status: 'completed',
+        }
+      }
+
       if (
         weekNumber ===
         currentWeekNumber
@@ -64,16 +77,6 @@ function getPlanProgressRows(
         weekNumber <
           currentWeekNumber
       ) {
-        if (
-          weekData?.weeklyStatus ===
-          'completed'
-        ) {
-          return {
-            ...weekData,
-            weekNumber,
-            status: 'completed',
-          }
-        }
 
         if (
           weekData?.weeklyStatus ===
@@ -380,7 +383,8 @@ export function PlanProgress({
 
             if (
               row.status ===
-              'current'
+              'current' &&
+              onOpenCurrentWeek
             ) {
               return (
                 <button

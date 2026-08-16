@@ -121,7 +121,19 @@ export function DashboardPage({
     track_alcohol: true,
   }
   const startCheckIn = dashboard?.startCheckIn ?? null
-  const currentWeekNumber = getPlanWeekNumber(plan, today)
+
+  // Reporting stays on the week being closed through Weekly morning.
+  // Plan Progress may advance as soon as that Weekly is finalized.
+  const reportingWeekNumber =
+    dashboard?.reportingWeekNumber ??
+    getPlanWeekNumber(
+      plan,
+      today,
+    )
+
+  const planProgressCurrentWeekNumber =
+    dashboard?.planProgress?.currentWeekNumber ??
+    reportingWeekNumber
 
   const workoutsGoalMet = isWeeklyGoalMet(
     weekly?.workoutsCompleted,
@@ -167,6 +179,16 @@ export function DashboardPage({
     todayWeeklyCheckIn?.status === 'completed'
   const hasWeeklyDraft = todayWeeklyCheckIn?.status === 'draft'
 
+  const closedReportingWeekToday =
+    weeklyCheckInDue &&
+    hasCompletedWeeklyCheckIn &&
+    Number(
+      todayWeeklyCheckIn?.week_number,
+    ) ===
+      Number(
+        reportingWeekNumber,
+      )
+
   const hasCheckedInToday =
     dashboard?.todayCheckIn?.checkin_date === today
 
@@ -181,7 +203,7 @@ export function DashboardPage({
     ? 'is-complete'
     : 'is-due'
   const weeklyCheckInLabel = hasCompletedWeeklyCheckIn
-    ? 'View This Week’s Check-In ✓'
+    ? `View Week ${reportingWeekNumber} Review ✓`
     : hasWeeklyDraft
       ? 'Resume Weekly Check-In'
       : 'Weekly Check-In'
@@ -234,7 +256,14 @@ export function DashboardPage({
               <button
                 type="button"
                 className={`daily-check-in-button ${weeklyCheckInState}`}
-                onClick={onOpenWeeklyCheckIn}
+                onClick={
+                  hasCompletedWeeklyCheckIn
+                    ? () =>
+                        onOpenWeeklyReview(
+                          reportingWeekNumber,
+                        )
+                    : onOpenWeeklyCheckIn
+                }
               >
                 {weeklyCheckInLabel}
               </button>
@@ -278,8 +307,10 @@ export function DashboardPage({
               aria-labelledby="week-at-a-glance-heading"
             >
               <h2 id="week-at-a-glance-heading">
-                {currentWeekNumber
-                  ? `Week ${currentWeekNumber} at a Glance`
+                {reportingWeekNumber
+                  ? closedReportingWeekToday
+                    ? `Week ${reportingWeekNumber} Final Results`
+                    : `Week ${reportingWeekNumber} at a Glance`
                   : 'Week at a Glance'}
               </h2>
 
@@ -387,18 +418,34 @@ export function DashboardPage({
               <button
                 type="button"
                 className="dashboard-section-link"
-                onClick={onOpenCurrentWeek}
+                onClick={
+                  closedReportingWeekToday
+                    ? () =>
+                        onOpenWeeklyReview(
+                          reportingWeekNumber,
+                        )
+                    : onOpenCurrentWeek
+                }
               >
-                See Daily Check-Ins →
+                {closedReportingWeekToday
+                  ? 'See Weekly Review →'
+                  : 'See Daily Check-Ins →'}
               </button>
             </section>
           )}
 
           <PlanProgress
             plan={plan}
-            currentWeekNumber={currentWeekNumber}
+            currentWeekNumber={
+              planProgressCurrentWeekNumber
+            }
             weeks={dashboard?.planProgress?.weeks ?? []}
-            onOpenCurrentWeek={onOpenCurrentWeek}
+            onOpenCurrentWeek={
+              planProgressCurrentWeekNumber ===
+              reportingWeekNumber
+                ? onOpenCurrentWeek
+                : null
+            }
             onOpenWeeklyReview={onOpenWeeklyReview}
           />
 
