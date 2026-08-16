@@ -624,8 +624,6 @@ function getDevPreviewWeekNumber(plan) {
 export function WeeklySummaryPage({
   plan,
   profile,
-  initialWeekNumber = null,
-  justCompleted = false,
   onBack,
   onOpenToday,
   onOpenHistory,
@@ -682,26 +680,16 @@ export function WeeklySummaryPage({
 
         setCompletedWeeks(weeks)
 
-        const requestedWeek = Number(initialWeekNumber)
-        const requestedWeekExists =
-          Number.isFinite(requestedWeek) &&
-          weeks.some(
-            (week) =>
-              Number(week.week_number) === requestedWeek,
-          )
-
         setSelectedWeek(
-          requestedWeekExists
-            ? requestedWeek
-            : weeks[0]?.week_number ??
-              devPreviewWeekNumber ??
-              null,
+          weeks[0]?.week_number ??
+            devPreviewWeekNumber ??
+            null,
         )
       } catch (loadError) {
         if (!cancelled) {
           setError(
             loadError?.message ||
-              'Your Weekly Reviews could not be loaded.',
+              'Your Weekly Summaries could not be loaded.',
           )
         }
       } finally {
@@ -719,7 +707,6 @@ export function WeeklySummaryPage({
   }, [
     plan?.id,
     devPreviewWeekNumber,
-    initialWeekNumber,
   ])
 
   useEffect(() => {
@@ -774,7 +761,7 @@ export function WeeklySummaryPage({
         if (!cancelled) {
           setError(
             loadError?.message ||
-              'This Weekly Review could not be loaded.',
+              'This Weekly Summary could not be loaded.',
           )
         }
       } finally {
@@ -1174,7 +1161,7 @@ export function WeeklySummaryPage({
           Back to Today
         </button>
 
-        <h1>Weekly Review</h1>
+        <h1>Weekly Summary</h1>
 
         <p>
           A coaching plan is required.
@@ -1197,7 +1184,7 @@ export function WeeklySummaryPage({
           ← Back to Today
         </button>
 
-        <h1>Weekly Review</h1>
+        <h1>Weekly Summary</h1>
         <p>Loading your report card...</p>
       </main>
     )
@@ -1218,14 +1205,14 @@ export function WeeklySummaryPage({
           ← Back to Today
         </button>
 
-        <h1>Weekly Review</h1>
+        <h1>Weekly Summary</h1>
 
         <section className="weekly-summary-empty">
           <h2>Your first report card is coming.</h2>
 
           <p>
             Complete your first Weekly Check-In to
-            unlock your first Weekly Review.
+            unlock your first Weekly Summary.
           </p>
         </section>
       </main>
@@ -1243,32 +1230,12 @@ export function WeeklySummaryPage({
           ← Back to Today
         </button>
 
-      {justCompleted &&
-        Number.isFinite(
-          Number(
-            initialWeekNumber,
-          ),
-        ) && (
-          <section
-            className="weekly-completion-banner"
-            role="status"
-            aria-live="polite"
-          >
-            <strong>
-              ✓ Week {Number(initialWeekNumber)} Check-In Complete
-            </strong>
-            <span>
-              Your week is saved. Juntos Coach is reviewing your results.
-            </span>
-          </section>
-        )}
-
       <header className="weekly-summary-header">
         <label
           htmlFor="weekly-summary-week"
           className="visually-hidden"
         >
-          Choose Weekly Review
+          Choose Weekly Summary
         </label>
 
         <select
@@ -1289,7 +1256,7 @@ export function WeeklySummaryPage({
                 key={week.id}
                 value={week.week_number}
               >
-                Week {week.week_number} Review
+                Week {week.week_number} Summary
               </option>
             ),
           )}
@@ -1310,7 +1277,7 @@ export function WeeklySummaryPage({
                   devPreviewWeekNumber
                 }
               >
-                Week {devPreviewWeekNumber} Review · DEV Preview
+                Week {devPreviewWeekNumber} Summary · DEV Preview
               </option>
             )}
         </select>
@@ -1356,6 +1323,55 @@ export function WeeklySummaryPage({
 
       {summary && calculations && (
         <>
+          {summary.preview ? (
+            <section className="weekly-coach-placeholder">
+              <h2>Coach Review</h2>
+
+              <p>
+                Brain Lite generates from a completed
+                Weekly Check-In. DEV Summary Preview
+                stays read-only and does not create a
+                saved coaching review.
+              </p>
+            </section>
+          ) : coachReview ? (
+            <CoachReviewCard
+              review={coachReview}
+            />
+          ) : coachLoading ? (
+            <section
+              className="weekly-coach-loading"
+              aria-live="polite"
+            >
+              <h2>Coach Review</h2>
+              <p>
+                Juntos Coach is reviewing your week…
+              </p>
+            </section>
+          ) : coachError ? (
+            <section className="weekly-coach-error">
+              <h2>Coach Review</h2>
+              <p>{coachError}</p>
+              <p>
+                Your Weekly Check-In and Weekly Summary
+                are already saved.
+              </p>
+              <button
+                type="button"
+                onClick={retryCoachReview}
+              >
+                Try Coach Review Again
+              </button>
+            </section>
+          ) : (
+            <section className="weekly-coach-loading">
+              <h2>Coach Review</h2>
+              <p>
+                Your coaching review is getting ready.
+              </p>
+            </section>
+          )}
+
           <section className="weekly-summary-section">
             <h2>Results</h2>
 
@@ -1837,54 +1853,6 @@ export function WeeklySummaryPage({
             )}
           </section>
 
-          {summary.preview ? (
-            <section className="weekly-coach-placeholder">
-              <h2>Coach Review</h2>
-
-              <p>
-                Brain Lite generates from a completed
-                Weekly Check-In. DEV Review Preview
-                stays read-only and does not create a
-                saved coaching review.
-              </p>
-            </section>
-          ) : coachReview ? (
-            <CoachReviewCard
-              review={coachReview}
-            />
-          ) : coachLoading ? (
-            <section
-              className="weekly-coach-loading"
-              aria-live="polite"
-            >
-              <h2>Coach Review</h2>
-              <p>
-                Juntos Coach is reviewing your week…
-              </p>
-            </section>
-          ) : coachError ? (
-            <section className="weekly-coach-error">
-              <h2>Coach Review</h2>
-              <p>{coachError}</p>
-              <p>
-                Your Weekly Check-In and Weekly Review
-                are already saved.
-              </p>
-              <button
-                type="button"
-                onClick={retryCoachReview}
-              >
-                Try Coach Review Again
-              </button>
-            </section>
-          ) : (
-            <section className="weekly-coach-loading">
-              <h2>Coach Review</h2>
-              <p>
-                Your coaching review is getting ready.
-              </p>
-            </section>
-          )}
         </>
       )}
       </main>

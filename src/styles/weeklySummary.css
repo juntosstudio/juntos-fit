@@ -395,3 +395,22 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Coach Review is the payoff: keep it visually first and centered. */
+.weekly-coach-review-header {
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+  text-align: center;
+}
+
+.weekly-coach-review-header h2 {
+  width: 100%;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.weekly-coach-review-meta {
+  justify-content: center;
+}
+
