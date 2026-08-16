@@ -1,0 +1,429 @@
+/* Current / open program week */
+
+.current-week-page {
+  padding-bottom: 8rem;
+}
+
+.current-week-header {
+  margin: 1rem 0 1.15rem;
+  text-align: center;
+}
+
+.current-week-header h1 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: clamp(1.65rem, 6vw, 2.15rem);
+}
+
+.current-week-header p {
+  margin: 0.45rem 0 0;
+  color: var(--color-primary-dark);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.current-week-header small {
+  display: block;
+  max-width: 34rem;
+  margin: 0.6rem auto 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+/* Sticky Sun-Sat navigator */
+
+.current-week-day-nav {
+  position: sticky;
+  z-index: 12;
+  top: 0;
+  display: grid;
+  grid-template-columns:
+    repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+  margin: 0 -0.35rem 1rem;
+  border: 1px solid
+    rgb(221 217 232 / 88%);
+  border-radius: var(--radius-lg);
+  padding: 0.38rem;
+  background:
+    rgb(255 255 255 / 94%);
+  box-shadow:
+    0 8px 22px rgb(33 31 44 / 8%);
+  backdrop-filter: blur(12px);
+}
+
+.current-week-day-button {
+  display: grid;
+  min-width: 0;
+  min-height: 4.05rem;
+  grid-template-rows:
+    auto auto 0.65rem;
+  place-items: center;
+  gap: 0.05rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.05rem;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.current-week-day-button:hover:not(:disabled) {
+  background:
+    var(--color-accent-soft);
+  color: var(--color-primary);
+}
+
+.current-week-day-button > span {
+  font-size: clamp(
+    0.58rem,
+    2.2vw,
+    0.72rem
+  );
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.current-week-day-button > strong {
+  color: var(--color-primary-dark);
+  font-size: clamp(
+    0.9rem,
+    3.5vw,
+    1.08rem
+  );
+  line-height: 1;
+}
+
+.current-week-day-button > small {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 0.65rem;
+}
+
+.current-week-day-button.is-completed > small,
+.current-week-day-button.is-weekly-completed > small,
+.current-week-day-button.is-start-day > small {
+  color: var(--color-success);
+}
+
+.current-week-day-button.is-missing > small,
+.current-week-day-button.is-missing-weekly > small {
+  color: var(--color-interaction);
+}
+
+.current-week-day-button.is-today > small,
+.current-week-day-button.is-today-weekly > small,
+.current-week-day-button.is-weekly-draft > small {
+  color: var(--color-primary);
+}
+
+.current-week-day-button.is-active {
+  border-color:
+    var(--color-interaction);
+  background:
+    var(--color-accent-soft);
+  color:
+    var(--color-primary);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 40%),
+    0 0 12px
+      rgb(var(--color-interaction-rgb) / 16%);
+}
+
+/* Day rows */
+
+.current-week-rows {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.current-week-day-row {
+  scroll-margin-top: 6.4rem;
+  overflow: hidden;
+  border: 1px solid
+    var(--color-border);
+  border-radius:
+    var(--radius-xl);
+  background:
+    var(--color-surface);
+  box-shadow:
+    var(--shadow-card);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.current-week-day-row.is-active {
+  border-color:
+    rgb(var(--color-interaction-rgb) / 62%);
+  box-shadow:
+    0 0 4px
+      rgb(var(--color-interaction-rgb) / 24%),
+    0 8px 24px
+      rgb(33 31 44 / 8%);
+}
+
+.current-week-day-row.is-today,
+.current-week-day-row.is-today-weekly,
+.current-week-day-row.is-weekly-draft {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(238 234 253 / 46%),
+      var(--color-surface) 52%
+    );
+}
+
+.current-week-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.75rem;
+}
+
+.current-week-row-header > div:first-child {
+  min-width: 0;
+}
+
+.current-week-row-day {
+  display: block;
+  color:
+    var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.current-week-row-header h2 {
+  margin: 0.18rem 0 0;
+  color:
+    var(--color-primary-dark);
+  font-size: 1.05rem;
+}
+
+.current-week-row-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.current-week-status {
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  background:
+    var(--color-background);
+  color:
+    var(--color-text-muted);
+  font-size: 0.67rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.current-week-status.is-completed,
+.current-week-status.is-weekly-completed,
+.current-week-status.is-start-day {
+  background:
+    var(--color-success-soft);
+  color:
+    var(--color-success);
+}
+
+.current-week-status.is-today,
+.current-week-status.is-today-weekly,
+.current-week-status.is-weekly-draft {
+  background:
+    var(--color-accent-soft);
+  color:
+    var(--color-primary);
+}
+
+.current-week-status.is-missing,
+.current-week-status.is-missing-weekly {
+  background:
+    rgb(var(--color-interaction-rgb) / 12%);
+  color:
+    var(--color-primary-dark);
+}
+
+.current-week-edit {
+  display: grid;
+  width: 2.15rem;
+  min-width: 2.15rem;
+  height: 2.15rem;
+  min-height: 2.15rem;
+  place-items: center;
+  border: 1px solid
+    var(--color-border);
+  border-radius: 50%;
+  padding: 0;
+  background:
+    var(--color-surface);
+  color:
+    var(--color-primary);
+}
+
+.current-week-edit svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.current-week-edit:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* Horizontal answer strip */
+
+.current-week-swipe-hint {
+  padding: 0 1rem 0.4rem;
+  color:
+    var(--color-text-muted);
+  font-size: 0.67rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.current-week-metrics-scroll {
+  overflow-x: auto;
+  padding:
+    0 1rem 1rem;
+  overscroll-behavior-x:
+    contain;
+  scrollbar-width: thin;
+  scrollbar-color:
+    rgb(108 91 212 / 28%)
+    transparent;
+  -webkit-overflow-scrolling:
+    touch;
+}
+
+.current-week-metrics-scroll::-webkit-scrollbar {
+  height: 0.35rem;
+}
+
+.current-week-metrics-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background:
+    rgb(108 91 212 / 24%);
+}
+
+.current-week-metrics {
+  display: flex;
+  width: max-content;
+  gap: 0.55rem;
+}
+
+.current-week-metric {
+  display: grid;
+  width: 7.2rem;
+  min-height: 5rem;
+  flex: 0 0 7.2rem;
+  align-content: center;
+  gap: 0.3rem;
+  border: 1px solid
+    var(--color-border);
+  border-radius:
+    var(--radius-lg);
+  padding: 0.75rem;
+  background:
+    var(--color-background);
+}
+
+.current-week-metric.is-wide {
+  width: 12rem;
+  flex-basis: 12rem;
+}
+
+.current-week-metric > span {
+  color:
+    var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.current-week-metric > strong {
+  color:
+    var(--color-primary-dark);
+  font-size: 0.88rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.current-week-metric > small {
+  color:
+    var(--color-text-muted);
+  font-size: 0.63rem;
+  line-height: 1.25;
+}
+
+/* Missing / today / future row states */
+
+.current-week-empty-row {
+  display: grid;
+  min-height: 4.6rem;
+  place-items: center;
+  border-top: 1px solid
+    rgb(221 217 232 / 70%);
+  padding: 0.85rem 1rem 1rem;
+}
+
+.current-week-row-action {
+  width: min(100%, 18rem);
+  min-height: 2.8rem;
+  border-color:
+    var(--color-primary);
+  background:
+    var(--color-surface);
+  color:
+    var(--color-primary);
+}
+
+.current-week-row-action:hover:not(:disabled) {
+  background:
+    var(--color-accent-soft);
+  color:
+    var(--color-primary-dark);
+}
+
+.current-week-row-note {
+  margin: 0;
+  color:
+    var(--color-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (min-width: 40rem) {
+  .current-week-day-nav {
+    top: 0.75rem;
+  }
+
+  .current-week-day-row {
+    scroll-margin-top:
+      7.25rem;
+  }
+
+  .current-week-metric {
+    width: 8.2rem;
+    flex-basis: 8.2rem;
+  }
+
+  .current-week-metric.is-wide {
+    width: 14rem;
+    flex-basis: 14rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .current-week-day-row {
+    scroll-behavior: auto;
+  }
+}

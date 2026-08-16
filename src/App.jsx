@@ -10,7 +10,8 @@ import { PlanPage } from './pages/PlanPage'
 import { StartCheckInPage } from './pages/StartCheckInPage'
 import { WeeklyCheckInPage } from './pages/WeeklyCheckInPage'
 import { WeeklySummaryPage } from './pages/WeeklySummaryPage'
-import { CheckInHistoryPage } from './pages/CheckInHistoryPage'
+import { CurrentWeekPage } from './pages/CurrentWeekPage'
+import { ProgressPage } from './pages/ProgressPage'
 import { WeeklyPreflightPage } from './pages/WeeklyPreflightPage'
 import { CatchUpDailyCheckInPage } from './pages/CatchUpDailyCheckInPage'
 import { getTodayDateKey } from './utils/dates'
@@ -23,7 +24,8 @@ const PAGE_WEEKLY_PREFLIGHT = 'weekly-preflight'
 const PAGE_WEEKLY_CHECK_IN = 'weekly-check-in'
 const PAGE_WEEKLY_SUMMARY = 'weekly-summary'
 const PAGE_START_CHECK_IN = 'start-check-in'
-const PAGE_HISTORY = 'history'
+const PAGE_PROGRESS = 'progress'
+const PAGE_CURRENT_WEEK = 'current-week'
 const PAGE_CATCH_UP_DAILY = 'catch-up-daily'
 const PAGE_PLAN = 'plan'
 const PAGE_SETTINGS = 'settings'
@@ -42,7 +44,7 @@ function App() {
   const [catchUpDate, setCatchUpDate] =
     useState(null)
   const [catchUpReturnPage, setCatchUpReturnPage] =
-    useState(PAGE_HISTORY)
+    useState(PAGE_PROGRESS)
 
   const {
     user,
@@ -139,7 +141,7 @@ function App() {
 
   function openCatchUpDaily(
     date,
-    returnPage = PAGE_HISTORY,
+    returnPage = PAGE_PROGRESS,
   ) {
     setCatchUpDate(date)
     setCatchUpReturnPage(returnPage)
@@ -286,7 +288,7 @@ function App() {
         onBack={returnToDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_HISTORY)
+          setCurrentPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
           setCurrentPage(PAGE_PLAN)
@@ -308,7 +310,7 @@ function App() {
         onSaved={refreshDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_HISTORY)
+          setCurrentPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
           setCurrentPage(PAGE_PLAN)
@@ -323,7 +325,7 @@ function App() {
         dashboard={dashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_HISTORY)
+          setCurrentPage(PAGE_PROGRESS)
         }
         onOpenSettings={() =>
           setCurrentPage(PAGE_SETTINGS)
@@ -335,27 +337,58 @@ function App() {
     )
   }
 
-  if (currentPage === PAGE_HISTORY) {
+  if (currentPage === PAGE_CURRENT_WEEK) {
     return (
-      <CheckInHistoryPage
-        userId={user.id}
+      <CurrentWeekPage
         plan={dashboard?.plan}
         profile={dashboard?.profile}
+        settings={dashboard?.settings}
         onCompleteDay={(date) =>
           openCatchUpDaily(
             date,
-            PAGE_HISTORY,
+            PAGE_CURRENT_WEEK,
           )
         }
-        onOpenWeeklySummary={() =>
-          openWeeklyReview()
+        onOpenDailyCheckIn={() =>
+          setCurrentPage(PAGE_DAILY_CHECK_IN)
+        }
+        onOpenWeeklyCheckIn={() =>
+          setCurrentPage(PAGE_WEEKLY_PREFLIGHT)
         }
         onOpenToday={returnToDashboard}
+        onOpenHistory={() =>
+          setCurrentPage(PAGE_PROGRESS)
+        }
         onOpenPlan={() =>
           setCurrentPage(PAGE_PLAN)
         }
         onOpenSettings={() =>
           setCurrentPage(PAGE_SETTINGS)
+        }
+      />
+    )
+  }
+
+  if (currentPage === PAGE_PROGRESS) {
+    return (
+      <ProgressPage
+        dashboard={dashboard}
+        onOpenToday={returnToDashboard}
+        onOpenCurrentWeek={() =>
+          setCurrentPage(
+            PAGE_CURRENT_WEEK,
+          )
+        }
+        onOpenWeeklyReview={
+          openWeeklyReview
+        }
+        onOpenPlan={() =>
+          setCurrentPage(PAGE_PLAN)
+        }
+        onOpenSettings={() =>
+          setCurrentPage(
+            PAGE_SETTINGS,
+          )
         }
       />
     )
@@ -379,14 +412,14 @@ function App() {
         )
       }
       onOpenCurrentWeek={() =>
-        setCurrentPage(PAGE_HISTORY)
+        setCurrentPage(PAGE_CURRENT_WEEK)
       }
       onOpenWeeklyReview={openWeeklyReview}
       onOpenStartCheckIn={() =>
         setCurrentPage(PAGE_START_CHECK_IN)
       }
       onOpenHistory={() =>
-        setCurrentPage(PAGE_HISTORY)
+        setCurrentPage(PAGE_PROGRESS)
       }
       onOpenPlan={() =>
         setCurrentPage(PAGE_PLAN)

@@ -855,9 +855,15 @@ button.plan-progress-row:hover:not(:disabled) {
 
 .plan-progress-row.is-current {
   border-color: var(--color-interaction);
+  background:
+    linear-gradient(
+      135deg,
+      rgb(238 234 253 / 82%),
+      rgb(247 247 251 / 92%)
+    );
   box-shadow:
-    0 0 4px rgb(var(--color-interaction-rgb) / 36%),
-    0 0 12px rgb(var(--color-interaction-rgb) / 14%);
+    0 0 5px rgb(var(--color-interaction-rgb) / 48%),
+    0 0 16px rgb(var(--color-interaction-rgb) / 18%);
 }
 
 .plan-progress-row.is-completed {
@@ -906,8 +912,11 @@ button.plan-progress-row:hover:not(:disabled) {
 }
 
 .plan-progress-status.is-current {
-  background: rgb(var(--color-interaction-rgb) / 12%);
-  color: var(--color-primary-dark);
+  background: var(--color-primary);
+  color: white;
+  box-shadow:
+    0 0 0 1px rgb(var(--color-interaction-rgb) / 24%),
+    0 0 8px rgb(var(--color-interaction-rgb) / 14%);
 }
 
 .plan-progress-status.is-needs-review {
@@ -1416,4 +1425,34 @@ button.plan-progress-row:hover:not(:disabled) {
 
 .confirmation-dialog button {
   width: 100%;
+}
+
+/* Dedicated Plan Progress tab */
+
+.plan-progress-page {
+  padding-bottom: 8rem;
+}
+
+.plan-progress-page > .plan-progress-card {
+  margin-top: 1.25rem;
+}
+
+.plan-progress-empty {
+  margin-top: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.plan-progress-empty h1 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.plan-progress-empty p {
+  margin-bottom: 0;
+  color: var(--color-text-muted);
 }
