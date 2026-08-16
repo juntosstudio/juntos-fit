@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase'
 
 const WEEKLY_CHECKIN_FIELDS = `
   id,
-  user_id,
   daily_checkin_id,
   coaching_plan_id,
   checkin_date,
@@ -70,7 +69,6 @@ export async function loadWeeklyCheckIn(
 }
 
 export async function createWeeklyCheckInDraft({
-  userId,
   coachingPlanId,
   checkinDate,
   weekNumber,
@@ -90,7 +88,6 @@ export async function createWeeklyCheckInDraft({
   const { data, error } = await supabase
     .from('weekly_checkins')
     .insert({
-      user_id: userId,
       coaching_plan_id: coachingPlanId,
       checkin_date: checkinDate,
       week_number: weekNumber,

@@ -107,7 +107,6 @@ describe('weeklyCheckInService', () => {
 
     await expect(
       createWeeklyCheckInDraft({
-        userId: 'user-1',
         coachingPlanId: 'plan-1',
         checkinDate: '2026-08-16',
         weekNumber: 2,
@@ -135,7 +134,6 @@ describe('weeklyCheckInService', () => {
 
     await expect(
       createWeeklyCheckInDraft({
-        userId: 'user-1',
         coachingPlanId: 'plan-1',
         checkinDate: '2026-08-16',
         weekNumber: 2,
@@ -149,7 +147,6 @@ describe('weeklyCheckInService', () => {
     expect(
       insertQuery.insert,
     ).toHaveBeenCalledWith({
-      user_id: 'user-1',
       coaching_plan_id: 'plan-1',
       checkin_date: '2026-08-16',
       week_number: 2,
@@ -161,6 +158,10 @@ describe('weeklyCheckInService', () => {
       photos_required: true,
       body_fat_source: 'none',
     })
+
+    expect(
+      insertQuery.insert.mock.calls[0][0],
+    ).not.toHaveProperty('user_id')
   })
 
   test('recovers from a duplicate-create race by loading the Weekly row again', async () => {
@@ -185,7 +186,6 @@ describe('weeklyCheckInService', () => {
 
     await expect(
       createWeeklyCheckInDraft({
-        userId: 'user-1',
         coachingPlanId: 'plan-1',
         checkinDate: '2026-08-16',
         weekNumber: 2,
