@@ -4,13 +4,10 @@ import {
 } from './dailyCheckInService'
 import {
   addDays,
-  dateKeyToUtcMilliseconds,
-  getProgramWeekRange,
+  getReportingWeekForDate,
   getTodayDateKey,
   isWeeklyCheckInDate,
 } from '../utils/dates'
-
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const CURRENT_WEEKLY_FIELDS = `
   id,
@@ -47,21 +44,6 @@ function dateRange(startDate, endDate) {
   }
 
   return dates
-}
-
-function getWeekNumber(plan, weekStart) {
-  if (!plan?.start_date || !weekStart) {
-    return null
-  }
-
-  const elapsedDays = Math.floor(
-    (
-      dateKeyToUtcMilliseconds(weekStart) -
-      dateKeyToUtcMilliseconds(plan.start_date)
-    ) / DAY_MS,
-  )
-
-  return Math.floor(elapsedDays / 7) + 1
 }
 
 function getDayStatus({
@@ -125,17 +107,21 @@ export async function loadCurrentWeekCheckIns(
     return null
   }
 
-  const {
-    weekStart,
-    weekEnd,
-  } = getProgramWeekRange(
-    plan.start_date,
-    today,
-  )
+  const reportingWeek =
+    getReportingWeekForDate(
+      plan.start_date,
+      plan.checkin_day,
+      today,
+    )
 
-  if (!weekStart || !weekEnd) {
+  if (!reportingWeek) {
     return null
   }
+
+  const weekStart =
+    reportingWeek.reportingStart
+  const weekEnd =
+    reportingWeek.reportingEnd
 
   const [
     dailyResult,
@@ -240,10 +226,12 @@ export async function loadCurrentWeekCheckIns(
   })
 
   return {
-    weekNumber: getWeekNumber(
-      plan,
-      weekStart,
-    ),
+    weekNumber:
+      reportingWeek.weekNumber,
+    programStart:
+      reportingWeek.programStart,
+    programEnd:
+      reportingWeek.programEnd,
     weekStart,
     weekEnd,
     today,

@@ -4,6 +4,7 @@ import {
 } from './weeklyCoachService'
 import {
   addDays,
+  getReportingWeekRange,
 } from '../utils/dates'
 
 const COMPLETED_WEEK_FIELDS = `
@@ -69,32 +70,31 @@ const PRESCRIPTION_FIELDS = `
 `
 
 function getWeekRange(
-  planStartDate,
+  plan,
   weekNumber,
 ) {
-  const weekStart = addDays(
-    planStartDate,
-    (Number(weekNumber) - 1) * 7,
+  const range = getReportingWeekRange(
+    plan?.start_date,
+    plan?.checkin_day,
+    weekNumber,
   )
 
-  return {
-    weekStart,
-    weekEnd: addDays(
-      weekStart,
-      6,
-    ),
+  if (!range) {
+    return {
+      weekStart: null,
+      weekEnd: null,
+      dailyStart: null,
+      dailyEnd: null,
+      weeklyDueDate: null,
+    }
+  }
 
-    // Daily Check-In questions describe yesterday.
-    // A program week of Sun-Sat therefore lives in
-    // Daily rows submitted Mon-Sun.
-    dailyStart: addDays(
-      weekStart,
-      1,
-    ),
-    dailyEnd: addDays(
-      weekStart,
-      7,
-    ),
+  return {
+    weekStart: range.programStart,
+    weekEnd: range.programEnd,
+    dailyStart: range.reportingStart,
+    dailyEnd: range.reportingEnd,
+    weeklyDueDate: range.weeklyDueDate,
   }
 }
 
@@ -166,14 +166,14 @@ export async function loadWeeklySummary(
 
   const weekRange =
     getWeekRange(
-      plan.start_date,
+      plan,
       weekNumber,
     )
 
   const previousWeekRange =
     Number(weekNumber) > 1
       ? getWeekRange(
-          plan.start_date,
+          plan,
           Number(weekNumber) - 1,
         )
       : null
@@ -421,14 +421,14 @@ loadWeeklySummaryPreview(
 
   const weekRange =
     getWeekRange(
-      plan.start_date,
+      plan,
       weekNumber,
     )
 
   const previousWeekRange =
     Number(weekNumber) > 1
       ? getWeekRange(
-          plan.start_date,
+          plan,
           Number(weekNumber) - 1,
         )
       : null
@@ -513,10 +513,8 @@ loadWeeklySummaryPreview(
     week: {
       id: 'dev-preview',
       coaching_plan_id: plan.id,
-      checkin_date: addDays(
-        weekRange.weekEnd,
-        1,
-      ),
+      checkin_date:
+        weekRange.weeklyDueDate,
       week_number:
         Number(weekNumber),
       status: 'preview',

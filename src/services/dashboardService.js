@@ -2,9 +2,16 @@ import { supabase } from '../lib/supabase'
 import { loadCheckInSettings } from './checkInSettingsService'
 import {
   addDays,
-  getProgramWeekRange,
+  getReportingWeekForDate,
+  getReportingWeekRange,
   getTodayDateKey,
 } from '../utils/dates'
+import {
+  getPlanWeekNumber,
+} from '../utils/planProgress'
+import {
+  calculateProgramCheckInStreak,
+} from '../utils/checkInStreak'
 
 const PLAN_FIELDS = `
   id,
@@ -59,6 +66,11 @@ const PLAN_PROGRESS_WEEKLY_FIELDS = `
   week_number,
   status,
   submitted_at
+`
+
+const STREAK_WEEKLY_FIELDS = `
+  checkin_date,
+  status
 `
 
 const PLAN_PROGRESS_DAILY_FIELDS = `
@@ -223,6 +235,37 @@ async function loadCheckInDates(
   }
 
   return checkins ?? []
+}
+
+async function loadCompletedWeeklyCheckInDates(
+  coachingPlanId,
+  startDate,
+  today,
+) {
+  const { data: checkins, error } = await supabase
+    .from('weekly_checkins')
+    .select(STREAK_WEEKLY_FIELDS)
+    .eq('coaching_plan_id', coachingPlanId)
+    .gte('checkin_date', startDate)
+    .lte('checkin_date', today)
+    .order('checkin_date', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  const completedStatuses = new Set([
+    'completed',
+    'finalized',
+    'submitted',
+  ])
+
+  return (checkins ?? []).filter(
+    (checkin) =>
+      completedStatuses.has(
+        checkin.status,
+      ),
+  )
 }
 
 function average(values) {
@@ -406,44 +449,12 @@ function calculateConsistencyScore(
   return Math.round(weightedTotal / totalWeight)
 }
 
-function getPlanWeekNumberForDate(
-  plan,
-  date,
-) {
-  if (
-    !plan?.start_date ||
-    !date ||
-    date < plan.start_date
-  ) {
-    return null
-  }
-
-  const start = new Date(
-    `${plan.start_date}T00:00:00Z`,
-  )
-  const current = new Date(
-    `${date}T00:00:00Z`,
-  )
-
-  const elapsedDays = Math.floor(
-    (current.getTime() - start.getTime()) /
-      (24 * 60 * 60 * 1000),
-  )
-
-  return Math.min(
-    Math.floor(elapsedDays / 7) + 1,
-    Number(
-      plan.program_length_weeks,
-    ),
-  )
-}
-
 async function loadPlanProgress(
   plan,
   today,
 ) {
   const currentWeekNumber =
-    getPlanWeekNumberForDate(
+    getPlanWeekNumber(
       plan,
       today,
     )
@@ -460,10 +471,15 @@ async function loadPlanProgress(
       currentWeekNumber,
     )
 
-  const lastDailyDate = addDays(
-    plan.start_date,
-    lastRelevantWeek * 7,
-  )
+  const lastRelevantRange =
+    getReportingWeekRange(
+      plan.start_date,
+      plan.checkin_day,
+      lastRelevantWeek,
+    )
+
+  const lastDailyDate =
+    lastRelevantRange?.reportingEnd ?? today
 
   const [
     weeklyResult,
@@ -592,32 +608,29 @@ async function loadPlanProgress(
       const weekNumber =
         index + 1
 
-      const weekStart =
-        addDays(
+      const weekRange =
+        getReportingWeekRange(
           plan.start_date,
-          (weekNumber - 1) * 7,
+          plan.checkin_day,
+          weekNumber,
         )
 
       const dailyStart =
-        addDays(
-          weekStart,
-          1,
-        )
+        weekRange?.reportingStart ?? null
 
       const dailyEnd =
-        addDays(
-          weekStart,
-          7,
-        )
+        weekRange?.reportingEnd ?? null
 
       const weekDailyRows =
-        dailyRows.filter(
-          (row) =>
-            row.checkin_date >=
-              dailyStart &&
-            row.checkin_date <=
-              dailyEnd,
-        )
+        dailyStart && dailyEnd
+          ? dailyRows.filter(
+              (row) =>
+                row.checkin_date >=
+                  dailyStart &&
+                row.checkin_date <=
+                  dailyEnd,
+            )
+          : []
 
       const weekly =
         weeklyByNumber.get(
@@ -677,22 +690,6 @@ async function loadPlanProgress(
   )
 }
 
-function calculateStreak(checkInDates, today) {
-  const savedDates = new Set(
-    checkInDates.map((checkin) => checkin.checkin_date),
-  )
-
-  let streakDays = 0
-  let currentDate = today
-
-  while (savedDates.has(currentDate)) {
-    streakDays += 1
-    currentDate = addDays(currentDate, -1)
-  }
-
-  return streakDays
-}
-
 // Loads all information required by the home dashboard.
 export async function loadDashboardData(userId) {
   const today = getTodayDateKey()
@@ -744,10 +741,17 @@ export async function loadDashboardData(userId) {
     }
   }
 
-  const {
-    weekStart: cardioWeekStart,
-    weekEnd: cardioWeekEnd,
-  } = getProgramWeekRange(plan.start_date, today)
+  const reportingWeek =
+    getReportingWeekForDate(
+      plan.start_date,
+      plan.checkin_day,
+      today,
+    )
+
+  const cardioWeekStart =
+    reportingWeek?.reportingStart ?? null
+  const cardioWeekEnd =
+    reportingWeek?.reportingEnd ?? null
 
   const [
     target,
@@ -756,6 +760,7 @@ export async function loadDashboardData(userId) {
     todayWeeklyCheckIn,
     weeklyCheckIns,
     checkInDates,
+    weeklyCheckInDates,
     planProgressWeeks,
   ] = await Promise.all([
     loadCurrentTarget(plan.id, today),
@@ -763,15 +768,26 @@ export async function loadDashboardData(userId) {
     loadTodayCheckIn(plan.id, today),
     loadTodayWeeklyCheckIn(plan.id, today),
 
-    today >= plan.start_date
+    today >= plan.start_date &&
+    cardioWeekStart &&
+    cardioWeekEnd
       ? loadWeeklyCheckIns(
           plan.id,
-          addDays(cardioWeekStart, 1),
-          addDays(cardioWeekEnd, 1),
+          cardioWeekStart,
+          cardioWeekEnd,
         )
       : Promise.resolve([]),
 
-    loadCheckInDates(plan.id, plan.start_date, today),
+    loadCheckInDates(
+      plan.id,
+      plan.start_date,
+      today,
+    ),
+    loadCompletedWeeklyCheckInDates(
+      plan.id,
+      plan.start_date,
+      today,
+    ),
     loadPlanProgress(plan, today),
   ])
 
@@ -780,7 +796,13 @@ export async function loadDashboardData(userId) {
     target?.weekly_workout_target,
   )
 
-  const streakDays = calculateStreak(checkInDates, today)
+  const streakDays = calculateProgramCheckInStreak({
+    dailyCheckInDates: checkInDates,
+    weeklyCheckInDates,
+    startCheckIn,
+    planStartDate: plan.start_date,
+    today,
+  })
 
   const dashboard = {
     profile,

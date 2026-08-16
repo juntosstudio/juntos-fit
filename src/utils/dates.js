@@ -27,7 +27,12 @@ export function addDays(dateKey, numberOfDays) {
   return date.toISOString().slice(0, 10)
 }
 
-// Finds the active seven-day program window for a given date.
+// Finds the simple seven-day window anchored to Start Day.
+//
+// This is the prescription / behavior calendar when the selected
+// Weekly Check-In weekday matches Start Day. Morning reporting has a
+// deliberate one-day offset; use the reporting helpers below for
+// Dashboard / Daily-history grouping.
 export function getProgramWeekRange(startDate, currentDate) {
   if (currentDate < startDate) {
     return {
@@ -94,6 +99,157 @@ export function getFirstWeeklyCheckInDate(
     firstEligibleDate,
     daysUntilCheckIn,
   )
+}
+
+// Returns the scheduled Weekly Check-In date that closes a numbered
+// reporting week. Week 1 closes on the first Weekly Check-In date.
+export function getWeeklyCheckInDateForWeek(
+  startDate,
+  checkinDay,
+  weekNumber,
+) {
+  const numericWeek = Number(weekNumber)
+
+  if (
+    !Number.isInteger(numericWeek) ||
+    numericWeek < 1
+  ) {
+    return null
+  }
+
+  const firstWeeklyDate =
+    getFirstWeeklyCheckInDate(
+      startDate,
+      checkinDay,
+    )
+
+  return firstWeeklyDate
+    ? addDays(
+        firstWeeklyDate,
+        (numericWeek - 1) * 7,
+      )
+    : null
+}
+
+// Returns the week whose results are currently being reported.
+//
+// Important business rule:
+// - Start Day begins the diet/workout prescription for Week 1.
+// - The next morning's Daily Check-In reports Start Day behavior.
+// - The Weekly Check-In morning closes the week by reporting the
+//   previous day's behavior plus Weekly-only data.
+// - That Weekly calendar day also begins the next prescription week,
+//   but the Dashboard does not roll to the next reporting week until
+//   the following morning.
+export function getReportingWeekNumber(
+  startDate,
+  checkinDay,
+  currentDate,
+) {
+  if (
+    !startDate ||
+    !currentDate ||
+    currentDate < startDate
+  ) {
+    return null
+  }
+
+  const firstWeeklyDate =
+    getFirstWeeklyCheckInDate(
+      startDate,
+      checkinDay,
+    )
+
+  if (!firstWeeklyDate) {
+    return null
+  }
+
+  if (currentDate <= firstWeeklyDate) {
+    return 1
+  }
+
+  const daysSinceFirstWeekly = Math.floor(
+    (dateKeyToUtcMilliseconds(currentDate) -
+      dateKeyToUtcMilliseconds(firstWeeklyDate)) /
+      MILLISECONDS_PER_DAY,
+  )
+
+  return Math.ceil(daysSinceFirstWeekly / 7) + 1
+}
+
+// Returns both clocks for one numbered week:
+//
+// programStart/programEnd = the days the prescription is lived
+// reportingStart/reportingEnd = the mornings that report those days
+// weeklyDueDate = reportingEnd
+export function getReportingWeekRange(
+  startDate,
+  checkinDay,
+  weekNumber,
+) {
+  const numericWeek = Number(weekNumber)
+  const weeklyDueDate =
+    getWeeklyCheckInDateForWeek(
+      startDate,
+      checkinDay,
+      numericWeek,
+    )
+
+  if (!weeklyDueDate) {
+    return null
+  }
+
+  const programStart =
+    numericWeek === 1
+      ? startDate
+      : getWeeklyCheckInDateForWeek(
+          startDate,
+          checkinDay,
+          numericWeek - 1,
+        )
+
+  if (!programStart) {
+    return null
+  }
+
+  return {
+    weekNumber: numericWeek,
+    programStart,
+    programEnd: addDays(
+      weeklyDueDate,
+      -1,
+    ),
+    reportingStart: addDays(
+      programStart,
+      1,
+    ),
+    reportingEnd: weeklyDueDate,
+    weeklyDueDate,
+  }
+}
+
+// Returns the complete reporting/program range for the week that the
+// supplied calendar date currently belongs to from the Dashboard's
+// reporting perspective.
+export function getReportingWeekForDate(
+  startDate,
+  checkinDay,
+  currentDate,
+) {
+  const weekNumber =
+    getReportingWeekNumber(
+      startDate,
+      checkinDay,
+      currentDate,
+    )
+
+  return weekNumber
+    ? getReportingWeekRange(
+        startDate,
+        checkinDay,
+        weekNumber,
+      )
+    : null
 }
 
 // Returns true only on the recurring weekly check-in

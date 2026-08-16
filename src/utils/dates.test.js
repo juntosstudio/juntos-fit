@@ -11,7 +11,11 @@ import {
   getDateKeyWeekday,
   getFirstWeeklyCheckInDate,
   getProgramWeekRange,
+  getReportingWeekForDate,
+  getReportingWeekNumber,
+  getReportingWeekRange,
   getTodayDateKey,
+  getWeeklyCheckInDateForWeek,
   isWeeklyCheckInDate,
 } from './dates'
 
@@ -181,5 +185,103 @@ describe('Recurring Weekly Check-In dates', () => {
     expect(
       isWeeklyCheckInDate(startDate, checkinDay, ''),
     ).toBe(false)
+  })
+})
+
+
+describe('Reporting week boundaries', () => {
+  const startDate = '2026-07-26'
+  const checkinDay = 0
+
+  test('keeps Weekly Sunday in the week it closes', () => {
+    expect(
+      getReportingWeekNumber(
+        startDate,
+        checkinDay,
+        '2026-08-16',
+      ),
+    ).toBe(3)
+  })
+
+  test('rolls to the next reporting week the morning after Weekly', () => {
+    expect(
+      getReportingWeekNumber(
+        startDate,
+        checkinDay,
+        '2026-08-17',
+      ),
+    ).toBe(4)
+  })
+
+  test('keeps Start Day in Week 1 even though first Daily is tomorrow', () => {
+    expect(
+      getReportingWeekNumber(
+        startDate,
+        checkinDay,
+        '2026-07-26',
+      ),
+    ).toBe(1)
+  })
+
+  test('returns null before the plan starts', () => {
+    expect(
+      getReportingWeekNumber(
+        startDate,
+        checkinDay,
+        '2026-07-25',
+      ),
+    ).toBeNull()
+  })
+
+  test('maps Week 3 behavior and morning-reporting windows correctly', () => {
+    expect(
+      getReportingWeekRange(
+        startDate,
+        checkinDay,
+        3,
+      ),
+    ).toEqual({
+      weekNumber: 3,
+      programStart: '2026-08-09',
+      programEnd: '2026-08-15',
+      reportingStart: '2026-08-10',
+      reportingEnd: '2026-08-16',
+      weeklyDueDate: '2026-08-16',
+    })
+  })
+
+  test('finds the Weekly date for a numbered week', () => {
+    expect(
+      getWeeklyCheckInDateForWeek(
+        startDate,
+        checkinDay,
+        1,
+      ),
+    ).toBe('2026-08-02')
+
+    expect(
+      getWeeklyCheckInDateForWeek(
+        startDate,
+        checkinDay,
+        3,
+      ),
+    ).toBe('2026-08-16')
+  })
+
+  test('returns the same Week 3 reporting range on its closing Sunday', () => {
+    expect(
+      getReportingWeekForDate(
+        startDate,
+        checkinDay,
+        '2026-08-16',
+      ),
+    ).toEqual({
+      weekNumber: 3,
+      programStart: '2026-08-09',
+      programEnd: '2026-08-15',
+      reportingStart: '2026-08-10',
+      reportingEnd: '2026-08-16',
+      weeklyDueDate: '2026-08-16',
+    })
   })
 })

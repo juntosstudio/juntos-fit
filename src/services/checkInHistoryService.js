@@ -5,9 +5,10 @@ import {
 } from './dailyCheckInService'
 import {
   addDays,
-  dateKeyToUtcMilliseconds,
-  getFirstWeeklyCheckInDate,
+  getReportingWeekNumber,
+  getReportingWeekRange,
   getTodayDateKey,
+  getWeeklyCheckInDateForWeek,
 } from '../utils/dates'
 import {
   WEEKLY_DUE_STATE,
@@ -16,7 +17,6 @@ import {
   getWeeklyDueState,
 } from '../utils/checkInCatchUpRules'
 
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const WEEKLY_HISTORY_FIELDS = `
   id,
@@ -65,14 +65,6 @@ const RESOLUTION_FIELDS = `
   updated_at
 `
 
-function daysBetween(startDate, endDate) {
-  return Math.floor(
-    (dateKeyToUtcMilliseconds(endDate) -
-      dateKeyToUtcMilliseconds(startDate)) /
-      DAY_MS,
-  )
-}
-
 function dateRange(startDate, endDate) {
   if (!startDate || !endDate || startDate > endDate) {
     return []
@@ -93,108 +85,61 @@ export function getWeeklyDueDate(
   plan,
   weekNumber,
 ) {
-  if (
-    !plan?.start_date ||
-    !Number.isInteger(Number(plan?.checkin_day)) ||
-    !Number.isInteger(Number(weekNumber)) ||
-    Number(weekNumber) < 1
-  ) {
-    return null
-  }
-
-  const firstWeeklyDate =
-    getFirstWeeklyCheckInDate(
-      plan.start_date,
-      plan.checkin_day,
-    )
-
-  return firstWeeklyDate
-    ? addDays(
-        firstWeeklyDate,
-        (Number(weekNumber) - 1) * 7,
-      )
-    : null
+  return getWeeklyCheckInDateForWeek(
+    plan?.start_date,
+    plan?.checkin_day,
+    weekNumber,
+  )
 }
 
 export function getHistoryWeekNumber(
   plan,
   date = getTodayDateKey(),
 ) {
-  if (!plan?.start_date || !date) {
-    return null
-  }
-
-  const firstWeeklyDate =
-    getFirstWeeklyCheckInDate(
-      plan.start_date,
-      plan.checkin_day,
-    )
-
-  if (!firstWeeklyDate) {
-    return null
-  }
-
-  if (date <= firstWeeklyDate) {
-    return 1
-  }
-
-  const difference = daysBetween(
-    firstWeeklyDate,
+  return getReportingWeekNumber(
+    plan?.start_date,
+    plan?.checkin_day,
     date,
   )
-
-  return Math.ceil(difference / 7) + 1
 }
 
 export function getWeekExpectedDailyDates(
   plan,
   weekNumber,
 ) {
-  const dueDate = getWeeklyDueDate(
-    plan,
+  const range = getReportingWeekRange(
+    plan?.start_date,
+    plan?.checkin_day,
     weekNumber,
   )
 
-  if (!dueDate) {
+  if (!range) {
     return []
   }
 
-  const dailyStart =
-    Number(weekNumber) === 1
-      ? addDays(plan.start_date, 1)
-      : addDays(
-          getWeeklyDueDate(
-            plan,
-            Number(weekNumber) - 1,
-          ),
-          1,
-        )
-
+  // The final reporting date is the Weekly Check-In itself.
+  // Regular Daily catch-up covers only the mornings before it.
   return dateRange(
-    dailyStart,
-    addDays(dueDate, -1),
+    range.reportingStart,
+    addDays(
+      range.reportingEnd,
+      -1,
+    ),
   )
 }
 
 function getWeekPlanRange(plan, weekNumber) {
-  const dueDate = getWeeklyDueDate(
-    plan,
+  const range = getReportingWeekRange(
+    plan?.start_date,
+    plan?.checkin_day,
     weekNumber,
   )
 
-  if (!dueDate) {
-    return {
-      weekStart: null,
-      weekEnd: null,
-    }
-  }
-
   return {
     weekStart:
-      Number(weekNumber) === 1
-        ? plan.start_date
-        : addDays(dueDate, -7),
-    weekEnd: addDays(dueDate, -1),
+      range?.programStart ?? null,
+    weekEnd:
+      range?.programEnd ?? null,
   }
 }
 
@@ -524,30 +469,23 @@ function getExactWeeklyNumber(
   plan,
   date,
 ) {
-  const firstWeeklyDate =
-    getFirstWeeklyCheckInDate(
+  const weekNumber =
+    getReportingWeekNumber(
       plan?.start_date,
       plan?.checkin_day,
+      date,
     )
 
-  if (
-    !firstWeeklyDate ||
-    !date ||
-    date < firstWeeklyDate
-  ) {
+  if (!weekNumber) {
     return null
   }
 
-  const difference = daysBetween(
-    firstWeeklyDate,
-    date,
-  )
-
-  if (difference % 7 !== 0) {
-    return null
-  }
-
-  return Math.floor(difference / 7) + 1
+  return getWeeklyDueDate(
+    plan,
+    weekNumber,
+  ) === date
+    ? weekNumber
+    : null
 }
 
 export async function loadWeeklyPreflight(
