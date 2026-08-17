@@ -24,6 +24,8 @@ const baseForm = {
   training_problem: null,
   training_problem_details: '',
   cardio_minutes: '0',
+  cardio_type: '',
+  cardio_intensity: '',
   water_goal_met: null,
   alcohol_consumed: null,
   alcohol_details: '',
@@ -505,6 +507,44 @@ describe('Daily step continuation', () => {
     ).toBe(true)
   })
 
+  test('requires cardio type and effort when cardio minutes are greater than zero', () => {
+    expect(
+      canContinueDailyStep(
+        DAILY_CHECKIN_STEP_IDS.CARDIO,
+        {
+          ...baseForm,
+          cardio_minutes: '20',
+        },
+      ),
+    ).toBe(false)
+
+    expect(
+      canContinueDailyStep(
+        DAILY_CHECKIN_STEP_IDS.CARDIO,
+        {
+          ...baseForm,
+          cardio_minutes: '20',
+          cardio_type: 'walking',
+          cardio_intensity: 'moderate',
+        },
+      ),
+    ).toBe(true)
+  })
+
+  test('allows legacy saved cardio without context so old Dailies remain editable', () => {
+    expect(
+      canContinueDailyStep(
+        DAILY_CHECKIN_STEP_IDS.CARDIO,
+        {
+          ...baseForm,
+          cardio_minutes: '20',
+          _allow_legacy_cardio_context:
+            true,
+        },
+      ),
+    ).toBe(true)
+  })
+
   test('rejects invalid cardio input', () => {
     expect(
       canContinueDailyStep(
@@ -682,6 +722,37 @@ describe('Daily validation error messages', () => {
         },
       ),
     ).toBe('Enter your morning weight.')
+  })
+
+  test('asks for cardio type before effort when positive cardio has no context', () => {
+    expect(
+      getDailyCheckInValidationError(
+        {
+          ...baseForm,
+          cardio_minutes: '20',
+        },
+        {
+          trackingSettings: trackingOff,
+        },
+      ),
+    ).toBe(
+      'Choose the type of cardio you did.',
+    )
+
+    expect(
+      getDailyCheckInValidationError(
+        {
+          ...baseForm,
+          cardio_minutes: '20',
+          cardio_type: 'walking',
+        },
+        {
+          trackingSettings: trackingOff,
+        },
+      ),
+    ).toBe(
+      'Choose how hard the cardio felt.',
+    )
   })
 
   test('returns cardio validation message for invalid cardio', () => {

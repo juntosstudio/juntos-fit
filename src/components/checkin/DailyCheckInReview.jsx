@@ -10,6 +10,9 @@ import {
 import {
   normalizeCheckInSettings,
 } from '../../utils/checkInTracking'
+import {
+  getCardioContextLabel,
+} from '../../utils/cardio'
 
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow the plan',
@@ -234,7 +237,19 @@ export function DailyCheckInReview({
 
           <ReviewItem
             label="Cardio"
-            value={`${form.cardio_minutes} minutes`}
+            value={[
+              `${form.cardio_minutes} minutes`,
+              Number(form.cardio_minutes) > 0
+                ? getCardioContextLabel({
+                    cardioType:
+                      form.cardio_type,
+                    cardioIntensity:
+                      form.cardio_intensity,
+                  })
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           />
 
           {trackWater && (

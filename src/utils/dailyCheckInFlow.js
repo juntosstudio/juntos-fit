@@ -2,6 +2,10 @@ import {
   normalizeCheckInSettings,
 } from './checkInTracking'
 import {
+  isCardioIntensity,
+  isCardioType,
+} from './cardio'
+import {
   canContinueMeasurementFields,
   getCheckInMeasurementValidation,
 } from './measurementValidation'
@@ -283,27 +287,55 @@ export function canContinueDailyStep(
     step ===
     DAILY_CHECKIN_STEP_IDS.CARDIO
   ) {
+    let minutesAreValid
+
     if (
       validationByField.cardio_minutes
     ) {
-      return canContinueMeasurementFields(
-        ['cardio_minutes'],
-        validationByField,
-      )
+      minutesAreValid =
+        canContinueMeasurementFields(
+          ['cardio_minutes'],
+          validationByField,
+        )
+    } else {
+      const validation =
+        getCheckInMeasurementValidation({
+          formField: 'cardio_minutes',
+          value: form.cardio_minutes,
+          unitSystem: 'imperial',
+          label: 'Cardio',
+        })
+
+      minutesAreValid = ![
+        'unanswered',
+        'invalid',
+      ].includes(validation.status)
     }
 
-    const validation =
-      getCheckInMeasurementValidation({
-        formField: 'cardio_minutes',
-        value: form.cardio_minutes,
-        unitSystem: 'imperial',
-        label: 'Cardio',
-      })
+    if (!minutesAreValid) {
+      return false
+    }
 
-    return ![
-      'unanswered',
-      'invalid',
-    ].includes(validation.status)
+    const minutes = Number(
+      form.cardio_minutes,
+    )
+
+    if (minutes <= 0) {
+      return true
+    }
+
+    if (
+      form._allow_legacy_cardio_context
+    ) {
+      return true
+    }
+
+    return (
+      isCardioType(form.cardio_type) &&
+      isCardioIntensity(
+        form.cardio_intensity,
+      )
+    )
   }
 
   if (
@@ -498,10 +530,29 @@ export function getDailyCheckInValidationError(
     invalidStep ===
     DAILY_CHECKIN_STEP_IDS.CARDIO
   ) {
-    return (
-      cardioValidation.message ||
-      'Enter valid cardio minutes.'
-    )
+    if (
+      cardioValidation.message
+    ) {
+      return cardioValidation.message
+    }
+
+    if (
+      Number(form.cardio_minutes) > 0 &&
+      !isCardioType(form.cardio_type)
+    ) {
+      return 'Choose the type of cardio you did.'
+    }
+
+    if (
+      Number(form.cardio_minutes) > 0 &&
+      !isCardioIntensity(
+        form.cardio_intensity,
+      )
+    ) {
+      return 'Choose how hard the cardio felt.'
+    }
+
+    return 'Enter valid cardio minutes.'
   }
 
   if (

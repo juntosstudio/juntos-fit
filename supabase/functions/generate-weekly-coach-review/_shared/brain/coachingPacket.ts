@@ -1,0 +1,992 @@
+const DAY_MS = 86_400_000
+
+function dateKeyToMs(dateKey: string) {
+  const [year, month, day] =
+    dateKey.split('-').map(Number)
+
+  return Date.UTC(year, month - 1, day)
+}
+
+function addDays(
+  dateKey: string,
+  days: number,
+) {
+  return new Date(
+    dateKeyToMs(dateKey) + days * DAY_MS,
+  )
+    .toISOString()
+    .slice(0, 10)
+}
+
+function getWeekRange(
+  planStartDate: string,
+  weekNumber: number,
+) {
+  const weekStart = addDays(
+    planStartDate,
+    (weekNumber - 1) * 7,
+  )
+
+  const weekEnd = addDays(
+    weekStart,
+    6,
+  )
+
+  return {
+    week_start: weekStart,
+    week_end: weekEnd,
+
+    // Daily questions describe the prior calendar day.
+    // This mirrors Weekly Summary's current boundary logic.
+    daily_start: addDays(weekStart, 1),
+    daily_end: addDays(weekStart, 7),
+  }
+}
+
+function finiteNumbers(
+  rows: any[],
+  field: string,
+) {
+  return rows
+    .map((row) => row?.[field])
+    .filter(
+      (value) =>
+        value !== null &&
+        value !== undefined &&
+        value !== '',
+    )
+    .map(Number)
+    .filter(Number.isFinite)
+}
+
+function numericOrNull(value: unknown) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return null
+  }
+
+  const numeric = Number(value)
+
+  return Number.isFinite(numeric)
+    ? numeric
+    : null
+}
+
+function average(values: number[]) {
+  if (!values.length) {
+    return null
+  }
+
+  return (
+    values.reduce(
+      (sum, value) => sum + value,
+      0,
+    ) / values.length
+  )
+}
+
+function round(
+  value: number | null,
+  digits = 1,
+) {
+  if (value === null || !Number.isFinite(value)) {
+    return null
+  }
+
+  const factor = 10 ** digits
+
+  return (
+    Math.round(value * factor) /
+    factor
+  )
+}
+
+function calculateAgeYears(
+  dateOfBirth: string | null,
+  asOfDate: string,
+) {
+  if (!dateOfBirth || !asOfDate) {
+    return null
+  }
+
+  const [birthYear, birthMonth, birthDay] =
+    dateOfBirth.split('-').map(Number)
+  const [asOfYear, asOfMonth, asOfDay] =
+    asOfDate.split('-').map(Number)
+
+  if (
+    ![
+      birthYear,
+      birthMonth,
+      birthDay,
+      asOfYear,
+      asOfMonth,
+      asOfDay,
+    ].every(Number.isInteger)
+  ) {
+    return null
+  }
+
+  let age = asOfYear - birthYear
+
+  if (
+    asOfMonth < birthMonth ||
+    (asOfMonth === birthMonth &&
+      asOfDay < birthDay)
+  ) {
+    age -= 1
+  }
+
+  return age >= 0 ? age : null
+}
+
+function normalizeWeeklyQuestion(
+  reflection: unknown,
+  question: unknown,
+) {
+  const reflectionText = String(
+    reflection ?? '',
+  ).trim()
+  const questionText = String(
+    question ?? '',
+  ).trim()
+
+  if (!questionText) {
+    return null
+  }
+
+  // Older/current Weekly save logic can mirror the
+  // reflection into questions_for_coach. Do not send
+  // the same free text twice to the Brain.
+  if (questionText === reflectionText) {
+    return null
+  }
+
+  return questionText
+}
+
+function summarizeCardioGroup(
+  rows: any[],
+  field: 'cardio_type' | 'cardio_intensity',
+) {
+  const groups = new Map<
+    string,
+    {
+      value: string
+      sessions: number
+      minutes: number
+    }
+  >()
+
+  for (const row of rows) {
+    const minutes =
+      Number(row.cardio_minutes) || 0
+
+    if (minutes <= 0) {
+      continue
+    }
+
+    const value =
+      String(row?.[field] ?? '').trim() ||
+      'unknown'
+
+    const current =
+      groups.get(value) ?? {
+        value,
+        sessions: 0,
+        minutes: 0,
+      }
+
+    current.sessions += 1
+    current.minutes += minutes
+    groups.set(value, current)
+  }
+
+  return [...groups.values()].sort(
+    (a, b) =>
+      b.minutes - a.minutes,
+  )
+}
+
+function summarizeDailyRows(rows: any[]) {
+  const mealScores = finiteNumbers(
+    rows,
+    'meal_plan_score',
+  )
+  const hungerScores = finiteNumbers(
+    rows,
+    'hunger_score',
+  )
+  const weights = finiteNumbers(
+    rows,
+    'morning_weight',
+  )
+
+  const cardioRows = rows.filter(
+    (row) =>
+      (Number(row.cardio_minutes) || 0) >
+      0,
+  )
+
+  const waterTracked = rows.filter(
+    (row) =>
+      row.water_goal_met !== null &&
+      row.water_goal_met !== undefined,
+  )
+
+  const alcoholTracked = rows.filter(
+    (row) =>
+      row.alcohol_consumed !== null &&
+      row.alcohol_consumed !== undefined,
+  )
+
+  const averageMealScore = average(mealScores)
+
+  return {
+    days_reported: mealScores.length,
+    daily_rows_present: rows.length,
+    average_weight_lbs: round(
+      average(weights),
+    ),
+    weight_readings: weights.length,
+    meal_plan_adherence_percent:
+      averageMealScore === null
+        ? null
+        : round(averageMealScore * 20, 0),
+    meal_score_average: round(
+      average(mealScores),
+      2,
+    ),
+    average_hunger_score: round(
+      average(hungerScores),
+      2,
+    ),
+    workouts_completed: rows.filter(
+      (row) =>
+        row.workout_status === 'completed',
+    ).length,
+    workouts_partial: rows.filter(
+      (row) =>
+        row.workout_status === 'partial',
+    ).length,
+    workouts_missed: rows.filter(
+      (row) =>
+        row.workout_status === 'missed',
+    ).length,
+    cardio_minutes: rows.reduce(
+      (sum, row) =>
+        sum +
+        (Number(row.cardio_minutes) || 0),
+      0,
+    ),
+    cardio_sessions:
+      cardioRows.length,
+    cardio_context_entries:
+      cardioRows.filter(
+        (row) =>
+          row.cardio_type &&
+          row.cardio_intensity,
+      ).length,
+    cardio_by_type:
+      summarizeCardioGroup(
+        cardioRows,
+        'cardio_type',
+      ),
+    cardio_by_intensity:
+      summarizeCardioGroup(
+        cardioRows,
+        'cardio_intensity',
+      ),
+    cardio_entries:
+      cardioRows.map((row) => ({
+        checkin_date:
+          row.checkin_date,
+        review_date:
+          row.review_date,
+        minutes:
+          Number(row.cardio_minutes) || 0,
+        type:
+          row.cardio_type ?? null,
+        intensity:
+          row.cardio_intensity ?? null,
+      })),
+    water_days_tracked: waterTracked.length,
+    water_goal_days: waterTracked.filter(
+      (row) => row.water_goal_met === true,
+    ).length,
+    alcohol_days_tracked:
+      alcoholTracked.length,
+    alcohol_days: alcoholTracked.filter(
+      (row) => row.alcohol_consumed === true,
+    ).length,
+    planned_cheat_meal_days: rows.filter(
+      (row) =>
+        row.planned_cheat_meal_status ===
+        'eaten',
+    ).length,
+    deviation_days: rows.filter(
+      (row) => {
+        const score = Number(
+          row.meal_plan_score,
+        )
+
+        return (
+          Number.isFinite(score) &&
+          score < 5
+        )
+      },
+    ).length,
+    notable_daily_context: rows
+      .filter(
+        (row) =>
+          row.meal_plan_deviation_details ||
+          row.workout_incomplete_reason ||
+          row.training_problem_details ||
+          row.alcohol_details ||
+          row.additional_notes ||
+          row.questions_for_coach,
+      )
+      .map((row) => ({
+        checkin_date: row.checkin_date,
+        review_date: row.review_date,
+        meal_plan_deviation_details:
+          row.meal_plan_deviation_details ?? null,
+        workout_incomplete_reason:
+          row.workout_incomplete_reason ?? null,
+        training_problem_details:
+          row.training_problem_details ?? null,
+        alcohol_details:
+          row.alcohol_details ?? null,
+        additional_notes:
+          row.additional_notes ?? null,
+        questions_for_coach:
+          row.questions_for_coach ?? null,
+      })),
+  }
+}
+
+function buildPrescriptionSegments(
+  targets: any[],
+  weekStart: string,
+  weekEnd: string,
+  weekNumber: number,
+) {
+  if (!targets?.length) {
+    return []
+  }
+
+  const activeBeforeOrAtStart = [...targets]
+    .filter(
+      (target) =>
+        target.effective_date <= weekStart,
+    )
+    .sort((a, b) =>
+      a.effective_date.localeCompare(
+        b.effective_date,
+      ),
+    )
+    .at(-1)
+
+  const duringWeek = targets
+    .filter(
+      (target) =>
+        target.effective_date > weekStart &&
+        target.effective_date <= weekEnd,
+    )
+    .sort((a, b) =>
+      a.effective_date.localeCompare(
+        b.effective_date,
+      ),
+    )
+
+  const relevant = [
+    ...(activeBeforeOrAtStart
+      ? [activeBeforeOrAtStart]
+      : []),
+    ...duringWeek,
+  ]
+
+  return relevant.map((target, index) => {
+    const effectiveFrom =
+      target.effective_date < weekStart
+        ? weekStart
+        : target.effective_date
+
+    const next = relevant[index + 1]
+    const effectiveTo = next?.effective_date
+      ? addDays(next.effective_date, -1)
+      : weekEnd
+
+    const daysInEffect =
+      Math.round(
+        (dateKeyToMs(effectiveTo) -
+          dateKeyToMs(effectiveFrom)) /
+          DAY_MS,
+      ) + 1
+
+    return {
+      week_number: weekNumber,
+      effective_from: effectiveFrom,
+      effective_to: effectiveTo,
+      days_in_effect: daysInEffect,
+      calorie_target:
+        target.calorie_target ?? null,
+      protein_grams:
+        target.protein_grams ?? null,
+      carb_grams: target.carb_grams ?? null,
+      fat_grams: target.fat_grams ?? null,
+      weekly_cardio_target_minutes:
+        target.weekly_cardio_target_minutes ??
+        null,
+      weekly_workout_target:
+        target.weekly_workout_target ?? null,
+      daily_water_goal_oz:
+        target.daily_water_goal_oz ?? null,
+    }
+  })
+}
+
+async function loadDailyRows(
+  admin: any,
+  coachingPlanId: string,
+  dailyStart: string,
+  dailyEnd: string,
+) {
+  const { data, error } = await admin
+    .from('daily_checkins')
+    .select(`
+      id,
+      checkin_date,
+      review_date,
+      morning_weight,
+      weight_status,
+      meal_plan_score,
+      meal_plan_deviation_details,
+      planned_cheat_meal_status,
+      hunger_score,
+      water_goal_met,
+      workout_status,
+      workout_incomplete_reason,
+      training_problem,
+      training_problem_details,
+      cardio_minutes,
+      cardio_type,
+      cardio_intensity,
+      alcohol_consumed,
+      alcohol_details,
+      additional_notes,
+      questions_for_coach
+    `)
+    .eq('coaching_plan_id', coachingPlanId)
+    .gte('checkin_date', dailyStart)
+    .lte('checkin_date', dailyEnd)
+    .order('checkin_date', {
+      ascending: true,
+    })
+
+  if (error) {
+    throw error
+  }
+
+  return data ?? []
+}
+
+function mapSavedPrescription(row: any) {
+  return {
+    week_number: row.week_number,
+    effective_from: row.effective_from,
+    effective_to: row.effective_to,
+    days_in_effect: row.days_in_effect,
+    calorie_target:
+      row.calorie_target ?? null,
+    protein_grams:
+      row.protein_grams ?? null,
+    carb_grams: row.carb_grams ?? null,
+    fat_grams: row.fat_grams ?? null,
+    weekly_cardio_target_minutes:
+      row.weekly_cardio_target_minutes ?? null,
+    weekly_workout_target:
+      row.weekly_workout_target ?? null,
+    daily_water_goal_oz:
+      row.daily_water_goal_oz ?? null,
+  }
+}
+
+export async function buildCoachingPacket({
+  admin,
+  weeklyCheckIn,
+}: {
+  admin: any
+  weeklyCheckIn: any
+}) {
+  const weekNumber = Number(
+    weeklyCheckIn.week_number,
+  )
+
+  const { data: plan, error: planError } =
+    await admin
+      .from('coaching_plans')
+      .select(`
+        id,
+        user_id,
+        start_date,
+        checkin_day,
+        program_length_weeks,
+        goal,
+        status,
+        end_date
+      `)
+      .eq('id', weeklyCheckIn.coaching_plan_id)
+      .single()
+
+  if (planError) {
+    throw planError
+  }
+
+  const weekRange = getWeekRange(
+    plan.start_date,
+    weekNumber,
+  )
+
+  const historyWeekNumbers = [
+    weekNumber - 2,
+    weekNumber - 1,
+  ].filter((value) => value > 0)
+
+  const historyRanges =
+    historyWeekNumbers.map((historyWeek) => ({
+      week_number: historyWeek,
+      ...getWeekRange(
+        plan.start_date,
+        historyWeek,
+      ),
+    }))
+
+  const earliestHistoryStart =
+    historyRanges[0]?.daily_start ??
+    weekRange.daily_start
+
+  const [
+    profileResult,
+    settingsResult,
+    startResult,
+    currentDailyRows,
+    targetResult,
+    savedPrescriptionResult,
+    previousWeeklyResult,
+  ] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('id, sex, date_of_birth')
+      .eq('id', plan.user_id)
+      .single(),
+
+    admin
+      .from('user_settings')
+      .select(`
+        track_water,
+        track_alcohol,
+        body_fat_source
+      `)
+      .eq('user_id', plan.user_id)
+      .maybeSingle(),
+
+    admin
+      .from('start_checkins')
+      .select(`
+        starting_weight_lbs,
+        waist_inches,
+        body_fat_percent,
+        body_fat_status,
+        body_fat_method,
+        body_fat_formula_version,
+        status,
+        completed_at
+      `)
+      .eq('coaching_plan_id', plan.id)
+      .maybeSingle(),
+
+    loadDailyRows(
+      admin,
+      plan.id,
+      weekRange.daily_start,
+      weekRange.daily_end,
+    ),
+
+    admin
+      .from('coaching_plan_targets')
+      .select(`
+        id,
+        coaching_plan_id,
+        effective_date,
+        calorie_target,
+        protein_grams,
+        carb_grams,
+        fat_grams,
+        weekly_cardio_target_minutes,
+        weekly_workout_target,
+        daily_water_goal_oz
+      `)
+      .eq('coaching_plan_id', plan.id)
+      .lte(
+        'effective_date',
+        weekRange.week_end,
+      )
+      .order('effective_date', {
+        ascending: true,
+      }),
+
+    admin
+      .from('weekly_plan_prescriptions')
+      .select(`
+        week_number,
+        effective_from,
+        effective_to,
+        days_in_effect,
+        calorie_target,
+        protein_grams,
+        carb_grams,
+        fat_grams,
+        weekly_cardio_target_minutes,
+        weekly_workout_target,
+        daily_water_goal_oz
+      `)
+      .eq(
+        'weekly_checkin_id',
+        weeklyCheckIn.id,
+      )
+      .order('effective_from', {
+        ascending: true,
+      }),
+
+    historyWeekNumbers.length
+      ? admin
+          .from('weekly_checkins')
+          .select(`
+            id,
+            week_number,
+            status,
+            waist,
+            body_fat_percent,
+            body_fat_source,
+            body_fat_method,
+            sleep_quality,
+            energy_level,
+            recovery_score,
+            stress_level,
+            menstrual_cycle_context,
+            weekly_reflection
+          `)
+          .eq('coaching_plan_id', plan.id)
+          .in('week_number', historyWeekNumbers)
+          .order('week_number', {
+            ascending: true,
+          })
+      : Promise.resolve({
+          data: [],
+          error: null,
+        }),
+  ])
+
+  if (profileResult.error) {
+    throw profileResult.error
+  }
+
+  if (settingsResult.error) {
+    throw settingsResult.error
+  }
+
+  if (startResult.error) {
+    throw startResult.error
+  }
+
+  if (targetResult.error) {
+    throw targetResult.error
+  }
+
+  if (savedPrescriptionResult.error) {
+    throw savedPrescriptionResult.error
+  }
+
+  if (previousWeeklyResult.error) {
+    throw previousWeeklyResult.error
+  }
+
+  // Load historical Daily rows in one query, then
+  // partition them into program weeks in code.
+  const historicalDailyRows =
+    historyWeekNumbers.length
+      ? await loadDailyRows(
+          admin,
+          plan.id,
+          earliestHistoryStart,
+          addDays(
+            weekRange.daily_start,
+            -1,
+          ),
+        )
+      : []
+
+  const targets = targetResult.data ?? []
+  const savedPrescriptions =
+    savedPrescriptionResult.data ?? []
+
+  const currentPrescriptions =
+    savedPrescriptions.length
+      ? savedPrescriptions.map(
+          mapSavedPrescription,
+        )
+      : buildPrescriptionSegments(
+          targets,
+          weekRange.week_start,
+          weekRange.week_end,
+          weekNumber,
+        )
+
+  const currentBehavior =
+    summarizeDailyRows(currentDailyRows)
+
+  const previousWeeklyMap = new Map(
+    (previousWeeklyResult.data ?? []).map(
+      (row: any) => [
+        Number(row.week_number),
+        row,
+      ],
+    ),
+  )
+
+  const history = historyRanges.map(
+    (range) => {
+      const rows = historicalDailyRows.filter(
+        (row: any) =>
+          row.checkin_date >=
+            range.daily_start &&
+          row.checkin_date <=
+            range.daily_end,
+      )
+
+      const weekly = previousWeeklyMap.get(
+        range.week_number,
+      ) as any
+
+      return {
+        week_number: range.week_number,
+        week_range: {
+          start: range.week_start,
+          end: range.week_end,
+        },
+        prescription:
+          buildPrescriptionSegments(
+            targets,
+            range.week_start,
+            range.week_end,
+            range.week_number,
+          ),
+        behavior: summarizeDailyRows(rows),
+        weekly_context: weekly
+          ? {
+              status: weekly.status,
+              waist_inches:
+                weekly.waist ?? null,
+              body_fat_percent:
+                weekly.body_fat_percent ?? null,
+              body_fat_source:
+                weekly.body_fat_source ?? null,
+              body_fat_method:
+                weekly.body_fat_method ?? null,
+              sleep_quality:
+                weekly.sleep_quality ?? null,
+              energy_level:
+                weekly.energy_level ?? null,
+              recovery_score:
+                weekly.recovery_score ?? null,
+              stress_level:
+                weekly.stress_level ?? null,
+              menstrual_cycle_context:
+                weekly.menstrual_cycle_context ??
+                null,
+              weekly_reflection:
+                weekly.weekly_reflection ?? null,
+            }
+          : null,
+      }
+    },
+  )
+
+  const previousBehavior =
+    history.at(-1)?.behavior ?? null
+
+  const currentAverageWeight = numericOrNull(
+    currentBehavior.average_weight_lbs,
+  )
+  const previousAverageWeight = numericOrNull(
+    previousBehavior?.average_weight_lbs,
+  )
+  const startWeight = numericOrNull(
+    startResult.data?.starting_weight_lbs,
+  )
+
+  const weightComparison =
+    previousAverageWeight !== null
+      ? previousAverageWeight
+      : startWeight
+
+  const previousWeekly =
+    previousWeeklyMap.get(weekNumber - 1) as any
+  const currentWaist = numericOrNull(
+    weeklyCheckIn.waist,
+  )
+  const previousWaist = numericOrNull(
+    previousWeekly?.waist,
+  )
+  const startWaist = numericOrNull(
+    startResult.data?.waist_inches,
+  )
+
+  const waistComparison =
+    previousWaist !== null
+      ? previousWaist
+      : startWaist
+
+  return {
+    packet_version: 'coaching_packet_v0.1',
+
+    subject: {
+      sex: profileResult.data?.sex ?? null,
+      age_years: calculateAgeYears(
+        profileResult.data?.date_of_birth ?? null,
+        weekRange.week_end,
+      ),
+    },
+
+    tracking_settings: {
+      source: 'current_user_settings_at_generation',
+      track_water:
+        settingsResult.data?.track_water !== false,
+      track_alcohol:
+        settingsResult.data?.track_alcohol !== false,
+      body_fat_source:
+        settingsResult.data?.body_fat_source ??
+        'none',
+    },
+
+    plan: {
+      goal: plan.goal,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      program_length_weeks:
+        plan.program_length_weeks,
+      current_week_number: weekNumber,
+    },
+
+    baseline: {
+      starting_weight_lbs:
+        startResult.data?.starting_weight_lbs ??
+        null,
+      starting_waist_inches:
+        startResult.data?.waist_inches ?? null,
+      starting_body_fat_percent:
+        startResult.data?.body_fat_percent ?? null,
+      starting_body_fat_status:
+        startResult.data?.body_fat_status ?? null,
+      starting_body_fat_method:
+        startResult.data?.body_fat_method ?? null,
+      starting_body_fat_formula_version:
+        startResult.data
+          ?.body_fat_formula_version ?? null,
+    },
+
+    current_week: {
+      week_number: weekNumber,
+      week_range: {
+        start: weekRange.week_start,
+        end: weekRange.week_end,
+      },
+      prescription_source:
+        savedPrescriptions.length
+          ? 'weekly_snapshot'
+          : 'target_history_fallback',
+      prescription: currentPrescriptions,
+      behavior: currentBehavior,
+      outcomes: {
+        weekly_average_weight_lbs:
+          currentBehavior.average_weight_lbs,
+        weight_change_lbs:
+          currentAverageWeight !== null &&
+          weightComparison !== null
+            ? round(
+                currentAverageWeight -
+                  weightComparison,
+              )
+            : null,
+        weight_comparison:
+          previousAverageWeight !== null
+            ? `week_${weekNumber - 1}_average`
+            : startWeight !== null
+              ? 'start_day'
+              : null,
+        waist_inches: currentWaist,
+        waist_change_inches:
+          currentWaist !== null &&
+          waistComparison !== null
+            ? round(
+                currentWaist -
+                  waistComparison,
+              )
+            : null,
+        waist_comparison:
+          previousWaist !== null
+            ? `week_${weekNumber - 1}`
+            : startWaist !== null
+              ? 'start_day'
+              : null,
+        body_fat_percent:
+          weeklyCheckIn.body_fat_percent ?? null,
+        body_fat_source:
+          weeklyCheckIn.body_fat_source ?? null,
+        body_fat_method:
+          weeklyCheckIn.body_fat_method ?? null,
+      },
+      context: {
+        sleep_quality:
+          weeklyCheckIn.sleep_quality ?? null,
+        energy_level:
+          weeklyCheckIn.energy_level ?? null,
+        recovery_score:
+          weeklyCheckIn.recovery_score ?? null,
+        stress_level:
+          weeklyCheckIn.stress_level ?? null,
+        menstrual_cycle_context:
+          weeklyCheckIn
+            .menstrual_cycle_context ?? null,
+        weekly_reflection:
+          weeklyCheckIn.weekly_reflection ?? null,
+        questions_for_coach:
+          normalizeWeeklyQuestion(
+            weeklyCheckIn.weekly_reflection,
+            weeklyCheckIn.questions_for_coach,
+          ),
+      },
+    },
+
+    history,
+
+    previous_coaching_decision: null,
+
+    data_quality: {
+      expected_daily_reports: 7,
+      daily_reports_present:
+        currentBehavior.days_reported,
+      has_completed_weekly_checkin: true,
+      has_prescription:
+        currentPrescriptions.length > 0,
+      history_weeks_included:
+        historyWeekNumbers.length,
+      note:
+        'Earlier weeks may contain Daily-derived history without a Weekly Check-In. Missing Weekly context stays missing.',
+    },
+  }
+}

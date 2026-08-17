@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   saveWeeklyCheckInDraft: vi.fn(),
   loadWeeklyCheckInPhotos: vi.fn(),
   uploadWeeklyCheckInPhoto: vi.fn(),
+  loadLastCardioContext: vi.fn(),
   saveTodayDailyCheckIn: vi.fn(),
 }))
 
@@ -96,6 +97,8 @@ vi.mock(
 vi.mock(
   '../services/dailyCheckInService',
   () => ({
+    loadLastCardioContext:
+      mocks.loadLastCardioContext,
     saveTodayDailyCheckIn:
       mocks.saveTodayDailyCheckIn,
   }),
@@ -149,6 +152,8 @@ function setSubmissionFields(result) {
       workout_status: 'completed',
       training_problem: false,
       cardio_minutes: '20',
+      cardio_type: 'walking',
+      cardio_intensity: 'moderate',
       alcohol_consumed: false,
       sleep_quality: '4',
       energy_level: '4',
@@ -166,6 +171,12 @@ function setSubmissionFields(result) {
     }
   })
 }
+
+beforeEach(() => {
+  mocks.loadLastCardioContext.mockResolvedValue(
+    null,
+  )
+})
 
 describe('useWeeklyCheckIn load and preview behavior', () => {
   beforeEach(() => {
@@ -243,6 +254,36 @@ describe('useWeeklyCheckIn load and preview behavior', () => {
     expect(
       result.current.photosRequired,
     ).toBe(false)
+  })
+
+  test('prefills a new Weekly draft with the most recent cardio type and effort', async () => {
+    mocks.loadLastCardioContext.mockResolvedValue({
+      cardio_type: 'cycling',
+      cardio_intensity: 'hard',
+    })
+
+    const { result } = renderHook(() =>
+      useWeeklyCheckIn(plan, {
+        bodyFatSource: 'none',
+        unitSystem: 'imperial',
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        result.current.form.cardio_type,
+      ).toBe('cycling')
+    })
+
+    expect(
+      result.current.form.cardio_intensity,
+    ).toBe('hard')
+    expect(
+      mocks.loadLastCardioContext,
+    ).toHaveBeenCalledWith(
+      'plan-1',
+      '2026-08-16',
+    )
   })
 
   test('uses preview mode when today is not an exact Weekly date', async () => {
@@ -874,6 +915,8 @@ describe('useWeeklyCheckIn submission', () => {
         workout_status: 'completed',
         training_problem: false,
         cardio_minutes: 20,
+        cardio_type: 'walking',
+        cardio_intensity: 'moderate',
         alcohol_consumed: false,
         alcohol_details: null,
         additional_notes: null,

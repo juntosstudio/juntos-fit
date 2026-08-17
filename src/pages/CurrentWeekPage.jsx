@@ -15,6 +15,9 @@ import {
   getMeasurementUnit,
   normalizeUnitSystem,
 } from '../utils/measurementUnits'
+import {
+  getCardioContextLabel,
+} from '../utils/cardio'
 import '../styles/currentWeek.css'
 
 const MEAL_PLAN_LABELS = {
@@ -290,6 +293,17 @@ function DailyMetrics({
               row.cardio_minutes,
             ) || 0} min`
           : '—',
+      detail:
+        Number(
+          row?.cardio_minutes,
+        ) > 0
+          ? getCardioContextLabel({
+              cardioType:
+                row?.cardio_type,
+              cardioIntensity:
+                row?.cardio_intensity,
+            })
+          : '',
     },
   ]
 

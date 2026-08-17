@@ -32,6 +32,7 @@ import {
   deleteDailyCheckInDraft,
   loadDailyCheckInDraft,
   loadDailyCheckInForDate,
+  loadLastCardioContext,
   loadTodayDailyCheckIn,
   saveDailyCheckInDraft,
   saveDailyCheckInForDate,
@@ -45,6 +46,11 @@ function makeQuery({
   const query = {
     select: vi.fn(),
     eq: vi.fn(),
+    lt: vi.fn(),
+    gt: vi.fn(),
+    not: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
     maybeSingle: vi.fn(),
     upsert: vi.fn(),
     delete: vi.fn(),
@@ -53,6 +59,11 @@ function makeQuery({
 
   query.select.mockReturnValue(query)
   query.eq.mockReturnValue(query)
+  query.lt.mockReturnValue(query)
+  query.gt.mockReturnValue(query)
+  query.not.mockReturnValue(query)
+  query.order.mockReturnValue(query)
+  query.limit.mockReturnValue(query)
   query.upsert.mockReturnValue(query)
   query.delete.mockReturnValue(query)
   query.maybeSingle.mockResolvedValue({
@@ -75,6 +86,43 @@ describe('dailyCheckInService', () => {
     )
     mocks.addDays.mockReturnValue(
       '2026-08-14',
+    )
+  })
+
+  test('loads the most recent prior cardio context for defaults', async () => {
+    const query = makeQuery({
+      data: {
+        cardio_type: 'walking',
+        cardio_intensity: 'moderate',
+      },
+    })
+    mocks.from.mockReturnValue(query)
+
+    await expect(
+      loadLastCardioContext(
+        'plan-1',
+        '2026-08-15',
+      ),
+    ).resolves.toEqual({
+      cardio_type: 'walking',
+      cardio_intensity: 'moderate',
+    })
+
+    expect(query.lt).toHaveBeenCalledWith(
+      'checkin_date',
+      '2026-08-15',
+    )
+    expect(query.gt).toHaveBeenCalledWith(
+      'cardio_minutes',
+      0,
+    )
+    expect(query.not).toHaveBeenCalledWith(
+      'cardio_type',
+      'is',
+      null,
+    )
+    expect(query.limit).toHaveBeenCalledWith(
+      1,
     )
   })
 

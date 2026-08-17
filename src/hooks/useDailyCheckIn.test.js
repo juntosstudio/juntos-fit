@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   deleteDailyCheckInDraft: vi.fn(),
   loadDailyCheckInDraft: vi.fn(),
   loadDailyCheckInForDate: vi.fn(),
+  loadLastCardioContext: vi.fn(),
   loadTodayDailyCheckIn: vi.fn(),
   saveDailyCheckInDraft: vi.fn(),
   saveDailyCheckInForDate: vi.fn(),
@@ -35,6 +36,8 @@ vi.mock(
       mocks.loadDailyCheckInDraft,
     loadDailyCheckInForDate:
       mocks.loadDailyCheckInForDate,
+    loadLastCardioContext:
+      mocks.loadLastCardioContext,
     loadTodayDailyCheckIn:
       mocks.loadTodayDailyCheckIn,
     saveDailyCheckInDraft:
@@ -92,6 +95,8 @@ const validLoadedCheckIn = {
   training_problem: null,
   training_problem_details: null,
   cardio_minutes: 0,
+  cardio_type: null,
+  cardio_intensity: null,
   alcohol_consumed: false,
   alcohol_details: null,
   additional_notes: null,
@@ -126,6 +131,12 @@ function fillBasicValidForm(result) {
     )
   })
 }
+
+beforeEach(() => {
+  mocks.loadLastCardioContext.mockResolvedValue(
+    null,
+  )
+})
 
 describe('useDailyCheckIn availability and loading', () => {
   beforeEach(() => {
@@ -252,6 +263,40 @@ describe('useDailyCheckIn availability and loading', () => {
     )
     expect(result.current.canEdit).toBe(
       true,
+    )
+  })
+
+  test('prefills cardio type and effort from the most recent prior cardio entry', async () => {
+    mocks.loadLastCardioContext.mockResolvedValue({
+      cardio_type: 'walking',
+      cardio_intensity: 'moderate',
+    })
+
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        activePlan,
+        undefined,
+        trackingOff,
+      ),
+    )
+
+    await waitFor(() => {
+      expect(
+        mocks.loadLastCardioContext,
+      ).toHaveBeenCalledWith(
+        'plan-1',
+        '2026-08-15',
+      )
+    })
+
+    expect(
+      result.current.form.cardio_type,
+    ).toBe('walking')
+    expect(
+      result.current.form.cardio_intensity,
+    ).toBe('moderate')
+    expect(result.current.isDirty).toBe(
+      false,
     )
   })
 
@@ -1053,6 +1098,47 @@ describe('useDailyCheckIn save payload', () => {
         alcohol_consumed: true,
         alcohol_details:
           '1 vodka soda',
+      }),
+    )
+  })
+
+  test('saves cardio type and effort for positive cardio minutes', async () => {
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        activePlan,
+        undefined,
+        trackingOff,
+      ),
+    )
+
+    fillBasicValidForm(result)
+
+    act(() => {
+      result.current.setField(
+        'cardio_minutes',
+        '25',
+      )
+      result.current.setField(
+        'cardio_type',
+        'walking',
+      )
+      result.current.setField(
+        'cardio_intensity',
+        'moderate',
+      )
+    })
+
+    await act(async () => {
+      await result.current.saveCheckIn()
+    })
+
+    expect(
+      mocks.saveTodayDailyCheckIn,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cardio_minutes: 25,
+        cardio_type: 'walking',
+        cardio_intensity: 'moderate',
       }),
     )
   })

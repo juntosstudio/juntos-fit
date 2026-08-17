@@ -1,0 +1,82 @@
+.cardio-details {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.1rem;
+}
+
+.cardio-select-field,
+.cardio-effort-field {
+  display: grid;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.cardio-select-field label,
+.cardio-effort-field > p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.cardio-select-field select {
+  width: 100%;
+  min-height: 3.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.72rem 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+
+/* Dedicated cardio effort control. It intentionally does not use .choice-list,
+   so the app's generic 2 + 1 choice-grid rule cannot affect this control. */
+.cardio-effort-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cardio-effort-option {
+  display: flex;
+  min-width: 0;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--color-interaction);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.35rem;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 2px rgb(0 42 53 / 7%);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.cardio-effort-option:hover,
+.cardio-effort-option:focus-within {
+  border-color: var(--color-interaction);
+  box-shadow: 0 0 0 3px rgb(0 42 53 / 14%), 0 0 12px rgb(0 42 53 / 16%);
+}
+
+.cardio-effort-option:has(input:checked) {
+  border-color: var(--color-interaction);
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  box-shadow: 0 0 0 3px rgb(0 42 53 / 15%), 0 0 14px rgb(0 42 53 / 18%);
+}
+
+.cardio-effort-option input[type='radio'] {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.cardio-effort-option span {
+  min-width: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}

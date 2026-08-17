@@ -12,6 +12,11 @@ import {
   DAILY_CHECKIN_STEP_IDS as STEP,
   MEAL_PLAN_DEVIATION_TYPES as DEVIATION,
 } from '../../utils/dailyCheckInFlow'
+import {
+  CARDIO_INTENSITY_OPTIONS,
+  CARDIO_TYPE_OPTIONS,
+} from '../../utils/cardio'
+import '../../styles/cardio.css'
 
 const MEAL_PLAN_LABELS = {
   1: 'Did not follow it',
@@ -360,6 +365,87 @@ export function DailyCheckInStep({
             )
           }
         />
+
+        {Number(form.cardio_minutes) > 0 && (
+          <div className="cardio-details">
+            <div className="cardio-select-field">
+              <label htmlFor="daily-cardio-type">
+                Cardio type
+              </label>
+
+              <select
+                id="daily-cardio-type"
+                aria-label="Cardio type"
+                className={`interaction-field ${
+                  form.cardio_type
+                    ? 'has-answer'
+                    : 'needs-answer'
+                }`}
+                value={form.cardio_type ?? ''}
+                onChange={(event) =>
+                  setField(
+                    'cardio_type',
+                    event.target.value,
+                  )
+                }
+              >
+                <option value="">
+                  Choose cardio type
+                </option>
+
+                {CARDIO_TYPE_OPTIONS.map(
+                  (option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                    >
+                      {option.label}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+
+            <div className="cardio-effort-field">
+              <p>Effort</p>
+
+              <div
+                className="cardio-effort-options"
+                role="radiogroup"
+                aria-label="Cardio effort"
+              >
+                {CARDIO_INTENSITY_OPTIONS.map(
+                  (option) => (
+                    <label
+                      key={option.value}
+                      className="cardio-effort-option"
+                    >
+                      <input
+                        type="radio"
+                        name="cardio-intensity"
+                        value={option.value}
+                        checked={
+                          form.cardio_intensity ===
+                          option.value
+                        }
+                        onChange={() =>
+                          setField(
+                            'cardio_intensity',
+                            option.value,
+                          )
+                        }
+                      />
+
+                      <span>
+                        {option.label}
+                      </span>
+                    </label>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </WizardQuestion>
     )
   }

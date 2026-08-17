@@ -33,6 +33,7 @@ import {
   uploadWeeklyCheckInPhoto,
 } from '../services/weeklyCheckInPhotoService'
 import {
+  loadLastCardioContext,
   saveTodayDailyCheckIn,
 } from '../services/dailyCheckInService'
 import {
@@ -53,6 +54,8 @@ const EMPTY_FORM = {
   training_problem: null,
   training_problem_details: '',
   cardio_minutes: '0',
+  cardio_type: '',
+  cardio_intensity: '',
   water_goal_met: null,
   alcohol_consumed: null,
   alcohol_details: '',
@@ -240,6 +243,18 @@ function buildDailyValues({
       nullableNumber(
         form.cardio_minutes,
       ) ?? 0,
+    cardio_type:
+      Number(form.cardio_minutes) > 0
+        ? optionalText(
+            form.cardio_type,
+          )
+        : null,
+    cardio_intensity:
+      Number(form.cardio_minutes) > 0
+        ? optionalText(
+            form.cardio_intensity,
+          )
+        : null,
     alcohol_consumed:
       settings?.track_alcohol === false
         ? null
@@ -635,6 +650,35 @@ export function useWeeklyCheckIn(
             checkIn.id,
           )
 
+        const hasSavedCardioType =
+          Object.prototype.hasOwnProperty.call(
+            checkIn.draft_data ?? {},
+            'cardio_type',
+          )
+
+        const lastCardioContext =
+          checkIn.status !== 'completed' &&
+          !hasSavedCardioType
+            ? await loadLastCardioContext(
+                plan.id,
+                today,
+              )
+            : null
+
+        const draftDataWithCardioDefaults =
+          checkIn.status === 'completed'
+            ? checkIn.draft_data
+            : {
+                cardio_type:
+                  lastCardioContext
+                    ?.cardio_type ?? '',
+                cardio_intensity:
+                  lastCardioContext
+                    ?.cardio_intensity ?? '',
+                ...(checkIn.draft_data ??
+                  {}),
+              }
+
         setExistingCheckIn(checkIn)
         setForm(
           buildInitialForm(
@@ -643,7 +687,7 @@ export function useWeeklyCheckIn(
               'completed'
               ? checkIn.body_fat_source
               : bodyFatSource,
-            checkIn.draft_data,
+            draftDataWithCardioDefaults,
           ),
         )
         setPhotos(

@@ -7,6 +7,7 @@ import {
   deleteDailyCheckInDraft,
   loadDailyCheckInDraft,
   loadDailyCheckInForDate,
+  loadLastCardioContext,
   loadTodayDailyCheckIn,
   saveDailyCheckInDraft,
   saveDailyCheckInForDate,
@@ -45,6 +46,9 @@ const EMPTY_FORM = {
   training_problem: null,
   training_problem_details: '',
   cardio_minutes: '0',
+  cardio_type: '',
+  cardio_intensity: '',
+  _allow_legacy_cardio_context: false,
   alcohol_consumed: null,
   alcohol_details: '',
   coach_notes: '',
@@ -127,6 +131,14 @@ function mapCheckInToForm(checkin) {
     cardio_minutes:
       checkin.cardio_minutes
         ?.toString() ?? '0',
+    cardio_type:
+      checkin.cardio_type ?? '',
+    cardio_intensity:
+      checkin.cardio_intensity ?? '',
+    _allow_legacy_cardio_context:
+      Number(checkin.cardio_minutes) > 0 &&
+      (!checkin.cardio_type ||
+        !checkin.cardio_intensity),
     alcohol_consumed:
       checkin.alcohol_consumed,
     alcohol_details:
@@ -250,11 +262,25 @@ export function useDailyCheckIn(
               )
             : null
 
+        const lastCardioContext =
+          !checkin && !loadedDraft
+            ? await loadLastCardioContext(
+                plan.id,
+                checkInDate,
+              )
+            : null
+
         const loadedForm =
           checkin
             ? mapCheckInToForm(checkin)
             : {
                 ...EMPTY_FORM,
+                cardio_type:
+                  lastCardioContext
+                    ?.cardio_type ?? '',
+                cardio_intensity:
+                  lastCardioContext
+                    ?.cardio_intensity ?? '',
                 ...(loadedDraft
                   ?.draft_data ?? {}),
               }
@@ -502,6 +528,22 @@ export function useDailyCheckIn(
           cardio_minutes: Number(
             form.cardio_minutes || 0,
           ),
+          cardio_type:
+            Number(
+              form.cardio_minutes || 0,
+            ) > 0
+              ? optionalText(
+                  form.cardio_type,
+                )
+              : null,
+          cardio_intensity:
+            Number(
+              form.cardio_minutes || 0,
+            ) > 0
+              ? optionalText(
+                  form.cardio_intensity,
+                )
+              : null,
           alcohol_consumed:
             trackAlcohol
               ? form.alcohol_consumed

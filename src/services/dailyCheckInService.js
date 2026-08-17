@@ -21,6 +21,8 @@ export const DAILY_CHECKIN_FIELDS = `
   training_problem,
   training_problem_details,
   cardio_minutes,
+  cardio_type,
+  cardio_intensity,
   alcohol_consumed,
   alcohol_details,
   additional_notes,
@@ -49,6 +51,39 @@ function debug(message, data = undefined) {
       data ?? '',
     )
   }
+}
+
+export async function loadLastCardioContext(
+  coachingPlanId,
+  beforeDate,
+) {
+  if (!coachingPlanId || !beforeDate) {
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('daily_checkins')
+    .select(
+      'cardio_type, cardio_intensity',
+    )
+    .eq(
+      'coaching_plan_id',
+      coachingPlanId,
+    )
+    .lt('checkin_date', beforeDate)
+    .gt('cardio_minutes', 0)
+    .not('cardio_type', 'is', null)
+    .order('checkin_date', {
+      ascending: false,
+    })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data
 }
 
 export async function loadDailyCheckInDraft(
