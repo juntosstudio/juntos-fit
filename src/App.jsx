@@ -53,6 +53,15 @@ function App() {
     getTodayDateKey,
   )
 
+  const [
+    dailyCheckInDate,
+    setDailyCheckInDate,
+  ] = useState(null)
+  const [
+    dailyCheckInReturnPage,
+    setDailyCheckInReturnPage,
+  ] = useState(PAGE_DASHBOARD)
+
   const [catchUpDate, setCatchUpDate] =
     useState(null)
   const [catchUpReturnPage, setCatchUpReturnPage] =
@@ -201,6 +210,26 @@ function App() {
     returnToDashboard()
   }
 
+  function openDailyCheckIn(
+    date = null,
+    returnPage = PAGE_DASHBOARD,
+  ) {
+    setDailyCheckInDate(date)
+    setDailyCheckInReturnPage(
+      returnPage,
+    )
+    setCurrentPage(
+      PAGE_DAILY_CHECK_IN,
+    )
+  }
+
+  function returnFromDailyCheckIn() {
+    setDailyCheckInDate(null)
+    setCurrentPage(
+      dailyCheckInReturnPage,
+    )
+  }
+
   function openCatchUpDaily(
     date,
     returnPage = PAGE_PROGRESS,
@@ -255,17 +284,30 @@ function App() {
   }
 
   if (currentPage === PAGE_DAILY_CHECK_IN) {
+    const selectedDailyDate =
+      dailyCheckInDate ?? activeDate
+    const editingHistoricalDaily =
+      Boolean(dailyCheckInDate)
+
     return (
       <DailyCheckInPage
-        key={activeDate}
+        key={`${selectedDailyDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
         plan={dashboard?.plan}
         target={dashboard?.target}
         cardioCompleted={
           dashboard?.cardioCompleted ?? 0
         }
         settings={dashboard?.settings}
+        checkinDate={
+          dailyCheckInDate
+        }
+        completionReturnLabel={
+          editingHistoricalDaily
+            ? 'Back to Daily Check-Ins'
+            : 'Back to Dashboard'
+        }
         onSaved={refreshDashboard}
-        onBack={returnToDashboard}
+        onBack={returnFromDailyCheckIn}
       />
     )
   }
@@ -369,6 +411,7 @@ function App() {
     return (
       <CheckInSettingsPage
         userId={user.id}
+        profile={dashboard?.profile}
         initialSettings={
           dashboard?.settings
         }
@@ -415,7 +458,16 @@ function App() {
           )
         }
         onOpenDailyCheckIn={() =>
-          setCurrentPage(PAGE_DAILY_CHECK_IN)
+          openDailyCheckIn(
+            null,
+            PAGE_CURRENT_WEEK,
+          )
+        }
+        onEditDay={(date) =>
+          openDailyCheckIn(
+            date,
+            PAGE_CURRENT_WEEK,
+          )
         }
         onOpenWeeklyCheckIn={() =>
           setCurrentPage(PAGE_WEEKLY_PREFLIGHT)
@@ -469,7 +521,7 @@ function App() {
         setCurrentPage(PAGE_CREATE_PLAN)
       }
       onOpenDailyCheckIn={() =>
-        setCurrentPage(PAGE_DAILY_CHECK_IN)
+        openDailyCheckIn()
       }
       onOpenWeeklyCheckIn={() =>
         setCurrentPage(

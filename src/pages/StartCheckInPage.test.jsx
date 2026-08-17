@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   hookState: {},
   setField: vi.fn(),
   clearMessages: vi.fn(),
+  saveDraft: vi.fn(),
   saveCheckIn: vi.fn(),
   uploadPhoto: vi.fn(),
   markForwardNavigation: vi.fn(),
@@ -236,6 +237,16 @@ function renderPage(props = {}) {
   )
 }
 
+async function clickButton(name) {
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole('button', {
+        name,
+      }),
+    )
+  })
+}
+
 describe('StartCheckInPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -279,9 +290,13 @@ describe('StartCheckInPage', () => {
       isReadOnly: false,
       planHasStarted: true,
       isCompleted: false,
+      resumeStep: null,
+      saveMessage: '',
       setField: mocks.setField,
       clearMessages:
         mocks.clearMessages,
+      saveDraft:
+        mocks.saveDraft,
       saveCheckIn:
         mocks.saveCheckIn,
       uploadPhoto:
@@ -306,6 +321,7 @@ describe('StartCheckInPage', () => {
       false,
     )
 
+    mocks.saveDraft.mockResolvedValue(true)
     mocks.saveCheckIn.mockResolvedValue(true)
   })
 
@@ -406,14 +422,10 @@ describe('StartCheckInPage', () => {
     ).toBe(true)
   })
 
-  test('passes field changes from Start step into the hook', () => {
+  test('passes field changes from Start step into the hook', async () => {
     renderPage()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
+    await clickButton('Next')
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -430,15 +442,11 @@ describe('StartCheckInPage', () => {
     )
   })
 
-  test('moves through the Start wizard and reaches review', () => {
+  test('moves through the Start wizard and reaches review', async () => {
     renderPage()
 
     for (let i = 0; i < 6; i += 1) {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'Next',
-        }),
-      )
+      await clickButton('Next')
     }
 
     expect(
@@ -447,11 +455,7 @@ describe('StartCheckInPage', () => {
       ),
     ).toBeTruthy()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Baseline',
-      }),
-    )
+    await clickButton('Review Baseline')
 
     expect(
       screen.getByRole('heading', {
@@ -467,31 +471,15 @@ describe('StartCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('Back from review returns to the final Start step', () => {
+  test('Back from review returns to the final Start step', async () => {
     renderPage()
 
-    for (let i = 0; i < 7; i += 1) {
-      const button =
-        screen.queryByRole('button', {
-          name: 'Next',
-        })
-
-      if (button) {
-        fireEvent.click(button)
-      }
+    for (let i = 0; i < 6; i += 1) {
+      await clickButton('Next')
     }
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Baseline',
-      }),
-    )
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Edit Answers',
-      }),
-    )
+    await clickButton('Review Baseline')
+    await clickButton('Edit Answers')
 
     expect(
       screen.getByText(
@@ -500,54 +488,41 @@ describe('StartCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('Save Progress calls saveCheckIn with complete false when dirty', async () => {
+  test('dirty incomplete Start Check-In autosaves before Exit Check-In', async () => {
+    const onBack = vi.fn()
+
     mocks.hookState = {
       ...mocks.hookState,
       isDirty: true,
     }
 
-    renderPage()
+    renderPage({ onBack })
 
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', {
-          name: 'Save Progress',
+          name: 'Exit Check-In',
         }),
       )
     })
 
     expect(
-      mocks.saveCheckIn,
-    ).toHaveBeenCalledWith({
-      complete: false,
-    })
+      mocks.saveDraft,
+    ).toHaveBeenCalledWith(
+      'tips',
+    )
+    expect(onBack).toHaveBeenCalledOnce()
   })
 
   test('completes Start Check-In from review and shows completion dialog', async () => {
     renderPage()
 
     for (let i = 0; i < 6; i += 1) {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'Next',
-        }),
-      )
+      await clickButton('Next')
     }
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Baseline',
-      }),
-    )
-
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name:
-            'Complete Start Check-In',
-        }),
-      )
-    })
+    await clickButton('Review Baseline')
+    await clickButton('Complete Start Check-In')
 
     expect(
       mocks.saveCheckIn,
@@ -573,18 +548,10 @@ describe('StartCheckInPage', () => {
     renderPage()
 
     for (let i = 0; i < 6; i += 1) {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'Next',
-        }),
-      )
+      await clickButton('Next')
     }
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Changes',
-      }),
-    )
+    await clickButton('Review Changes')
 
     expect(
       screen.getByRole('heading', {
@@ -708,32 +675,15 @@ describe('StartCheckInPage', () => {
 
     renderPage()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Baseline',
-      }),
-    )
+    await clickButton('Next')
+    await clickButton('Next')
+    await clickButton('Review Baseline')
 
     waistValid = false
 
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name:
-            'Complete Start Check-In',
-        }),
-      )
-    })
+    await clickButton(
+      'Complete Start Check-In',
+    )
 
     expect(
       mocks.saveCheckIn,
@@ -746,8 +696,13 @@ describe('StartCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('top Back to Dashboard calls onBack', () => {
+  test('completed Start edit keeps Back to Dashboard', () => {
     const onBack = vi.fn()
+
+    mocks.hookState = {
+      ...mocks.hookState,
+      isCompleted: true,
+    }
 
     renderPage({ onBack })
 

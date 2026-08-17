@@ -22,6 +22,7 @@ describe('Check-In tracking constants', () => {
     expect(DEFAULT_CHECKIN_SETTINGS).toEqual({
       track_water: true,
       track_alcohol: true,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'none',
     })
   })
@@ -32,6 +33,7 @@ describe('Check-In settings normalization', () => {
     expect(normalizeCheckInSettings()).toEqual({
       track_water: true,
       track_alcohol: true,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'none',
     })
   })
@@ -41,11 +43,13 @@ describe('Check-In settings normalization', () => {
       normalizeCheckInSettings({
         track_water: true,
         track_alcohol: true,
+        track_menstrual_cycle_context: false,
         body_fat_source: 'scale',
       }),
     ).toEqual({
       track_water: true,
       track_alcohol: true,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'scale',
     })
   })
@@ -55,11 +59,13 @@ describe('Check-In settings normalization', () => {
       normalizeCheckInSettings({
         track_water: false,
         track_alcohol: false,
+        track_menstrual_cycle_context: false,
         body_fat_source: 'none',
       }),
     ).toEqual({
       track_water: false,
       track_alcohol: false,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'none',
     })
   })
@@ -69,11 +75,13 @@ describe('Check-In settings normalization', () => {
       normalizeCheckInSettings({
         track_water: false,
         track_alcohol: true,
+        track_menstrual_cycle_context: false,
         body_fat_source: 'juntos_estimate',
       }),
     ).toEqual({
       track_water: false,
       track_alcohol: true,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'juntos_estimate',
     })
   })
@@ -140,6 +148,35 @@ describe('Check-In settings normalization', () => {
         track_water: false,
       }).track_water,
     ).toBe(false)
+  })
+
+  test('menstrual cycle context tracking is opt-in and off by default', () => {
+    expect(
+      normalizeCheckInSettings({})
+        .track_menstrual_cycle_context,
+    ).toBe(false)
+
+    expect(
+      normalizeCheckInSettings({
+        track_menstrual_cycle_context: true,
+      }).track_menstrual_cycle_context,
+    ).toBe(true)
+  })
+
+  test('only explicit true enables menstrual cycle context tracking', () => {
+    for (const value of [
+      undefined,
+      null,
+      '',
+      0,
+      false,
+    ]) {
+      expect(
+        normalizeCheckInSettings({
+          track_menstrual_cycle_context: value,
+        }).track_menstrual_cycle_context,
+      ).toBe(false)
+    }
   })
 
   test('only explicit false disables alcohol tracking', () => {

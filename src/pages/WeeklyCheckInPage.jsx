@@ -97,6 +97,10 @@ export function WeeklyCheckInPage({
       ? settings.body_fat_source
       : plan?.body_fat_source ?? 'none'
 
+  const currentMenstrualCycleTracking =
+    profile?.sex === 'female' &&
+    settings?.track_menstrual_cycle_context === true
+
   const {
     today,
     weekNumber,
@@ -130,6 +134,17 @@ export function WeeklyCheckInPage({
     },
   )
 
+  const savedMenstrualCycleTracking =
+    typeof form
+      ._track_menstrual_cycle_context ===
+      'boolean'
+      ? form._track_menstrual_cycle_context
+      : null
+
+  const trackMenstrualCycleContext =
+    savedMenstrualCycleTracking ??
+    currentMenstrualCycleTracking
+
   const [stepIndex, setStepIndex] =
     useState(0)
   const [reviewing, setReviewing] =
@@ -144,6 +159,10 @@ export function WeeklyCheckInPage({
     warningConfirmation,
     setWarningConfirmation,
   ] = useState(null)
+  const [
+    submitConfirmation,
+    setSubmitConfirmation,
+  ] = useState(false)
 
   const rawValidationByField =
     useMemo(
@@ -232,13 +251,24 @@ export function WeeklyCheckInPage({
     )
 
   const steps = useMemo(
-    () =>
-      getWeeklyCheckInSteps(form, {
-        bodyFatSource,
-        sex: profile?.sex,
-        photosRequired,
-        trackingSettings: settings,
-      }),
+    () => {
+      const generatedSteps =
+        getWeeklyCheckInSteps(form, {
+          bodyFatSource,
+          sex: profile?.sex,
+          photosRequired,
+          trackingSettings: settings,
+        })
+
+      if (trackMenstrualCycleContext) {
+        return generatedSteps
+      }
+
+      return generatedSteps.filter(
+        (step) =>
+          step !== STEP.MENSTRUAL_CONTEXT,
+      )
+    },
     [
       form,
       bodyFatSource,
@@ -246,8 +276,46 @@ export function WeeklyCheckInPage({
       photosRequired,
       settings?.track_water,
       settings?.track_alcohol,
+      trackMenstrualCycleContext,
     ],
   )
+
+  useEffect(() => {
+    if (
+      isCompleted ||
+      savedMenstrualCycleTracking !== null
+    ) {
+      return
+    }
+
+    setField(
+      '_track_menstrual_cycle_context',
+      currentMenstrualCycleTracking,
+    )
+  }, [
+    isCompleted,
+    savedMenstrualCycleTracking,
+    currentMenstrualCycleTracking,
+  ])
+
+  useEffect(() => {
+    if (
+      isCompleted ||
+      trackMenstrualCycleContext ||
+      !form.menstrual_cycle_context
+    ) {
+      return
+    }
+
+    setField(
+      'menstrual_cycle_context',
+      '',
+    )
+  }, [
+    isCompleted,
+    trackMenstrualCycleContext,
+    form.menstrual_cycle_context,
+  ])
 
   useEffect(() => {
     if (loading || steps.length === 0) {
@@ -638,8 +706,12 @@ export function WeeklyCheckInPage({
     }
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     setPageError('')
+
+    if (saving) {
+      return
+    }
 
     const validation =
       validateSubmission()
@@ -653,6 +725,17 @@ export function WeeklyCheckInPage({
       return
     }
 
+    setSubmitConfirmation(true)
+  }
+
+  async function confirmFinalSubmission() {
+    if (saving) {
+      return
+    }
+
+    setPageError('')
+    setSubmitConfirmation(false)
+
     const submitted =
       await submitCheckIn()
 
@@ -665,6 +748,7 @@ export function WeeklyCheckInPage({
     resetPreview()
     setReviewing(false)
     setWarningConfirmation(null)
+    setSubmitConfirmation(false)
     setConfirmedWarningKeys(
       new Set(),
     )
@@ -706,6 +790,56 @@ export function WeeklyCheckInPage({
               onClick={confirmWarnings}
             >
               Use This Value
+            </button>
+          </div>
+        </section>
+      </div>
+    ) : null
+
+  const submitDialog =
+    submitConfirmation ? (
+      <div className="confirmation-overlay">
+        <section
+          className="confirmation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="weekly-submit-title"
+        >
+          <h2 id="weekly-submit-title">
+            Finalize Week {weekNumber}?
+          </h2>
+
+          <p>
+            <strong>
+              You can’t change this Weekly Check-In
+              once it’s submitted.
+            </strong>
+          </p>
+
+          <p>
+            Submitting will finalize this week and
+            lock its Daily Check-Ins.
+          </p>
+
+          <div className="wizard-actions">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() =>
+                setSubmitConfirmation(false)
+              }
+            >
+              Go Back & Review
+            </button>
+
+            <button
+              type="button"
+              disabled={saving}
+              onClick={confirmFinalSubmission}
+            >
+              {saving
+                ? 'Submitting...'
+                : 'Submit & Finalize'}
             </button>
           </div>
         </section>
@@ -757,13 +891,13 @@ export function WeeklyCheckInPage({
           >
             {persistenceEnabled &&
             !isCompleted
-              ? 'Save & Exit'
+              ? 'Exit Check-In'
               : 'Back to Dashboard'}
           </button>
 
           {!persistenceEnabled && (
             <p className="weekly-preview-badge">
-              DEV Preview · Nothing will be saved
+              DEV Preview · Autosave is off · Nothing will be saved
             </p>
           )}
 
@@ -879,6 +1013,7 @@ export function WeeklyCheckInPage({
         </main>
 
         {warningDialog}
+        {submitDialog}
       </>
     )
   }
@@ -903,7 +1038,7 @@ export function WeeklyCheckInPage({
           }
         >
           {persistenceEnabled
-            ? 'Save & Exit'
+            ? 'Exit Check-In'
             : 'Back to Dashboard'}
         </button>
 
@@ -915,7 +1050,7 @@ export function WeeklyCheckInPage({
               : photosRequired
                 ? ' · Full Measurements + Photos'
                 : ' · Waist Check-In'}
-            {' · '}Nothing will be saved
+            {' · '}Autosave is off · Nothing will be saved
           </p>
         )}
 
@@ -1012,6 +1147,7 @@ export function WeeklyCheckInPage({
       </main>
 
       {warningDialog}
+      {submitDialog}
     </>
   )
 }

@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   createStartCheckInDraft: vi.fn(),
   loadBodyFatProfile: vi.fn(),
   savePlanMeasurementPreferences: vi.fn(),
+  saveStartCheckInDraftState: vi.fn(),
   saveStartCheckInMeasurements: vi.fn(),
   loadStartCheckInPhotos: vi.fn(),
   uploadStartCheckInPhoto: vi.fn(),
@@ -41,6 +42,8 @@ vi.mock(
       mocks.loadBodyFatProfile,
     savePlanMeasurementPreferences:
       mocks.savePlanMeasurementPreferences,
+    saveStartCheckInDraftState:
+      mocks.saveStartCheckInDraftState,
     saveStartCheckInMeasurements:
       mocks.saveStartCheckInMeasurements,
   }),
@@ -178,6 +181,13 @@ describe('useStartCheckIn availability and loading', () => {
     )
     mocks.savePlanMeasurementPreferences.mockResolvedValue(
       undefined,
+    )
+    mocks.saveStartCheckInDraftState.mockImplementation(
+      async (_id, values) => ({
+        ...draftCheckIn,
+        draft_data: values.form,
+        resume_step: values.resumeStep,
+      }),
     )
     mocks.saveStartCheckInMeasurements.mockImplementation(
       async (_id, values) => ({
@@ -348,6 +358,13 @@ describe('useStartCheckIn field behavior', () => {
     mocks.savePlanMeasurementPreferences.mockResolvedValue(
       undefined,
     )
+    mocks.saveStartCheckInDraftState.mockImplementation(
+      async (_id, values) => ({
+        ...draftCheckIn,
+        draft_data: values.form,
+        resume_step: values.resumeStep,
+      }),
+    )
     mocks.saveStartCheckInMeasurements.mockImplementation(
       async (_id, values) => ({
         ...draftCheckIn,
@@ -487,6 +504,99 @@ describe('useStartCheckIn field behavior', () => {
   })
 })
 
+describe('useStartCheckIn autosave draft', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getDateKeyForTimeZone.mockReturnValue(
+      '2026-08-15',
+    )
+    mocks.createStartCheckInDraft.mockResolvedValue({
+      ...draftCheckIn,
+      draft_data: {
+        starting_weight_status:
+          'not_recorded',
+        measurement_side: 'right',
+      },
+      resume_step: 'waist',
+    })
+    mocks.loadBodyFatProfile.mockResolvedValue({
+      ...baseProfile,
+    })
+    mocks.loadStartCheckInPhotos.mockResolvedValue(
+      [],
+    )
+    mocks.saveStartCheckInDraftState.mockImplementation(
+      async (_id, values) => ({
+        ...draftCheckIn,
+        draft_data: values.form,
+        resume_step: values.resumeStep,
+      }),
+    )
+    mocks.calculateJuntosBodyFatEstimate.mockReturnValue(
+      null,
+    )
+  })
+
+  test('restores exact draft-only answers and resume step', async () => {
+    const { result } = renderHook(() =>
+      useStartCheckIn(basePlan),
+    )
+
+    await waitFor(() => {
+      expect(result.current.resumeStep).toBe(
+        'waist',
+      )
+    })
+
+    expect(
+      result.current.form
+        .starting_weight_status,
+    ).toBe('not_recorded')
+  })
+
+  test('autosaves exact Start form JSON without completing the baseline', async () => {
+    const { result } = renderHook(() =>
+      useStartCheckIn(basePlan),
+    )
+
+    await waitFor(() => {
+      expect(
+        result.current.existingCheckIn?.id,
+      ).toBe('start-1')
+    })
+
+    act(() => {
+      result.current.setField(
+        'waist_inches',
+        '32',
+      )
+    })
+
+    let saved
+    await act(async () => {
+      saved = await result.current.saveDraft(
+        'hips',
+      )
+    })
+
+    expect(saved).toBe(true)
+    expect(
+      mocks.saveStartCheckInDraftState,
+    ).toHaveBeenCalledWith(
+      'start-1',
+      expect.objectContaining({
+        resumeStep: 'hips',
+        form: expect.objectContaining({
+          waist_inches: '32',
+        }),
+      }),
+    )
+    expect(
+      mocks.completeStartCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+})
+
 describe('useStartCheckIn save behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -504,6 +614,13 @@ describe('useStartCheckIn save behavior', () => {
     )
     mocks.savePlanMeasurementPreferences.mockResolvedValue(
       undefined,
+    )
+    mocks.saveStartCheckInDraftState.mockImplementation(
+      async (_id, values) => ({
+        ...draftCheckIn,
+        draft_data: values.form,
+        resume_step: values.resumeStep,
+      }),
     )
     mocks.saveStartCheckInMeasurements.mockImplementation(
       async (_id, values) => ({

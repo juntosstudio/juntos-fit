@@ -4,7 +4,12 @@ import {
   useState,
 } from 'react'
 import {
+  deleteDailyCheckInDraft,
+  loadDailyCheckInDraft,
+  loadDailyCheckInForDate,
   loadTodayDailyCheckIn,
+  saveDailyCheckInDraft,
+  saveDailyCheckInForDate,
   saveTodayDailyCheckIn,
 } from '../services/dailyCheckInService'
 import {
@@ -145,6 +150,7 @@ export function useDailyCheckIn(
   plan,
   onSaved,
   trackingSettings,
+  requestedCheckInDate = null,
 ) {
   const {
     track_water: trackWater,
@@ -163,6 +169,12 @@ export function useDailyCheckIn(
     useState({
       ...EMPTY_FORM,
     })
+  const [draft, setDraft] =
+    useState(null)
+  const [resumeStep, setResumeStep] =
+    useState(null)
+  const [saveMessage, setSaveMessage] =
+    useState('')
   const [loading, setLoading] =
     useState(false)
   const [saving, setSaving] =
@@ -175,6 +187,8 @@ export function useDailyCheckIn(
   ] = useState('')
 
   const today = getTodayDateKey()
+  const checkInDate =
+    requestedCheckInDate ?? today
   const firstCheckInDate =
     plan?.start_date
       ? addDays(plan.start_date, 1)
@@ -184,15 +198,20 @@ export function useDailyCheckIn(
     Boolean(firstCheckInDate) &&
     today >= firstCheckInDate
 
+  const checkInDateIsAvailable =
+    Boolean(firstCheckInDate) &&
+    checkInDate >= firstCheckInDate &&
+    checkInDate <= today
+
   const canEdit =
     Boolean(plan?.id) &&
-    planHasStarted
+    checkInDateIsAvailable
 
   const loadCheckIn =
     useCallback(async () => {
       if (
         !plan?.id ||
-        !planHasStarted
+        !checkInDateIsAvailable
       ) {
         const emptyForm = {
           ...EMPTY_FORM,
@@ -201,6 +220,9 @@ export function useDailyCheckIn(
         setForm(emptyForm)
         setSavedForm(emptyForm)
         setExistingCheckIn(null)
+        setDraft(null)
+        setResumeStep(null)
+        setSaveMessage('')
         setLoading(false)
         return
       }
@@ -210,14 +232,39 @@ export function useDailyCheckIn(
 
       try {
         const checkin =
-          await loadTodayDailyCheckIn(
-            plan.id,
-          )
+          checkInDate === today
+            ? await loadTodayDailyCheckIn(
+                plan.id,
+              )
+            : await loadDailyCheckInForDate(
+                plan.id,
+                checkInDate,
+              )
+
+        const loadedDraft =
+          !checkin &&
+          checkInDate === today
+            ? await loadDailyCheckInDraft(
+                plan.id,
+                checkInDate,
+              )
+            : null
 
         const loadedForm =
-          mapCheckInToForm(checkin)
+          checkin
+            ? mapCheckInToForm(checkin)
+            : {
+                ...EMPTY_FORM,
+                ...(loadedDraft
+                  ?.draft_data ?? {}),
+              }
 
         setExistingCheckIn(checkin)
+        setDraft(loadedDraft)
+        setResumeStep(
+          loadedDraft?.resume_step ?? null,
+        )
+        setSaveMessage('')
         setForm(loadedForm)
         setSavedForm(loadedForm)
       } catch (loadError) {
@@ -237,7 +284,9 @@ export function useDailyCheckIn(
       }
     }, [
       plan?.id,
-      planHasStarted,
+      checkInDate,
+      checkInDateIsAvailable,
+      today,
     ])
 
   useEffect(() => {
@@ -255,6 +304,69 @@ export function useDailyCheckIn(
 
     setError('')
     setSuccessMessage('')
+    setSaveMessage('')
+  }
+
+  async function saveDraft(
+    resumeAt,
+    formToSave = form,
+  ) {
+    if (
+      !plan?.id ||
+      !checkInDateIsAvailable ||
+      checkInDate !== today ||
+      existingCheckIn
+    ) {
+      return false
+    }
+
+    setSaving(true)
+    setError('')
+    setSuccessMessage('')
+    setSaveMessage('')
+
+    try {
+      const savedDraft =
+        await saveDailyCheckInDraft(
+          plan.id,
+          checkInDate,
+          {
+            form: formToSave,
+            resumeStep: resumeAt,
+          },
+        )
+
+      setDraft(savedDraft)
+      setResumeStep(
+        savedDraft?.resume_step ??
+        resumeAt ??
+        null,
+      )
+      setSavedForm({
+        ...EMPTY_FORM,
+        ...(savedDraft
+          ?.draft_data ?? formToSave),
+      })
+      setSaveMessage('Saved')
+
+      return true
+    } catch (saveError) {
+      logDevelopmentError(
+        'useDailyCheckIn.saveDraft',
+        saveError,
+      )
+
+      setError(
+        getErrorMessage(
+          saveError,
+          'Your Daily Check-In progress could not be saved.',
+        ),
+      )
+
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   function validateCheckIn() {
@@ -264,7 +376,16 @@ export function useDailyCheckIn(
       )
     }
 
-    if (!planHasStarted) {
+    if (!checkInDateIsAvailable) {
+      if (
+        checkInDate &&
+        checkInDate > today
+      ) {
+        return (
+          'A future Daily Check-In cannot be changed.'
+        )
+      }
+
       return (
         'Daily check-ins begin the morning after your ' +
         `program starts. Your first check-in is ${
@@ -321,11 +442,10 @@ export function useDailyCheckIn(
     setSuccessMessage('')
 
     try {
-      const savedCheckIn =
-        await saveTodayDailyCheckIn({
+      const dailyPayload = {
           coaching_plan_id:
             plan.id,
-          checkin_date: today,
+          checkin_date: checkInDate,
           morning_weight:
             form.weight_status ===
             'recorded'
@@ -405,7 +525,17 @@ export function useDailyCheckIn(
               form.coach_notes,
             ),
           questions_for_coach: null,
-        })
+        }
+
+      const savedCheckIn =
+        checkInDate === today
+          ? await saveTodayDailyCheckIn(
+              dailyPayload,
+            )
+          : await saveDailyCheckInForDate(
+              checkInDate,
+              dailyPayload,
+            )
 
       const updatedForm =
         mapCheckInToForm(savedCheckIn)
@@ -413,10 +543,30 @@ export function useDailyCheckIn(
       setExistingCheckIn(
         savedCheckIn,
       )
+      setDraft(null)
+      setResumeStep(null)
+      setSaveMessage('')
       setForm(updatedForm)
       setSavedForm(updatedForm)
+
+      if (checkInDate === today) {
+        try {
+          await deleteDailyCheckInDraft(
+            plan.id,
+            checkInDate,
+          )
+        } catch (draftDeleteError) {
+          logDevelopmentError(
+            'useDailyCheckIn.deleteDraft',
+            draftDeleteError,
+          )
+        }
+      }
+
       setSuccessMessage(
-        'Today’s check-in was saved.',
+        checkInDate === today
+          ? 'Today’s check-in was saved.'
+          : 'Your Daily Check-In changes were saved.',
       )
 
       await onSaved?.()
@@ -447,9 +597,13 @@ export function useDailyCheckIn(
 
   return {
     today,
+    checkInDate,
     firstCheckInDate,
     form,
     existingCheckIn,
+    hasDraft: Boolean(draft),
+    resumeStep,
+    saveMessage,
     isDirty,
     loading,
     saving,
@@ -458,6 +612,7 @@ export function useDailyCheckIn(
     canEdit,
     planHasStarted,
     setField,
+    saveDraft,
     saveCheckIn,
   }
 }

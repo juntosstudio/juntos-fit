@@ -6,6 +6,8 @@ const START_CHECKIN_FIELDS = `
   coaching_plan_id,
   checkin_date,
   status,
+  draft_data,
+  resume_step,
   starting_weight_lbs,
   body_fat_percent,
   body_fat_status,
@@ -179,6 +181,39 @@ export async function savePlanMeasurementPreferences(
   return data
 }
 
+// Saves exact wizard form/resume state without requiring
+// the draft answers to be valid structured measurements yet.
+export async function saveStartCheckInDraftState(
+  startCheckInId,
+  {
+    form,
+    resumeStep,
+  },
+) {
+  if (!startCheckInId) {
+    throw new Error(
+      'A Start Check-In is required.',
+    )
+  }
+
+  const { data, error } = await supabase
+    .from('start_checkins')
+    .update({
+      draft_data: form ?? {},
+      resume_step: resumeStep ?? null,
+    })
+    .eq('id', startCheckInId)
+    .eq('status', 'draft')
+    .select(START_CHECKIN_FIELDS)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
 // Saves the baseline fields without changing completion status.
 export async function saveStartCheckInMeasurements(
   startCheckInId,
@@ -234,6 +269,8 @@ export async function completeStartCheckIn(
     .from('start_checkins')
     .update({
       status: 'completed',
+      draft_data: {},
+      resume_step: null,
       completed_at: new Date().toISOString(),
     })
     .eq('id', startCheckInId)

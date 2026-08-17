@@ -59,6 +59,7 @@ describe('checkInSettingsService', () => {
     ).resolves.toEqual({
       track_water: true,
       track_alcohol: true,
+      track_menstrual_cycle_context: false,
       body_fat_source: 'none',
     })
 
@@ -71,6 +72,7 @@ describe('checkInSettingsService', () => {
         user_id: 'user-1',
         track_water: false,
         track_alcohol: null,
+        track_menstrual_cycle_context: true,
         body_fat_source: 'bad-value',
         created_at: 'created',
         updated_at: 'updated',
@@ -93,6 +95,7 @@ describe('checkInSettingsService', () => {
       user_id: 'user-1',
       track_water: false,
       track_alcohol: true,
+      track_menstrual_cycle_context: true,
       body_fat_source: 'none',
     })
   })
@@ -124,6 +127,7 @@ describe('checkInSettingsService', () => {
         user_id: 'user-1',
         track_water: false,
         track_alcohol: true,
+        track_menstrual_cycle_context: true,
         body_fat_source: 'none',
       },
     })
@@ -135,6 +139,7 @@ describe('checkInSettingsService', () => {
         {
           track_water: false,
           track_alcohol: null,
+          track_menstrual_cycle_context: true,
           body_fat_source: 'invalid',
         },
       )
@@ -144,6 +149,7 @@ describe('checkInSettingsService', () => {
         user_id: 'user-1',
         track_water: false,
         track_alcohol: true,
+        track_menstrual_cycle_context: true,
         body_fat_source: 'none',
         updated_at: expect.any(String),
       },
@@ -154,6 +160,7 @@ describe('checkInSettingsService', () => {
     expect(result).toMatchObject({
       track_water: false,
       track_alcohol: true,
+      track_menstrual_cycle_context: true,
       body_fat_source: 'none',
     })
   })

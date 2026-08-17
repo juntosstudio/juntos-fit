@@ -8,9 +8,13 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:rules": "vitest run src/utils/checkInCatchUpRules.test.js"
+    "test": "vitest --exclude \"e2e/**\"",
+    "test:run": "vitest run --exclude \"e2e/**\"",
+    "test:rules": "vitest run src/utils/checkInCatchUpRules.test.js",
+    "test:e2e": "playwright test",
+    "db:push": "npx supabase db push",
+    "deploy:coach": "supabase functions deploy generate-weekly-coach-review",
+    "loc": "powershell -NoProfile -Command \"$ext='.js','.jsx','.ts','.tsx','.css','.sql'; $files=Get-ChildItem -Recurse -File | Where-Object { $ext -contains $_.Extension -and $_.FullName -notmatch '\\\\node_modules\\\\|\\\\dist\\\\|\\\\coverage\\\\' }; $lines=($files | Get-Content | Measure-Object -Line).Lines; Write-Host ($files.Count.ToString() + ' files / ' + $lines.ToString() + ' LOC')\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",

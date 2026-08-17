@@ -14,7 +14,12 @@ import {
 } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  deleteDailyCheckInDraft: vi.fn(),
+  loadDailyCheckInDraft: vi.fn(),
+  loadDailyCheckInForDate: vi.fn(),
   loadTodayDailyCheckIn: vi.fn(),
+  saveDailyCheckInDraft: vi.fn(),
+  saveDailyCheckInForDate: vi.fn(),
   saveTodayDailyCheckIn: vi.fn(),
   getTodayDateKey: vi.fn(
     () => '2026-08-15',
@@ -24,8 +29,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock(
   '../services/dailyCheckInService',
   () => ({
+    deleteDailyCheckInDraft:
+      mocks.deleteDailyCheckInDraft,
+    loadDailyCheckInDraft:
+      mocks.loadDailyCheckInDraft,
+    loadDailyCheckInForDate:
+      mocks.loadDailyCheckInForDate,
     loadTodayDailyCheckIn:
       mocks.loadTodayDailyCheckIn,
+    saveDailyCheckInDraft:
+      mocks.saveDailyCheckInDraft,
+    saveDailyCheckInForDate:
+      mocks.saveDailyCheckInForDate,
     saveTodayDailyCheckIn:
       mocks.saveTodayDailyCheckIn,
   }),
@@ -118,8 +133,23 @@ describe('useDailyCheckIn availability and loading', () => {
     mocks.getTodayDateKey.mockReturnValue(
       '2026-08-15',
     )
+    mocks.loadDailyCheckInForDate.mockResolvedValue(
+      null,
+    )
     mocks.loadTodayDailyCheckIn.mockResolvedValue(
       null,
+    )
+    mocks.loadDailyCheckInDraft.mockResolvedValue(
+      null,
+    )
+    mocks.deleteDailyCheckInDraft.mockResolvedValue(
+      undefined,
+    )
+    mocks.saveDailyCheckInForDate.mockImplementation(
+      async (_date, values) => ({
+        id: 'daily-saved',
+        ...values,
+      }),
     )
     mocks.saveTodayDailyCheckIn.mockImplementation(
       async (values) => ({
@@ -277,7 +307,7 @@ describe('useDailyCheckIn availability and loading', () => {
   })
 })
 
-describe('useDailyCheckIn editing and validation', () => {
+describe('useDailyCheckIn autosave draft', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getTodayDateKey.mockReturnValue(
@@ -285,6 +315,245 @@ describe('useDailyCheckIn editing and validation', () => {
     )
     mocks.loadTodayDailyCheckIn.mockResolvedValue(
       null,
+    )
+    mocks.loadDailyCheckInDraft.mockResolvedValue({
+      id: 'draft-1',
+      coaching_plan_id: 'plan-1',
+      checkin_date: '2026-08-15',
+      resume_step: 'cardio',
+      draft_data: {
+        weight_status: 'recorded',
+        morning_weight: '150',
+        cardio_minutes: '0',
+      },
+    })
+    mocks.saveDailyCheckInDraft.mockImplementation(
+      async (_planId, _date, values) => ({
+        id: 'draft-1',
+        resume_step: values.resumeStep,
+        draft_data: values.form,
+      }),
+    )
+    mocks.deleteDailyCheckInDraft.mockResolvedValue(
+      undefined,
+    )
+    mocks.saveTodayDailyCheckIn.mockImplementation(
+      async (values) => ({
+        id: 'daily-saved',
+        ...values,
+      }),
+    )
+  })
+
+  test('loads saved draft form and resume step when no completed Daily exists', async () => {
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        activePlan,
+        undefined,
+        trackingOff,
+      ),
+    )
+
+    await waitFor(() => {
+      expect(result.current.hasDraft).toBe(
+        true,
+      )
+    })
+
+    expect(result.current.resumeStep).toBe(
+      'cardio',
+    )
+    expect(
+      result.current.form.morning_weight,
+    ).toBe('150')
+  })
+
+  test('autosaves exact form JSON without creating a completed Daily row', async () => {
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        activePlan,
+        undefined,
+        trackingOff,
+      ),
+    )
+
+    await waitFor(() => {
+      expect(result.current.hasDraft).toBe(
+        true,
+      )
+    })
+
+    act(() => {
+      result.current.setField(
+        'coach_notes',
+        'Still working on this',
+      )
+    })
+
+    let saved
+    await act(async () => {
+      saved = await result.current.saveDraft(
+        'notes',
+      )
+    })
+
+    expect(saved).toBe(true)
+    expect(
+      mocks.saveDailyCheckInDraft,
+    ).toHaveBeenCalledWith(
+      'plan-1',
+      '2026-08-15',
+      expect.objectContaining({
+        resumeStep: 'notes',
+        form: expect.objectContaining({
+          coach_notes:
+            'Still working on this',
+        }),
+      }),
+    )
+    expect(
+      mocks.saveTodayDailyCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+})
+
+describe('useDailyCheckIn historical editing', () => {
+  const historicalPlan = {
+    id: 'plan-1',
+    start_date: '2026-08-12',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getTodayDateKey.mockReturnValue(
+      '2026-08-15',
+    )
+    mocks.loadDailyCheckInForDate.mockResolvedValue({
+      ...validLoadedCheckIn,
+      id: 'daily-historical',
+      checkin_date: '2026-08-13',
+      morning_weight: 149.5,
+    })
+    mocks.loadTodayDailyCheckIn.mockResolvedValue(
+      null,
+    )
+    mocks.loadDailyCheckInDraft.mockResolvedValue(
+      null,
+    )
+    mocks.deleteDailyCheckInDraft.mockResolvedValue(
+      undefined,
+    )
+    mocks.saveDailyCheckInForDate.mockImplementation(
+      async (_date, values) => ({
+        id: 'daily-historical',
+        ...values,
+      }),
+    )
+  })
+
+  test('loads the requested historical Daily instead of today', async () => {
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        historicalPlan,
+        undefined,
+        trackingOff,
+        '2026-08-13',
+      ),
+    )
+
+    await waitFor(() => {
+      expect(
+        mocks.loadDailyCheckInForDate,
+      ).toHaveBeenCalledWith(
+        'plan-1',
+        '2026-08-13',
+      )
+    })
+
+    expect(
+      mocks.loadTodayDailyCheckIn,
+    ).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(
+        result.current.existingCheckIn?.id,
+      ).toBe('daily-historical')
+    })
+
+    expect(
+      result.current.checkInDate,
+    ).toBe('2026-08-13')
+  })
+
+  test('saves changes back to the same historical date', async () => {
+    const { result } = renderHook(() =>
+      useDailyCheckIn(
+        historicalPlan,
+        undefined,
+        trackingOff,
+        '2026-08-13',
+      ),
+    )
+
+    await waitFor(() => {
+      expect(
+        result.current.existingCheckIn?.id,
+      ).toBe('daily-historical')
+    })
+
+    act(() => {
+      result.current.setField(
+        'hunger_score',
+        '4',
+      )
+    })
+
+    let saved
+    await act(async () => {
+      saved =
+        await result.current.saveCheckIn()
+    })
+
+    expect(saved).toBe(true)
+    expect(
+      mocks.saveDailyCheckInForDate,
+    ).toHaveBeenCalledWith(
+      '2026-08-13',
+      expect.objectContaining({
+        coaching_plan_id: 'plan-1',
+        checkin_date: '2026-08-13',
+        hunger_score: 4,
+      }),
+    )
+    expect(
+      mocks.saveTodayDailyCheckIn,
+    ).not.toHaveBeenCalled()
+  })
+})
+
+describe('useDailyCheckIn editing and validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getTodayDateKey.mockReturnValue(
+      '2026-08-15',
+    )
+    mocks.loadDailyCheckInForDate.mockResolvedValue(
+      null,
+    )
+    mocks.loadTodayDailyCheckIn.mockResolvedValue(
+      null,
+    )
+    mocks.loadDailyCheckInDraft.mockResolvedValue(
+      null,
+    )
+    mocks.deleteDailyCheckInDraft.mockResolvedValue(
+      undefined,
+    )
+    mocks.saveDailyCheckInForDate.mockImplementation(
+      async (_date, values) => ({
+        id: 'daily-saved',
+        ...values,
+      }),
     )
     mocks.saveTodayDailyCheckIn.mockImplementation(
       async (values) => ({
@@ -389,8 +658,23 @@ describe('useDailyCheckIn save payload', () => {
     mocks.getTodayDateKey.mockReturnValue(
       '2026-08-15',
     )
+    mocks.loadDailyCheckInForDate.mockResolvedValue(
+      null,
+    )
     mocks.loadTodayDailyCheckIn.mockResolvedValue(
       null,
+    )
+    mocks.loadDailyCheckInDraft.mockResolvedValue(
+      null,
+    )
+    mocks.deleteDailyCheckInDraft.mockResolvedValue(
+      undefined,
+    )
+    mocks.saveDailyCheckInForDate.mockImplementation(
+      async (_date, values) => ({
+        id: 'daily-saved',
+        ...values,
+      }),
     )
     mocks.saveTodayDailyCheckIn.mockImplementation(
       async (values) => ({

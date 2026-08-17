@@ -424,6 +424,7 @@ function DayAction({
   onCompleteDay,
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
+  onEditDay,
 }) {
   if (day.status === 'missing') {
     return (
@@ -521,6 +522,7 @@ function DayRow({
   onCompleteDay,
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
+  onEditDay,
 }) {
   const {
     longDay,
@@ -529,13 +531,13 @@ function DayRow({
   const hasDailyAnswers =
     Boolean(day.dailyRow)
 
+  // A completed Daily remains editable only while its
+  // reporting week is still open. The Weekly day itself
+  // becomes weekly-completed after finalization and is
+  // intentionally not editable.
   const editable =
     hasDailyAnswers &&
-    (
-      day.status === 'completed' ||
-      day.status ===
-        'weekly-completed'
-    )
+    day.status === 'completed'
 
   return (
     <section
@@ -571,8 +573,10 @@ function DayRow({
               type="button"
               className="current-week-edit"
               aria-label={`Edit ${longDay} Daily Check-In`}
-              title="Daily Check-In editing will be enabled next."
-              disabled
+              title="Edit Daily Check-In"
+              onClick={() =>
+                onEditDay?.(day.date)
+              }
             >
               <PencilIcon />
             </button>
@@ -619,6 +623,7 @@ export function CurrentWeekPage({
   onCompleteDay,
   onOpenDailyCheckIn,
   onOpenWeeklyCheckIn,
+  onEditDay,
   onOpenToday,
   onOpenHistory,
   onOpenPlan,
@@ -971,6 +976,7 @@ export function CurrentWeekPage({
               onOpenWeeklyCheckIn={
                 onOpenWeeklyCheckIn
               }
+              onEditDay={onEditDay}
             />
           ))}
         </div>

@@ -32,6 +32,7 @@ import {
   loadBodyFatProfile,
   loadStartCheckIn,
   savePlanMeasurementPreferences,
+  saveStartCheckInDraftState,
   saveStartCheckInMeasurements,
 } from './startCheckInService'
 
@@ -270,6 +271,45 @@ describe('startCheckInService preferences and measurements', () => {
     )
   })
 
+  test('saves Start wizard draft JSON and resume step only while draft', async () => {
+    const query = makeQuery({
+      singleData: {
+        id: 'start-1',
+        status: 'draft',
+      },
+    })
+    mocks.from.mockReturnValue(query)
+
+    await saveStartCheckInDraftState(
+      'start-1',
+      {
+        form: {
+          starting_weight_status:
+            'not_recorded',
+        },
+        resumeStep: 'waist',
+      },
+    )
+
+    expect(query.update).toHaveBeenCalledWith({
+      draft_data: {
+        starting_weight_status:
+          'not_recorded',
+      },
+      resume_step: 'waist',
+    })
+    expect(query.eq).toHaveBeenNthCalledWith(
+      1,
+      'id',
+      'start-1',
+    )
+    expect(query.eq).toHaveBeenNthCalledWith(
+      2,
+      'status',
+      'draft',
+    )
+  })
+
   test('requires a Start Check-In id to save measurements', async () => {
     await expect(
       saveStartCheckInMeasurements(
@@ -354,6 +394,8 @@ describe('startCheckInService preferences and measurements', () => {
 
     expect(query.update).toHaveBeenCalledWith({
       status: 'completed',
+      draft_data: {},
+      resume_step: null,
       completed_at: expect.any(String),
     })
     expect(query.eq).toHaveBeenCalledWith(

@@ -266,6 +266,26 @@
     var(--color-surface);
   color:
     var(--color-primary);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.current-week-edit:hover:not(:disabled) {
+  border-color:
+    var(--color-interaction);
+  background:
+    var(--color-accent-soft);
+  box-shadow:
+    0 0 8px
+      rgb(var(--color-interaction-rgb) / 20%);
+}
+
+.current-week-edit:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .current-week-edit svg {
@@ -273,10 +293,6 @@
   height: 1.05rem;
 }
 
-.current-week-edit:disabled {
-  opacity: 1;
-  cursor: default;
-}
 
 /* Horizontal answer strip */
 

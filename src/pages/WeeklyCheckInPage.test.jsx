@@ -60,6 +60,8 @@ vi.mock(
   () => ({
     WEEKLY_CHECKIN_STEP_IDS: {
       BODY_FAT: 'body_fat',
+      MENSTRUAL_CONTEXT:
+        'weekly:menstrual-context',
     },
     getWeeklyCheckInSteps:
       mocks.getWeeklyCheckInSteps,
@@ -188,6 +190,7 @@ function renderPage(props = {}) {
         body_fat_source: 'none',
         track_water: true,
         track_alcohol: true,
+        track_menstrual_cycle_context: false,
       }}
       onSaved={vi.fn()}
       onBack={vi.fn()}
@@ -330,7 +333,76 @@ describe('WeeklyCheckInPage', () => {
     )
   })
 
-  test('persistent Weekly mode shows autosave badge and Save & Exit', () => {
+  test('female Weekly hides menstrual context when tracking is off', () => {
+    mocks.getWeeklyCheckInSteps.mockReturnValue([
+      'weight',
+      'weekly:menstrual-context',
+    ])
+
+    renderPage()
+
+    expect(
+      screen.getByText(
+        'Question 1 of 1',
+      ),
+    ).toBeTruthy()
+  })
+
+  test('started Weekly keeps its snapshotted menstrual tracking choice', () => {
+    mocks.getWeeklyCheckInSteps.mockReturnValue([
+      'weight',
+      'weekly:menstrual-context',
+    ])
+
+    mocks.hookState = {
+      ...mocks.hookState,
+      form: {
+        ...mocks.hookState.form,
+        _track_menstrual_cycle_context: true,
+      },
+    }
+
+    renderPage({
+      settings: {
+        user_id: 'user-1',
+        body_fat_source: 'none',
+        track_water: true,
+        track_alcohol: true,
+        track_menstrual_cycle_context: false,
+      },
+    })
+
+    expect(
+      screen.getByText(
+        'Question 1 of 2',
+      ),
+    ).toBeTruthy()
+  })
+
+  test('female Weekly keeps menstrual context when tracking is on', () => {
+    mocks.getWeeklyCheckInSteps.mockReturnValue([
+      'weight',
+      'weekly:menstrual-context',
+    ])
+
+    renderPage({
+      settings: {
+        user_id: 'user-1',
+        body_fat_source: 'none',
+        track_water: true,
+        track_alcohol: true,
+        track_menstrual_cycle_context: true,
+      },
+    })
+
+    expect(
+      screen.getByText(
+        'Question 1 of 2',
+      ),
+    ).toBeTruthy()
+  })
+
+  test('persistent Weekly mode shows autosave badge and Exit Check-In', () => {
     mocks.hookState = {
       ...mocks.hookState,
       saveMessage: 'Saved',
@@ -349,7 +421,7 @@ describe('WeeklyCheckInPage', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'Save & Exit',
+        name: 'Exit Check-In',
       }),
     ).toBeTruthy()
   })
@@ -365,6 +437,12 @@ describe('WeeklyCheckInPage', () => {
     expect(
       screen.getByText(
         /DEV Preview/,
+      ),
+    ).toBeTruthy()
+
+    expect(
+      screen.getByText(
+        /Autosave is off/,
       ),
     ).toBeTruthy()
 
@@ -434,7 +512,7 @@ describe('WeeklyCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('Save & Exit saves current resume step then calls onSaved and onBack', async () => {
+  test('Exit Check-In saves current resume step then calls onSaved and onBack', async () => {
     const onSaved = vi.fn()
     const onBack = vi.fn()
 
@@ -446,7 +524,7 @@ describe('WeeklyCheckInPage', () => {
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', {
-          name: 'Save & Exit',
+          name: 'Exit Check-In',
         }),
       )
     })
@@ -574,7 +652,7 @@ describe('WeeklyCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('submit calls submitCheckIn and returns to dashboard on success', async () => {
+  test('final submit requires irreversible confirmation before submitting', async () => {
     const onBack = vi.fn()
 
     renderPage({ onBack })
@@ -594,11 +672,31 @@ describe('WeeklyCheckInPage', () => {
       })
     }
 
+    fireEvent.click(
+      screen.getByRole('button', {
+        name:
+          'Submit Weekly Check-In',
+      }),
+    )
+
+    expect(
+      mocks.submitCheckIn,
+    ).not.toHaveBeenCalled()
+
+    expect(
+      screen.getByRole('dialog'),
+    ).toBeTruthy()
+
+    expect(
+      screen.getByText(
+        /You can’t change this Weekly Check-In/,
+      ),
+    ).toBeTruthy()
+
     await act(async () => {
       fireEvent.click(
         screen.getByRole('button', {
-          name:
-            'Submit Weekly Check-In',
+          name: 'Submit & Finalize',
         }),
       )
     })
@@ -607,6 +705,52 @@ describe('WeeklyCheckInPage', () => {
       mocks.submitCheckIn,
     ).toHaveBeenCalledOnce()
     expect(onBack).toHaveBeenCalledOnce()
+  })
+
+  test('Go Back & Review cancels final submission and keeps the Weekly open', async () => {
+    renderPage()
+
+    for (let i = 0; i < 4; i += 1) {
+      const name =
+        i === 3
+          ? 'Review Answers'
+          : 'Next'
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('button', {
+            name,
+          }),
+        )
+      })
+    }
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name:
+          'Submit Weekly Check-In',
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Go Back & Review',
+      }),
+    )
+
+    expect(
+      mocks.submitCheckIn,
+    ).not.toHaveBeenCalled()
+
+    expect(
+      screen.queryByRole('dialog'),
+    ).toBeNull()
+
+    expect(
+      screen.getByTestId(
+        'weekly-review',
+      ),
+    ).toBeTruthy()
   })
 
   test('submission validation redirects to invalid step and does not submit', async () => {

@@ -817,7 +817,7 @@ fieldset textarea {
 .plan-progress-header p {
   margin: 0.35rem 0 0;
   color: var(--color-text-muted);
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   font-weight: 700;
   text-align: center;
 }
@@ -905,8 +905,8 @@ button.plan-progress-row:hover:not(:disabled) {
 .plan-progress-status {
   flex: 0 0 auto;
   border-radius: 999px;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -945,7 +945,7 @@ button.plan-progress-row:hover:not(:disabled) {
   flex-wrap: wrap;
   gap: 0.25rem 0.85rem;
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.86rem;
 }
 
 .plan-progress-row-details strong {
@@ -955,7 +955,7 @@ button.plan-progress-row:hover:not(:disabled) {
 
 .plan-progress-subtext {
   color: var(--color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.86rem;
 }
 
 .plan-progress-chevron {
@@ -1490,4 +1490,18 @@ button.plan-progress-row:hover:not(:disabled) {
 .weekly-completion-banner span {
   color: var(--color-text-muted);
   line-height: 1.45;
+}
+
+/* Daily edit quick-save action:
+   keep it visually separate from Back / Next navigation. */
+.quick-save-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.15rem;
+}
+
+.quick-save-action button {
+  width: min(100%, 13rem);
+  min-height: 3rem;
 }

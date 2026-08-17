@@ -20,6 +20,7 @@ import {
 const mocks = vi.hoisted(() => ({
   hookState: {},
   setField: vi.fn(),
+  saveDraft: vi.fn(),
   saveCheckIn: vi.fn(),
   markForwardNavigation: vi.fn(),
   markBackNavigation: vi.fn(),
@@ -122,6 +123,7 @@ vi.mock(
       progress,
       stepLabel,
       onBack,
+      backLabel = 'Back to Dashboard',
       actions,
       footer,
       children,
@@ -131,7 +133,7 @@ vi.mock(
           type="button"
           onClick={onBack}
         >
-          Back to Dashboard
+          {backLabel}
         </button>
         <h1>{title}</h1>
         {subtitle && <p>{subtitle}</p>}
@@ -257,12 +259,23 @@ function renderPage(props = {}) {
   )
 }
 
+async function clickButton(name) {
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole('button', {
+        name,
+      }),
+    )
+  })
+}
+
 describe('DailyCheckInPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
     mocks.hookState = {
       today: '2026-08-15',
+      checkInDate: '2026-08-15',
       firstCheckInDate: '2026-08-15',
       form: {
         weight_status: 'recorded',
@@ -271,6 +284,9 @@ describe('DailyCheckInPage', () => {
         meal_plan_score: '5',
       },
       existingCheckIn: null,
+      hasDraft: false,
+      resumeStep: null,
+      saveMessage: '',
       isDirty: false,
       loading: false,
       saving: false,
@@ -279,6 +295,7 @@ describe('DailyCheckInPage', () => {
       canEdit: true,
       planHasStarted: true,
       setField: mocks.setField,
+      saveDraft: mocks.saveDraft,
       saveCheckIn: mocks.saveCheckIn,
     }
 
@@ -296,6 +313,7 @@ describe('DailyCheckInPage', () => {
     mocks.requestWarningConfirmation.mockReturnValue(
       false,
     )
+    mocks.saveDraft.mockResolvedValue(true)
     mocks.saveCheckIn.mockResolvedValue(true)
   })
 
@@ -407,14 +425,10 @@ describe('DailyCheckInPage', () => {
     )
   })
 
-  test('moves through Daily wizard and reaches review', () => {
+  test('moves through Daily wizard and reaches review', async () => {
     renderPage()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
+    await clickButton('Next')
 
     expect(
       screen.getByText(
@@ -422,11 +436,7 @@ describe('DailyCheckInPage', () => {
       ),
     ).toBeTruthy()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
+    await clickButton('Next')
 
     expect(
       screen.getByText(
@@ -434,11 +444,7 @@ describe('DailyCheckInPage', () => {
       ),
     ).toBeTruthy()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Answers',
-      }),
-    )
+    await clickButton('Review Answers')
 
     expect(
       screen.getByRole('heading', {
@@ -453,30 +459,13 @@ describe('DailyCheckInPage', () => {
     ).toBeTruthy()
   })
 
-  test('Back from review returns to the final Daily step', () => {
+  test('Back from review returns to the final Daily step', async () => {
     renderPage()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Answers',
-      }),
-    )
-
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Edit Answers',
-      }),
-    )
+    await clickButton('Next')
+    await clickButton('Next')
+    await clickButton('Review Answers')
+    await clickButton('Edit Answers')
 
     expect(
       screen.getByText(
@@ -525,29 +514,10 @@ describe('DailyCheckInPage', () => {
   test('submits a new Daily Check-In from review and shows confirmation', async () => {
     renderPage()
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Next',
-      }),
-    )
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Review Answers',
-      }),
-    )
-
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole('button', {
-          name: 'Submit Check-In',
-        }),
-      )
-    })
+    await clickButton('Next')
+    await clickButton('Next')
+    await clickButton('Review Answers')
+    await clickButton('Submit Check-In')
 
     expect(
       mocks.saveCheckIn,
@@ -688,8 +658,80 @@ describe('DailyCheckInPage', () => {
     ).toHaveBeenCalled()
   })
 
-  test('top Back to Dashboard calls onBack', () => {
+  test('historical edit displays the selected Daily Check-In date', () => {
+    mocks.hookState = {
+      ...mocks.hookState,
+      checkInDate: '2026-08-13',
+      existingCheckIn: {
+        id: 'daily-old',
+      },
+    }
+
+    renderPage({
+      checkinDate: '2026-08-13',
+      completionReturnLabel:
+        'Back to Daily Check-Ins',
+    })
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Update Daily Check-In',
+      }),
+    ).toBeTruthy()
+
+    expect(
+      screen.getByText(
+        'Formatted 2026-08-13',
+      ),
+    ).toBeTruthy()
+  })
+
+  test('historical edit uses Back to Daily Check-Ins label', () => {
+    mocks.hookState = {
+      ...mocks.hookState,
+      checkInDate: '2026-08-13',
+      existingCheckIn: {
+        id: 'daily-old',
+      },
+    }
+
+    renderPage({
+      checkinDate: '2026-08-13',
+      completionReturnLabel:
+        'Back to Daily Check-Ins',
+    })
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Back to Daily Check-Ins',
+      }),
+    ).toBeTruthy()
+  })
+
+  test('incomplete Daily uses Exit Check-In while completed edits keep the return label', async () => {
     const onBack = vi.fn()
+
+    renderPage({ onBack })
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Exit Check-In',
+        }),
+      )
+    })
+
+    expect(onBack).toHaveBeenCalledOnce()
+
+    cleanup()
+    onBack.mockClear()
+
+    mocks.hookState = {
+      ...mocks.hookState,
+      existingCheckIn: {
+        id: 'daily-1',
+      },
+    }
 
     renderPage({ onBack })
 
@@ -699,6 +741,32 @@ describe('DailyCheckInPage', () => {
       }),
     )
 
+    expect(onBack).toHaveBeenCalledOnce()
+  })
+
+  test('dirty incomplete Daily autosaves before exiting', async () => {
+    const onBack = vi.fn()
+
+    mocks.hookState = {
+      ...mocks.hookState,
+      isDirty: true,
+    }
+
+    renderPage({ onBack })
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Exit Check-In',
+        }),
+      )
+    })
+
+    expect(
+      mocks.saveDraft,
+    ).toHaveBeenCalledWith(
+      'weight',
+    )
     expect(onBack).toHaveBeenCalledOnce()
   })
 })

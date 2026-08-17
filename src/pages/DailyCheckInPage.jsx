@@ -46,14 +46,20 @@ export function DailyCheckInPage({
   target,
   cardioCompleted,
   settings,
+  checkinDate = null,
+  completionReturnLabel = 'Back to Dashboard',
   onSaved,
   onBack,
 }) {
   const {
     today,
+    checkInDate: activeCheckInDate,
     firstCheckInDate,
     form,
     existingCheckIn,
+    hasDraft,
+    resumeStep,
+    saveMessage,
     isDirty,
     loading,
     saving,
@@ -62,11 +68,13 @@ export function DailyCheckInPage({
     canEdit,
     planHasStarted,
     setField,
+    saveDraft,
     saveCheckIn,
   } = useDailyCheckIn(
     plan,
     onSaved,
     settings,
+    checkinDate,
   )
 
   const [
@@ -185,19 +193,67 @@ export function DailyCheckInPage({
     Boolean(existingCheckIn) &&
     !previewing
 
+  const autosaveEnabled =
+    !previewing &&
+    canEdit &&
+    !isEditing &&
+    !checkinDate
+
+  const shouldPersistDraft =
+    autosaveEnabled &&
+    (isDirty || hasDraft)
+
   const pageTitle = isEditing
     ? 'Update Daily Check-In'
-    : 'Daily Check-In'
+    : hasDraft
+      ? 'Continue Daily Check-In'
+      : 'Daily Check-In'
 
   const reviewTitle = isEditing
     ? 'Review Your Changes'
     : 'Review Your Answers'
 
-  function advanceFromCurrentStep() {
+  useEffect(() => {
+    if (
+      loading ||
+      isEditing ||
+      !resumeStep
+    ) {
+      return
+    }
+
+    if (resumeStep === 'review') {
+      setReviewing(true)
+      return
+    }
+
+    if (steps.includes(resumeStep)) {
+      setReviewing(false)
+      setCurrentStep(resumeStep)
+    }
+  }, [
+    isEditing,
+    loading,
+    resumeStep,
+    steps,
+  ])
+
+  async function advanceFromCurrentStep() {
     const nextStep =
       steps[safeStepIndex + 1]
+    const resumeAt =
+      nextStep ?? 'review'
 
     markForwardNavigation()
+
+    if (shouldPersistDraft) {
+      const saved =
+        await saveDraft(resumeAt)
+
+      if (!saved) {
+        return
+      }
+    }
 
     if (!nextStep) {
       setReviewing(true)
@@ -207,7 +263,7 @@ export function DailyCheckInPage({
     setCurrentStep(nextStep)
   }
 
-  function goNext() {
+  async function goNext() {
     if (
       !canContinueDailyStep(
         activeStep,
@@ -231,7 +287,7 @@ export function DailyCheckInPage({
       return
     }
 
-    advanceFromCurrentStep()
+    await advanceFromCurrentStep()
   }
 
   function editWarningValue() {
@@ -252,28 +308,71 @@ export function DailyCheckInPage({
     }
   }
 
-  function confirmWarnings() {
+  async function confirmWarnings() {
     confirmWarningValues()
-    advanceFromCurrentStep()
+    await advanceFromCurrentStep()
   }
 
-  function goBack() {
+  async function goBack() {
     markBackNavigation()
 
     if (reviewing) {
+      const previousStep =
+        steps.at(-1) ?? STEP.WEIGHT
+
+      if (shouldPersistDraft) {
+        const saved =
+          await saveDraft(previousStep)
+
+        if (!saved) {
+          return
+        }
+      }
+
       setReviewing(false)
-      setCurrentStep(
-        steps.at(-1) ?? STEP.WEIGHT,
-      )
+      setCurrentStep(previousStep)
       return
     }
 
     const previousStep =
       steps[safeStepIndex - 1]
 
-    if (previousStep) {
-      setCurrentStep(previousStep)
+    if (!previousStep) {
+      return
     }
+
+    if (shouldPersistDraft) {
+      const saved =
+        await saveDraft(previousStep)
+
+      if (!saved) {
+        return
+      }
+    }
+
+    setCurrentStep(previousStep)
+  }
+
+  async function handleExit() {
+    if (saving) {
+      return
+    }
+
+    if (shouldPersistDraft) {
+      const resumeAt =
+        reviewing
+          ? 'review'
+          : activeStep
+
+      const saved =
+        await saveDraft(resumeAt)
+
+      if (!saved) {
+        return
+      }
+    }
+
+    onBack?.()
   }
 
   // Saves immediately when editing, unless a newly
@@ -393,7 +492,7 @@ export function DailyCheckInPage({
             type="button"
             onClick={onBack}
           >
-            Back to Dashboard
+            {completionReturnLabel}
           </button>
         </section>
       </div>
@@ -404,7 +503,16 @@ export function DailyCheckInPage({
       <WizardPage
         className="daily-checkin-page"
         title="Daily Check-In"
-        onBack={onBack}
+        onBack={
+          autosaveEnabled
+            ? handleExit
+            : onBack
+        }
+        backLabel={
+          autosaveEnabled
+            ? 'Exit Check-In'
+            : completionReturnLabel
+        }
       >
         <p>
           Loading today’s check-in...
@@ -419,6 +527,7 @@ export function DailyCheckInPage({
         className="daily-checkin-page"
         title="Daily Check-In"
         onBack={onBack}
+        backLabel={completionReturnLabel}
       >
         <p role="alert">
           No active coaching plan was
@@ -434,6 +543,7 @@ export function DailyCheckInPage({
         className="daily-checkin-page"
         title="Daily Check-In"
         onBack={onBack}
+        backLabel={completionReturnLabel}
       >
         <p>
           Daily check-ins begin the
@@ -480,8 +590,29 @@ export function DailyCheckInPage({
         <WizardPage
           className="daily-checkin-page"
           title={reviewTitle}
-          onBack={onBack}
-          status={feedback}
+          onBack={
+            autosaveEnabled
+              ? handleExit
+              : onBack
+          }
+          backLabel={
+            autosaveEnabled
+              ? 'Exit Check-In'
+              : completionReturnLabel
+          }
+          status={
+            <>
+              {autosaveEnabled && (
+                <p className="wizard-question-helper" role="status">
+                  Autosave is on
+                  {saveMessage
+                    ? ` · ${saveMessage}`
+                    : ''}
+                </p>
+              )}
+              {feedback}
+            </>
+          }
           actions={
             <WizardActions
               backLabel="Edit Answers"
@@ -514,7 +645,7 @@ export function DailyCheckInPage({
           <DailyCheckInReview
             form={form}
             target={target}
-            today={today}
+            today={activeCheckInDate}
             settings={settings}
           />
         </WizardPage>
@@ -536,6 +667,15 @@ export function DailyCheckInPage({
         <p role="status">
           Preview mode — answers cannot
           be submitted.
+        </p>
+      )}
+
+      {autosaveEnabled && (
+        <p className="wizard-question-helper" role="status">
+          Autosave is on
+          {saveMessage
+            ? ` · ${saveMessage}`
+            : ''}
         </p>
       )}
 
@@ -563,14 +703,23 @@ export function DailyCheckInPage({
       <WizardPage
         className="daily-checkin-page"
         title={pageTitle}
-        subtitle={formatDate(today)}
+        subtitle={formatDate(activeCheckInDate)}
         status={pageStatus}
         progress={progress}
         progressLabel="Check-in progress"
         stepLabel={`Question ${
           safeStepIndex + 1
         } of ${steps.length}`}
-        onBack={onBack}
+        onBack={
+          autosaveEnabled
+            ? handleExit
+            : onBack
+        }
+        backLabel={
+          autosaveEnabled
+            ? 'Exit Check-In'
+            : completionReturnLabel
+        }
         actions={
           <WizardActions
             backDisabled={

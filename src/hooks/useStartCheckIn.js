@@ -9,6 +9,7 @@ import {
   createStartCheckInDraft,
   loadBodyFatProfile,
   savePlanMeasurementPreferences,
+  saveStartCheckInDraftState,
   saveStartCheckInMeasurements,
 } from '../services/startCheckInService'
 import {
@@ -118,6 +119,17 @@ function mapCheckInToForm(
   form.body_fat_unavailable =
     checkin.body_fat_status === 'unavailable'
 
+  if (
+    checkin.status === 'draft' &&
+    checkin.draft_data &&
+    typeof checkin.draft_data === 'object'
+  ) {
+    return {
+      ...form,
+      ...checkin.draft_data,
+    }
+  }
+
   return form
 }
 
@@ -170,6 +182,10 @@ export function useStartCheckIn(
     useState('')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] =
+    useState('')
+  const [resumeStep, setResumeStep] =
+    useState(null)
+  const [saveMessage, setSaveMessage] =
     useState('')
 
   const unitSystem = normalizeUnitSystem(
@@ -229,6 +245,8 @@ export function useStartCheckIn(
       setForm(empty)
       setSavedForm(empty)
       setExistingCheckIn(null)
+      setResumeStep(null)
+      setSaveMessage('')
       setProfile(null)
       setPhotos({ ...EMPTY_PHOTOS })
       setLoading(false)
@@ -262,6 +280,12 @@ export function useStartCheckIn(
         )
 
       setExistingCheckIn(checkin)
+      setResumeStep(
+        checkin.status === 'draft'
+          ? checkin.resume_step ?? null
+          : null,
+      )
+      setSaveMessage('')
       setProfile(loadedProfile)
       setForm(loadedForm)
       setSavedForm(loadedForm)
@@ -349,6 +373,72 @@ export function useStartCheckIn(
     })
 
     clearMessages()
+    setSaveMessage('')
+  }
+
+  async function saveDraft(
+    resumeAt,
+    formToSave = form,
+  ) {
+    if (
+      !existingCheckIn?.id ||
+      !canEdit ||
+      isCompleted
+    ) {
+      return false
+    }
+
+    setSaving(true)
+    clearMessages()
+    setSaveMessage('')
+
+    try {
+      const saved =
+        await saveStartCheckInDraftState(
+          existingCheckIn.id,
+          {
+            form: formToSave,
+            resumeStep: resumeAt,
+          },
+        )
+
+      setExistingCheckIn(saved)
+      setResumeStep(
+        saved?.resume_step ??
+        resumeAt ??
+        null,
+      )
+
+      const savedDraftForm = {
+        ...EMPTY_FORM,
+        measurement_side:
+          plan?.measurement_side ?? '',
+        ...(saved?.draft_data ??
+          formToSave),
+      }
+
+      setForm(savedDraftForm)
+      setSavedForm(savedDraftForm)
+      setSaveMessage('Saved')
+
+      return true
+    } catch (saveError) {
+      logDevelopmentError(
+        'useStartCheckIn.saveDraft',
+        saveError,
+      )
+
+      setError(
+        getErrorMessage(
+          saveError,
+          'Your Start Check-In progress could not be saved.',
+        ),
+      )
+
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   function validateEnteredMeasurements() {
@@ -601,6 +691,8 @@ export function useStartCheckIn(
         )
 
       setExistingCheckIn(saved)
+      setResumeStep(null)
+      setSaveMessage('')
       setForm(updatedForm)
       setSavedForm(updatedForm)
       setSuccessMessage(
@@ -737,8 +829,11 @@ export function useStartCheckIn(
     isReadOnly,
     planHasStarted,
     isCompleted,
+    resumeStep,
+    saveMessage,
     setField,
     clearMessages,
+    saveDraft,
     saveCheckIn,
     uploadPhoto,
     reload: loadCheckIn,

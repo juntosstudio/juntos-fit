@@ -113,8 +113,11 @@ export function StartCheckInPage({
     isReadOnly,
     planHasStarted,
     isCompleted,
+    resumeStep,
+    saveMessage,
     setField,
     clearMessages,
+    saveDraft,
     saveCheckIn,
     uploadPhoto,
   } = useStartCheckIn(plan, onSaved)
@@ -235,6 +238,19 @@ export function StartCheckInPage({
   const startedProgress =
     hasStartedProgress(form, photos)
 
+  const autosaveEnabled =
+    !previewing &&
+    canEdit &&
+    !isCompleted
+
+  const shouldPersistDraft =
+    autosaveEnabled &&
+    (
+      isDirty ||
+      Boolean(resumeStep) ||
+      startedProgress
+    )
+
   const pageTitle = previewing
     ? 'Preview Start Check-In'
     : isCompleted
@@ -244,6 +260,31 @@ export function StartCheckInPage({
     : startedProgress
       ? 'Continue Start Check-In'
       : 'Start Check-In'
+
+  useEffect(() => {
+    if (
+      loading ||
+      isCompleted ||
+      !resumeStep
+    ) {
+      return
+    }
+
+    if (resumeStep === 'review') {
+      setReviewing(true)
+      return
+    }
+
+    if (steps.includes(resumeStep)) {
+      setReviewing(false)
+      setCurrentStep(resumeStep)
+    }
+  }, [
+    isCompleted,
+    loading,
+    resumeStep,
+    steps,
+  ])
 
   function markFieldTouched(field) {
     setTouchedFields((current) => ({
@@ -363,12 +404,23 @@ export function StartCheckInPage({
     return true
   }
 
-  function advanceFromCurrentStep() {
+  async function advanceFromCurrentStep() {
     const nextStep = steps[safeIndex + 1]
+    const resumeAt =
+      nextStep ?? 'review'
 
     clearMessages()
 
     markForwardNavigation()
+
+    if (shouldPersistDraft) {
+      const saved =
+        await saveDraft(resumeAt)
+
+      if (!saved) {
+        return
+      }
+    }
 
     if (!nextStep) {
       setReviewing(true)
@@ -378,11 +430,11 @@ export function StartCheckInPage({
     setCurrentStep(nextStep)
   }
 
-  function skipBodyFatAndAdvance() {
-    advanceFromCurrentStep()
+  async function skipBodyFatAndAdvance() {
+    await advanceFromCurrentStep()
   }
 
-  function goNext() {
+  async function goNext() {
     touchStepFields(activeStep)
 
     if (!stepCanContinue(activeStep)) {
@@ -399,7 +451,7 @@ export function StartCheckInPage({
       return
     }
 
-    advanceFromCurrentStep()
+    await advanceFromCurrentStep()
   }
 
   function editWarningValue() {
@@ -420,34 +472,71 @@ export function StartCheckInPage({
     }
   }
 
-  function confirmWarnings() {
+  async function confirmWarnings() {
     confirmWarningValues()
-    advanceFromCurrentStep()
+    await advanceFromCurrentStep()
   }
 
-  function goBack() {
+  async function goBack() {
     clearMessages()
     markBackNavigation()
 
     if (reviewing) {
+      const previous =
+        steps.at(-1) ?? STEP.TIPS
+
+      if (shouldPersistDraft) {
+        const saved =
+          await saveDraft(previous)
+
+        if (!saved) {
+          return
+        }
+      }
+
       setReviewing(false)
-      setCurrentStep(
-        steps.at(-1) ?? STEP.TIPS,
-      )
+      setCurrentStep(previous)
       return
     }
 
     const previous = steps[safeIndex - 1]
 
-    if (previous) {
-      setCurrentStep(previous)
+    if (!previous) {
+      return
     }
+
+    if (shouldPersistDraft) {
+      const saved =
+        await saveDraft(previous)
+
+      if (!saved) {
+        return
+      }
+    }
+
+    setCurrentStep(previous)
   }
 
-  async function handleSaveProgress() {
-    if (!previewing && canEdit) {
-      await saveCheckIn({ complete: false })
+  async function handleExit() {
+    if (saving) {
+      return
     }
+
+    if (shouldPersistDraft) {
+      const resumeAt =
+        reviewing
+          ? 'review'
+          : activeStep
+
+      const saved =
+        await saveDraft(resumeAt)
+
+      if (!saved) {
+        return
+      }
+    }
+
+    onBack?.()
   }
 
   async function handleComplete() {
@@ -624,9 +713,28 @@ export function StartCheckInPage({
     return (
       <>
         <main className="container start-checkin-page">
-          <button type="button" onClick={onBack}>
-            Back to Dashboard
+          <button
+            type="button"
+            disabled={saving}
+            onClick={
+              autosaveEnabled
+                ? handleExit
+                : onBack
+            }
+          >
+            {autosaveEnabled
+              ? 'Exit Check-In'
+              : 'Back to Dashboard'}
           </button>
+
+          {autosaveEnabled && (
+            <p className="wizard-question-helper" role="status">
+              Autosave is on
+              {saveMessage
+                ? ` · ${saveMessage}`
+                : ''}
+            </p>
+          )}
 
           <h1>
             {isViewOnly
@@ -709,9 +817,28 @@ export function StartCheckInPage({
   return (
     <>
       <main className="container start-checkin-page">
-        <button type="button" onClick={onBack}>
-          Back to Dashboard
+        <button
+          type="button"
+          disabled={saving}
+          onClick={
+            autosaveEnabled
+              ? handleExit
+              : onBack
+          }
+        >
+          {autosaveEnabled
+            ? 'Exit Check-In'
+            : 'Back to Dashboard'}
         </button>
+
+        {autosaveEnabled && (
+          <p className="wizard-question-helper" role="status">
+            Autosave is on
+            {saveMessage
+              ? ` · ${saveMessage}`
+              : ''}
+          </p>
+        )}
 
         <h1>{pageTitle}</h1>
         <p>{formatDate(plan.start_date)}</p>
@@ -794,18 +921,21 @@ export function StartCheckInPage({
 
         {!previewing &&
           canEdit &&
+          isCompleted &&
           isDirty && (
             <div className="start-save-progress">
               <button
                 type="button"
                 disabled={saving}
-                onClick={handleSaveProgress}
+                onClick={() =>
+                  saveCheckIn({
+                    complete: true,
+                  })
+                }
               >
                 {saving
                   ? 'Saving...'
-                  : isCompleted
-                    ? 'Save Changes'
-                    : 'Save Progress'}
+                  : 'Save Changes'}
               </button>
             </div>
           )}

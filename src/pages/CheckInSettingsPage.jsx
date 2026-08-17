@@ -30,6 +30,7 @@ const YES_NO_OPTIONS = [
 
 export function CheckInSettingsPage({
   userId,
+  profile,
   initialSettings,
   onSaved,
   onOpenToday,
@@ -64,6 +65,7 @@ export function CheckInSettingsPage({
   }, [
     initialSettings?.track_water,
     initialSettings?.track_alcohol,
+    initialSettings?.track_menstrual_cycle_context,
     initialSettings?.body_fat_source,
   ])
 
@@ -183,6 +185,27 @@ export function CheckInSettingsPage({
           }
         />
       </WizardQuestion>
+
+      {profile?.sex === 'female' && (
+        <WizardQuestion
+          title="Do you want to track menstrual cycle context?"
+          helper="Turn this on and future Weekly Check-Ins will include an optional menstrual-cycle question so Juntos can consider cycle-related changes in weight, hunger, energy, and recovery."
+        >
+          <WizardChoiceGroup
+            name="track-menstrual-cycle-context"
+            value={
+              form.track_menstrual_cycle_context
+            }
+            options={YES_NO_OPTIONS}
+            onChange={(value) =>
+              setField(
+                'track_menstrual_cycle_context',
+                value,
+              )
+            }
+          />
+        </WizardQuestion>
+      )}
 
       <WizardQuestion
         title="How should body fat be tracked?"

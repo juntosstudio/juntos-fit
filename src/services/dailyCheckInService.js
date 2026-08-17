@@ -26,6 +26,18 @@ export const DAILY_CHECKIN_FIELDS = `
   additional_notes,
   questions_for_coach,
   created_at,
+  updated_at,
+  edited_at
+`
+
+
+const DAILY_DRAFT_FIELDS = `
+  id,
+  coaching_plan_id,
+  checkin_date,
+  draft_data,
+  resume_step,
+  created_at,
   updated_at
 `
 
@@ -36,6 +48,91 @@ function debug(message, data = undefined) {
       `[dailyCheckInService] ${message}`,
       data ?? '',
     )
+  }
+}
+
+export async function loadDailyCheckInDraft(
+  coachingPlanId,
+  checkinDate,
+) {
+  if (!coachingPlanId || !checkinDate) {
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('daily_checkin_drafts')
+    .select(DAILY_DRAFT_FIELDS)
+    .eq('coaching_plan_id', coachingPlanId)
+    .eq('checkin_date', checkinDate)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function saveDailyCheckInDraft(
+  coachingPlanId,
+  checkinDate,
+  {
+    form,
+    resumeStep,
+  },
+) {
+  if (!coachingPlanId || !checkinDate) {
+    throw new Error(
+      'A coaching plan and Daily Check-In date are required.',
+    )
+  }
+
+  const today = getTodayDateKey()
+
+  if (checkinDate !== today) {
+    throw new Error(
+      'Only today’s Daily Check-In may be autosaved.',
+    )
+  }
+
+  const values = {
+    coaching_plan_id: coachingPlanId,
+    checkin_date: checkinDate,
+    draft_data: form ?? {},
+    resume_step: resumeStep ?? null,
+  }
+
+  const { data, error } = await supabase
+    .from('daily_checkin_drafts')
+    .upsert(values, {
+      onConflict: 'coaching_plan_id,checkin_date',
+    })
+    .select(DAILY_DRAFT_FIELDS)
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteDailyCheckInDraft(
+  coachingPlanId,
+  checkinDate,
+) {
+  if (!coachingPlanId || !checkinDate) {
+    return
+  }
+
+  const { error } = await supabase
+    .from('daily_checkin_drafts')
+    .delete()
+    .eq('coaching_plan_id', coachingPlanId)
+    .eq('checkin_date', checkinDate)
+
+  if (error) {
+    throw error
   }
 }
 
