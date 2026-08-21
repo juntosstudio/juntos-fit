@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "db:push": "npx supabase db push",
     "deploy:coach": "npx supabase functions deploy generate-weekly-coach-review",
+    "deploy:adjustment": "npx supabase functions deploy generate-plan-adjustment",
     "loc": "powershell -NoProfile -Command \"$ext='.js','.jsx','.ts','.tsx','.css','.sql'; $files=Get-ChildItem -Recurse -File | Where-Object { $ext -contains $_.Extension -and $_.FullName -notmatch '\\\\node_modules\\\\|\\\\dist\\\\|\\\\coverage\\\\' }; $lines=($files | Get-Content | Measure-Object -Line).Lines; Write-Host ($files.Count.ToString() + ' files / ' + $lines.ToString() + ' LOC')\""
   },
   "dependencies": {
