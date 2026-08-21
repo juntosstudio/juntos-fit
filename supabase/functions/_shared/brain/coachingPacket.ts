@@ -168,6 +168,49 @@ function normalizeWeeklyQuestion(
   return questionText
 }
 
+function summarizeCardioGroup(
+  rows: any[],
+  field: 'cardio_type' | 'cardio_intensity',
+) {
+  const groups = new Map<
+    string,
+    {
+      value: string
+      sessions: number
+      minutes: number
+    }
+  >()
+
+  for (const row of rows) {
+    const minutes =
+      Number(row.cardio_minutes) || 0
+
+    if (minutes <= 0) {
+      continue
+    }
+
+    const value =
+      String(row?.[field] ?? '').trim() ||
+      'unknown'
+
+    const current =
+      groups.get(value) ?? {
+        value,
+        sessions: 0,
+        minutes: 0,
+      }
+
+    current.sessions += 1
+    current.minutes += minutes
+    groups.set(value, current)
+  }
+
+  return [...groups.values()].sort(
+    (a, b) =>
+      b.minutes - a.minutes,
+  )
+}
+
 const NUTRITION_ADHERENCE_POLICY_VERSION =
   'meal_plan_self_report_v1'
 
@@ -248,6 +291,12 @@ function summarizeDailyRows(
   const weights = finiteNumbers(
     rows,
     'morning_weight',
+  )
+
+  const cardioRows = rows.filter(
+    (row) =>
+      (Number(row.cardio_minutes) || 0) >
+      0,
   )
 
   const waterTracked = rows.filter(
@@ -346,6 +395,37 @@ function summarizeDailyRows(
         (Number(row.cardio_minutes) || 0),
       0,
     ),
+    cardio_sessions:
+      cardioRows.length,
+    cardio_context_entries:
+      cardioRows.filter(
+        (row) =>
+          row.cardio_type &&
+          row.cardio_intensity,
+      ).length,
+    cardio_by_type:
+      summarizeCardioGroup(
+        cardioRows,
+        'cardio_type',
+      ),
+    cardio_by_intensity:
+      summarizeCardioGroup(
+        cardioRows,
+        'cardio_intensity',
+      ),
+    cardio_entries:
+      cardioRows.map((row) => ({
+        checkin_date:
+          row.checkin_date,
+        review_date:
+          row.review_date,
+        minutes:
+          Number(row.cardio_minutes) || 0,
+        type:
+          row.cardio_type ?? null,
+        intensity:
+          row.cardio_intensity ?? null,
+      })),
     water_days_tracked: waterTracked.length,
     water_goal_days: waterTracked.filter(
       (row) => row.water_goal_met === true,
@@ -537,6 +617,8 @@ async function loadDailyRows(
       training_problem,
       training_problem_details,
       cardio_minutes,
+      cardio_type,
+      cardio_intensity,
       alcohol_consumed,
       alcohol_details,
       additional_notes,
