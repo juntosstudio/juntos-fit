@@ -7,6 +7,11 @@ export const DETERMINISTIC_POLICY_CONTRACT_VERSION =
 export const DETERMINISTIC_RULES_VERSION =
   'juntos_policy_rules_v0.1'
 
+export const POLICY_DEFAULTS = Object.freeze({
+  fatLossTargetRatePctPerWeek: 0.75,
+  macroDistributionPreference: 'balanced' as const,
+})
+
 export const POLICY_THRESHOLDS = Object.freeze({
   nutritionAdherenceStrong: 85,
   nutritionAdherenceUsable: 80,

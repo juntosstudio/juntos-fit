@@ -589,6 +589,14 @@ function buildPrescriptionSegments(
         target.weekly_workout_target ?? null,
       daily_water_goal_oz:
         target.daily_water_goal_oz ?? null,
+      source_target_id: target.id ?? null,
+      nutrition_ownership:
+        target.nutrition_ownership ??
+        'juntos_managed',
+      prescription_source:
+        target.prescription_source ?? 'legacy',
+      cardio_intensity_target:
+        target.cardio_intensity_target ?? null,
     }
   })
 }
@@ -656,6 +664,41 @@ function mapSavedPrescription(row: any) {
       row.weekly_workout_target ?? null,
     daily_water_goal_oz:
       row.daily_water_goal_oz ?? null,
+    source_target_id:
+      row.source_target_id ?? null,
+    nutrition_ownership:
+      row.nutrition_ownership ??
+      'juntos_managed',
+    prescription_source:
+      row.prescription_source ?? 'legacy',
+    cardio_intensity_target:
+      row.cardio_intensity_target ?? null,
+  }
+}
+
+function mapPrescriptionHistoryTarget(row: any) {
+  return {
+    id: row.id ?? null,
+    effective_date: row.effective_date,
+    calorie_target:
+      row.calorie_target ?? null,
+    protein_grams:
+      row.protein_grams ?? null,
+    carb_grams: row.carb_grams ?? null,
+    fat_grams: row.fat_grams ?? null,
+    weekly_cardio_target_minutes:
+      row.weekly_cardio_target_minutes ?? 0,
+    weekly_workout_target:
+      row.weekly_workout_target ?? null,
+    daily_water_goal_oz:
+      row.daily_water_goal_oz ?? null,
+    nutrition_ownership:
+      row.nutrition_ownership ??
+      'juntos_managed',
+    prescription_source:
+      row.prescription_source ?? 'legacy',
+    cardio_intensity_target:
+      row.cardio_intensity_target ?? null,
   }
 }
 
@@ -733,7 +776,8 @@ export async function buildCoachingPacket({
       .select(`
         track_water,
         track_alcohol,
-        body_fat_source
+        body_fat_source,
+        macro_distribution_preference
       `)
       .eq('user_id', plan.user_id)
       .maybeSingle(),
@@ -747,6 +791,7 @@ export async function buildCoachingPacket({
         body_fat_status,
         body_fat_method,
         body_fat_formula_version,
+        pre_plan_deficit_weeks,
         status,
         completed_at
       `)
@@ -772,7 +817,10 @@ export async function buildCoachingPacket({
         fat_grams,
         weekly_cardio_target_minutes,
         weekly_workout_target,
-        daily_water_goal_oz
+        daily_water_goal_oz,
+        nutrition_ownership,
+        prescription_source,
+        cardio_intensity_target
       `)
       .eq('coaching_plan_id', plan.id)
       .lte(
@@ -786,6 +834,7 @@ export async function buildCoachingPacket({
     admin
       .from('weekly_plan_prescriptions')
       .select(`
+        source_target_id,
         week_number,
         effective_from,
         effective_to,
@@ -796,7 +845,10 @@ export async function buildCoachingPacket({
         fat_grams,
         weekly_cardio_target_minutes,
         weekly_workout_target,
-        daily_water_goal_oz
+        daily_water_goal_oz,
+        nutrition_ownership,
+        prescription_source,
+        cardio_intensity_target
       `)
       .eq(
         'weekly_checkin_id',
@@ -864,11 +916,22 @@ export async function buildCoachingPacket({
     throw previousWeeklyResult.error
   }
 
-  // Load historical Daily rows in one query, then
-  // partition them into program weeks in code.
-  const historicalDailyRows =
+  const previousWeeklyRows =
+    previousWeeklyResult.data ?? []
+  const historicalWeeklyCheckInIds =
+    previousWeeklyRows
+      .map((row: any) => row?.id)
+      .filter(Boolean)
+
+  // Historical behavior and prescriptions are loaded together. When
+  // a frozen Weekly prescription snapshot exists, prefer it over
+  // rebuilding history from today's canonical target rows.
+  const [
+    historicalDailyRows,
+    historicalPrescriptionResult,
+  ] = await Promise.all([
     historyWeekNumbers.length
-      ? await loadDailyRows(
+      ? loadDailyRows(
           admin,
           plan.id,
           earliestHistoryStart,
@@ -877,7 +940,45 @@ export async function buildCoachingPacket({
             -1,
           ),
         )
-      : []
+      : Promise.resolve([]),
+
+    historicalWeeklyCheckInIds.length
+      ? admin
+          .from('weekly_plan_prescriptions')
+          .select(`
+            weekly_checkin_id,
+            source_target_id,
+            week_number,
+            effective_from,
+            effective_to,
+            days_in_effect,
+            calorie_target,
+            protein_grams,
+            carb_grams,
+            fat_grams,
+            weekly_cardio_target_minutes,
+            weekly_workout_target,
+            daily_water_goal_oz,
+            nutrition_ownership,
+            prescription_source,
+            cardio_intensity_target
+          `)
+          .in(
+            'weekly_checkin_id',
+            historicalWeeklyCheckInIds,
+          )
+          .order('effective_from', {
+            ascending: true,
+          })
+      : Promise.resolve({
+          data: [],
+          error: null,
+        }),
+  ])
+
+  if (historicalPrescriptionResult.error) {
+    throw historicalPrescriptionResult.error
+  }
 
   const targets = targetResult.data ?? []
   const savedPrescriptions =
@@ -902,13 +1003,40 @@ export async function buildCoachingPacket({
     )
 
   const previousWeeklyMap = new Map(
-    (previousWeeklyResult.data ?? []).map(
+    previousWeeklyRows.map(
       (row: any) => [
         Number(row.week_number),
         row,
       ],
     ),
   )
+
+  const historicalPrescriptionMap = new Map<
+    string,
+    any[]
+  >()
+
+  for (const row of
+    historicalPrescriptionResult.data ?? []) {
+    const weeklyCheckInId = String(
+      row?.weekly_checkin_id ?? '',
+    )
+
+    if (!weeklyCheckInId) {
+      continue
+    }
+
+    const rows =
+      historicalPrescriptionMap.get(
+        weeklyCheckInId,
+      ) ?? []
+
+    rows.push(row)
+    historicalPrescriptionMap.set(
+      weeklyCheckInId,
+      rows,
+    )
+  }
 
   const history = historyRanges.map(
     (range) => {
@@ -924,19 +1052,28 @@ export async function buildCoachingPacket({
         range.week_number,
       ) as any
 
+      const frozenPrescriptions = weekly?.id
+        ? historicalPrescriptionMap.get(
+            String(weekly.id),
+          ) ?? []
+        : []
+
       return {
         week_number: range.week_number,
         week_range: {
           start: range.week_start,
           end: range.week_end,
         },
-        prescription:
-          buildPrescriptionSegments(
-            targets,
-            range.week_start,
-            range.week_end,
-            range.week_number,
-          ),
+        prescription: frozenPrescriptions.length
+          ? frozenPrescriptions.map(
+              mapSavedPrescription,
+            )
+          : buildPrescriptionSegments(
+              targets,
+              range.week_start,
+              range.week_end,
+              range.week_number,
+            ),
         behavior: summarizeDailyRows(
           rows,
           weekly,
@@ -1026,6 +1163,9 @@ export async function buildCoachingPacket({
       body_fat_source:
         settingsResult.data?.body_fat_source ??
         'none',
+      macro_distribution_preference:
+        settingsResult.data
+          ?.macro_distribution_preference ?? null,
     },
 
     plan: {
@@ -1052,6 +1192,9 @@ export async function buildCoachingPacket({
       starting_body_fat_formula_version:
         startResult.data
           ?.body_fat_formula_version ?? null,
+      pre_plan_deficit_weeks:
+        startResult.data
+          ?.pre_plan_deficit_weeks ?? null,
     },
 
     current_week: {
@@ -1128,6 +1271,9 @@ export async function buildCoachingPacket({
     },
 
     history,
+
+    prescription_history:
+      targets.map(mapPrescriptionHistoryTarget),
 
     previous_coaching_decision: null,
 

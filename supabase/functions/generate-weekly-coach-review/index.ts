@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { buildCoachingPacket } from '../_shared/brain/coachingPacket.ts'
 import { evaluateHardRules } from '../_shared/brain/hardRules.ts'
+import { evaluateDeterministicPolicy } from '../_shared/brain/policyEngine.ts'
+import { buildDeterministicPolicyInput } from '../_shared/brain/policyInputAdapter.ts'
 import { WEEKLY_COACH_PROTOCOL } from '../_shared/brain/protocol.ts'
 import { loadRelevantMemory } from '../_shared/brain/memoryProvider.ts'
 import { runAiCoach } from '../_shared/brain/aiCoachProvider.ts'
@@ -314,21 +316,39 @@ Deno.serve(async (req) => {
       weeklyCheckIn,
     })
 
+    const policyInput =
+      buildDeterministicPolicyInput(packet)
+
+    const deterministicPolicy =
+      evaluateDeterministicPolicy(policyInput)
+
     const hardRules =
       evaluateHardRules(packet)
 
     const memory =
       await loadRelevantMemory()
 
-    const inputSnapshot = {
+    // The deterministic policy is computed before BB judgment, but
+    // Coach Lite does not consume or choose from it yet. Keep the AI
+    // hash scoped to the inputs OpenAI actually receives so a future
+    // policy-only change cannot needlessly regenerate prose.
+    const aiInputSnapshot = {
       packet,
       hard_rules: hardRules,
       protocol: WEEKLY_COACH_PROTOCOL,
       memory,
     }
 
+    const inputSnapshot = {
+      ...aiInputSnapshot,
+      deterministic_policy_input:
+        policyInput,
+      deterministic_policy:
+        deterministicPolicy,
+    }
+
     const inputHash = await sha256(
-      JSON.stringify(inputSnapshot),
+      JSON.stringify(aiInputSnapshot),
     )
 
     const existing = await loadCoachReview(
@@ -344,6 +364,7 @@ Deno.serve(async (req) => {
     ) {
       return jsonResponse({
         review: toPublicReview(existing),
+        policy: deterministicPolicy,
         cached: true,
       })
     }
@@ -383,6 +404,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       review: toPublicReview(saved),
+      policy: deterministicPolicy,
       cached: false,
     })
   } catch (error) {

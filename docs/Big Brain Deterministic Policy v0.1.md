@@ -126,15 +126,33 @@ The first Reset increase restores carbs first: `+25g carbs`, with protein and fa
 
 ## Data adapter contract
 
-The policy engine intentionally accepts normalized evidence instead of querying app tables. The future adapter must derive these fields deterministically:
+The policy engine intentionally accepts normalized evidence instead of querying app tables. `policyInputAdapter.ts` now converts the finalized coaching packet into `DeterministicPolicyInput` deterministically.
 
-- `target_loss_rate_pct_per_week` from the plan's deterministic target-rate policy; the engine does not invent a default if absent.
-- `full_weeks_under_current_prescription` from effective-dated immutable prescription history; split weeks do not count.
-- `continuous_deficit_weeks` from current-plan history plus validated pre-Juntos deficit context where applicable.
-- `prior_calorie_reductions` from immutable prescription/intervention history, not AI narration.
-- adherence and coverage from the deterministic nutrition-adherence layer.
+The live adapter derives:
+
+- `target_loss_rate_pct_per_week` from the v0.1 fat-loss default of **0.75% body weight/week**. This is explicit policy configuration, not an AI guess. A future plan-level target-rate setting can replace this default without changing the engine contract.
+- `full_weeks_under_current_prescription` from consecutive full seven-day prescription segments. Split weeks do not count. The clock compares material prescription values, not target-row IDs, so inserting an identical immutable target row does not falsely reset observation.
+- `continuous_deficit_weeks` from completed fat-loss plan weeks plus answered `pre_plan_deficit_weeks`. Unknown pre-plan history contributes zero while known in-plan deficit time remains usable.
+- `prior_calorie_reductions` from ordered canonical effective-dated target history by counting actual downward calorie transitions.
+- adherence and coverage from the deterministic nutrition-adherence layer already frozen into Weekly when available.
 - current/previous/recent weekly evidence from finalized check-in data.
-- `minimum_fat_grams` from the plan/user macro policy when available. If missing, the engine protects current fat rather than inventing a floor.
+- macro-distribution preference from `user_settings`, with the previously documented Balanced fallback when unanswered.
+- nutrition ownership and prescribed cardio intensity from prescription metadata.
+- `minimum_fat_grams` remains `null` until an explicit user/plan floor exists; the macro engine therefore protects current fat instead of inventing a floor.
+
+Historical program weeks prefer immutable `weekly_plan_prescriptions` snapshots when available. Canonical target history is only a fallback for older/missing snapshots.
+
+## Live Weekly integration
+
+`generate-weekly-coach-review` now follows this order:
+
+1. build the normalized coaching packet
+2. build deterministic policy input
+3. evaluate deterministic legal/blocked actions
+4. run existing Coach Lite assessment
+5. persist the review snapshot
+
+The deterministic input and result are stored inside the review's `input_snapshot`, and the Edge Function response also returns `policy`. Coach Lite **does not consume or choose from this policy yet**; its prompt/schema remain HOLD-only until the BB judgment phase is deliberately implemented. This lets the policy spine run against real Weekly data without silently changing current AI behavior.
 
 ## Common-sense decisions made during implementation for review
 
@@ -150,14 +168,18 @@ These were not treated as reasons to stop coding; they are explicit so product c
 8. **Reset plateau is stricter than the ordinary slow-loss gate.** Reset requires <25% of expected loss across the three-week window, not merely <75% of target.
 9. **Reset entry still requires two completed Juntos observation weeks.** Pre-Juntos deficit history can satisfy the 10-week duration criterion, but Juntos must still have enough current-plan evidence before proposing entry.
 10. **Reset restores carbs first.** This is separate from the ordinary Balanced/Higher-Carb/Lower-Carb +/-100 helper.
+11. **Fat-loss target pace defaults to 0.75%/week in v0.1.** The app does not currently collect a plan-specific pace, so the adapter uses the midpoint of the common 0.5-1.0%/week fat-loss range as explicit deterministic policy configuration. This should become a plan-level input later rather than staying implicit forever.
+12. **Known in-plan fat-loss weeks count as deficit exposure.** `pre_plan_deficit_weeks` extends that clock when answered; unknown pre-plan history does not erase weeks Juntos actually observed. Active Calorie Reset will need to pause/break this clock when its state machine is implemented.
+13. **Observation compares material values, not row identity.** A new immutable target row with the same calories/macros/cardio/etc. does not restart the two-week observation clock.
+14. **Frozen Weekly prescription history wins.** Historical policy evidence uses `weekly_plan_prescriptions` when present so later target-history repair cannot rewrite what was actually prescribed that week.
+15. **Corrupt/missing goal fails closed.** The adapter routes an unknown goal through the unsupported maintenance path rather than accidentally enabling fat-loss changes.
 
 ## Explicitly not implemented in this pass
 
-- OpenAI/BB prompting or judgment
+- OpenAI/BB judgment from the deterministic legal-action set (Coach Lite remains HOLD-only)
 - proposal conversation UI
 - user acceptance flow
 - deterministic DB persistence wiring
-- data adapter from Supabase rows into `DeterministicPolicyInput`
 - active Calorie Reset weekly-ramp state machine
 - maintenance policy
 - muscle-gain policy
