@@ -79,6 +79,7 @@ export function DailyCheckInReview({
   today,
   settings,
   showCoachNotes = true,
+  isHistorical = false,
 }) {
   const {
     track_water: trackWater,
@@ -127,8 +128,9 @@ export function DailyCheckInReview({
     <div className="checkin-review">
       <section>
         <h2>
-          This Morning,{' '}
-          {formatDateWithOrdinal(today)}
+          {isHistorical
+            ? `Morning of ${formatDateWithOrdinal(today)}`
+            : `This Morning, ${formatDateWithOrdinal(today)}`}
         </h2>
 
         <dl>
@@ -141,10 +143,9 @@ export function DailyCheckInReview({
 
       <section>
         <h2>
-          Yesterday,{' '}
-          {formatDateWithOrdinal(
-            reviewDate,
-          )}
+          {isHistorical
+            ? `About ${formatDateWithOrdinal(reviewDate)}`
+            : `Yesterday, ${formatDateWithOrdinal(reviewDate)}`}
         </h2>
 
         <dl>

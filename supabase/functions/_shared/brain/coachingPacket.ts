@@ -168,7 +168,75 @@ function normalizeWeeklyQuestion(
   return questionText
 }
 
-function summarizeDailyRows(rows: any[]) {
+const NUTRITION_ADHERENCE_POLICY_VERSION =
+  'meal_plan_self_report_v1'
+
+function dailyNutritionAdherencePercent(row: any) {
+  const score = Number(row?.meal_plan_score)
+
+  if (!Number.isFinite(score)) {
+    return null
+  }
+
+  const deviationDetails = String(
+    row?.meal_plan_deviation_details ?? '',
+  ).trim()
+
+  const plannedCheatMealOnly =
+    score >= 1 &&
+    score <= 4 &&
+    row?.planned_cheat_meal_status === 'eaten' &&
+    !deviationDetails
+
+  if (plannedCheatMealOnly) {
+    return 100
+  }
+
+  const mapping: Record<number, number> = {
+    5: 100,
+    4: 95,
+    3: 80,
+    2: 60,
+    1: 30,
+  }
+
+  return mapping[score] ?? null
+}
+
+function summarizeNutritionAdherence(rows: any[]) {
+  const scores = rows
+    .map(dailyNutritionAdherencePercent)
+    .filter((value): value is number =>
+      Number.isFinite(value),
+    )
+
+  const daysReported = scores.length
+  const expectedDays = 7
+  const adherencePercent = round(
+    average(scores),
+    0,
+  )
+  const coveragePercent = Math.round(
+    (daysReported / expectedDays) * 100,
+  )
+
+  return {
+    adherencePercent,
+    daysReported,
+    expectedDays,
+    coveragePercent,
+    dataConfidence:
+      daysReported > 0 &&
+      coveragePercent >= 80
+        ? 'good'
+        : 'limited',
+  }
+}
+
+function summarizeDailyRows(
+  rows: any[],
+  frozenWeekly: any = null,
+) {
   const mealScores = finiteNumbers(
     rows,
     'meal_plan_score',
@@ -194,19 +262,64 @@ function summarizeDailyRows(rows: any[]) {
       row.alcohol_consumed !== undefined,
   )
 
-  const averageMealScore = average(mealScores)
+  const calculatedNutritionAdherence =
+    summarizeNutritionAdherence(rows)
+
+  const frozenAdherence = numericOrNull(
+    frozenWeekly?.nutrition_adherence_percent,
+  )
+  const frozenCoverage = numericOrNull(
+    frozenWeekly?.nutrition_adherence_coverage_percent,
+  )
+  const frozenDaysReported = numericOrNull(
+    frozenWeekly?.nutrition_adherence_days_reported,
+  )
+  const frozenExpectedDays = numericOrNull(
+    frozenWeekly?.nutrition_adherence_expected_days,
+  )
+
+  const nutritionAdherence = {
+    adherencePercent: frozenAdherence !== null
+      ? frozenAdherence
+      : calculatedNutritionAdherence.adherencePercent,
+    coveragePercent: frozenCoverage !== null
+      ? frozenCoverage
+      : calculatedNutritionAdherence.coveragePercent,
+    daysReported: frozenDaysReported !== null
+      ? frozenDaysReported
+      : calculatedNutritionAdherence.daysReported,
+    expectedDays: frozenExpectedDays !== null
+      ? frozenExpectedDays
+      : calculatedNutritionAdherence.expectedDays,
+    dataConfidence:
+      frozenCoverage !== null
+        ? frozenCoverage >= 80
+          ? 'good'
+          : 'limited'
+        : calculatedNutritionAdherence.dataConfidence,
+    policyVersion:
+      frozenWeekly?.nutrition_adherence_policy_version ??
+      NUTRITION_ADHERENCE_POLICY_VERSION,
+  }
 
   return {
-    days_reported: mealScores.length,
+    days_reported:
+      nutritionAdherence.daysReported,
     daily_rows_present: rows.length,
     average_weight_lbs: round(
       average(weights),
     ),
     weight_readings: weights.length,
     meal_plan_adherence_percent:
-      averageMealScore === null
-        ? null
-        : round(averageMealScore * 20, 0),
+      nutritionAdherence.adherencePercent,
+    meal_plan_adherence_coverage_percent:
+      nutritionAdherence.coveragePercent,
+    meal_plan_adherence_expected_days:
+      nutritionAdherence.expectedDays,
+    meal_plan_adherence_data_confidence:
+      nutritionAdherence.dataConfidence,
+    meal_plan_adherence_policy_version:
+      nutritionAdherence.policyVersion,
     meal_score_average: round(
       average(mealScores),
       2,
@@ -253,12 +366,43 @@ function summarizeDailyRows(rows: any[]) {
           row.meal_plan_score,
         )
 
-        return (
-          Number.isFinite(score) &&
-          score < 5
-        )
+        if (
+          !Number.isFinite(score) ||
+          score >= 5
+        ) {
+          return false
+        }
+
+        const details = String(
+          row.meal_plan_deviation_details ?? '',
+        ).trim()
+
+        const plannedCheatMealOnly =
+          row.planned_cheat_meal_status ===
+            'eaten' &&
+          !details
+
+        return !plannedCheatMealOnly
       },
     ).length,
+    planned_cheat_meal_only_days:
+      rows.filter((row) => {
+        const score = Number(
+          row.meal_plan_score,
+        )
+        const details = String(
+          row.meal_plan_deviation_details ?? '',
+        ).trim()
+
+        return (
+          Number.isFinite(score) &&
+          score >= 1 &&
+          score <= 4 &&
+          row.planned_cheat_meal_status ===
+            'eaten' &&
+          !details
+        )
+      }).length,
     notable_daily_context: rows
       .filter(
         (row) =>
@@ -596,7 +740,12 @@ export async function buildCoachingPacket({
             recovery_score,
             stress_level,
             menstrual_cycle_context,
-            weekly_reflection
+            weekly_reflection,
+            nutrition_adherence_percent,
+            nutrition_adherence_days_reported,
+            nutrition_adherence_expected_days,
+            nutrition_adherence_coverage_percent,
+            nutrition_adherence_policy_version
           `)
           .eq('coaching_plan_id', plan.id)
           .in('week_number', historyWeekNumbers)
@@ -665,7 +814,10 @@ export async function buildCoachingPacket({
         )
 
   const currentBehavior =
-    summarizeDailyRows(currentDailyRows)
+    summarizeDailyRows(
+      currentDailyRows,
+      weeklyCheckIn,
+    )
 
   const previousWeeklyMap = new Map(
     (previousWeeklyResult.data ?? []).map(
@@ -703,7 +855,10 @@ export async function buildCoachingPacket({
             range.week_end,
             range.week_number,
           ),
-        behavior: summarizeDailyRows(rows),
+        behavior: summarizeDailyRows(
+          rows,
+          weekly,
+        ),
         weekly_context: weekly
           ? {
               status: weekly.status,

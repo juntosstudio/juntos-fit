@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => ({
   loadWeeklyCheckInPhotos: vi.fn(),
   uploadWeeklyCheckInPhoto: vi.fn(),
   loadLastCardioContext: vi.fn(),
-  saveTodayDailyCheckIn: vi.fn(),
+  saveDailyCheckInForDate: vi.fn(),
 }))
 
 vi.mock('../utils/dates', () => ({
@@ -99,8 +99,8 @@ vi.mock(
   () => ({
     loadLastCardioContext:
       mocks.loadLastCardioContext,
-    saveTodayDailyCheckIn:
-      mocks.saveTodayDailyCheckIn,
+    saveDailyCheckInForDate:
+      mocks.saveDailyCheckInForDate,
   }),
 )
 
@@ -209,7 +209,7 @@ describe('useWeeklyCheckIn load and preview behavior', () => {
         resume_step: values.resumeStep,
       }),
     )
-    mocks.saveTodayDailyCheckIn.mockResolvedValue({
+    mocks.saveDailyCheckInForDate.mockResolvedValue({
       id: 'daily-1',
     })
     mocks.completeWeeklyCheckIn.mockResolvedValue({
@@ -283,6 +283,58 @@ describe('useWeeklyCheckIn load and preview behavior', () => {
     ).toHaveBeenCalledWith(
       'plan-1',
       '2026-08-16',
+    )
+  })
+
+  test('can open and persist a late Weekly for its original scheduled date', async () => {
+    mocks.getTodayDateKey.mockReturnValue(
+      '2026-08-17',
+    )
+
+    const { result } = renderHook(() =>
+      useWeeklyCheckIn(plan, {
+        bodyFatSource: 'none',
+        unitSystem: 'imperial',
+        checkinDate: '2026-08-16',
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        result.current.persistenceEnabled,
+      ).toBe(true)
+    })
+
+    expect(
+      mocks.getWeeklyCheckInNumber,
+    ).toHaveBeenCalledWith(
+      plan.start_date,
+      plan.checkin_day,
+      '2026-08-16',
+    )
+
+    expect(
+      mocks.createWeeklyCheckInDraft,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkinDate: '2026-08-16',
+        weekNumber: 2,
+      }),
+    )
+
+    setSubmissionFields(result)
+
+    await act(async () => {
+      await result.current.submitCheckIn()
+    })
+
+    expect(
+      mocks.saveDailyCheckInForDate,
+    ).toHaveBeenCalledWith(
+      '2026-08-16',
+      expect.objectContaining({
+        coaching_plan_id: 'plan-1',
+      }),
     )
   })
 
@@ -800,7 +852,7 @@ describe('useWeeklyCheckIn submission', () => {
     mocks.saveWeeklyCheckInDraft.mockResolvedValue({
       ...draft,
     })
-    mocks.saveTodayDailyCheckIn.mockResolvedValue({
+    mocks.saveDailyCheckInForDate.mockResolvedValue({
       id: 'daily-1',
     })
     mocks.completeWeeklyCheckIn.mockResolvedValue({
@@ -847,7 +899,7 @@ describe('useWeeklyCheckIn submission', () => {
       mocks.saveWeeklyCheckInDraft,
     ).toHaveBeenCalled()
     expect(
-      mocks.saveTodayDailyCheckIn,
+      mocks.saveDailyCheckInForDate,
     ).toHaveBeenCalled()
     expect(
       mocks.completeWeeklyCheckIn,
@@ -857,11 +909,11 @@ describe('useWeeklyCheckIn submission', () => {
       mocks.saveWeeklyCheckInDraft.mock
         .invocationCallOrder[0],
     ).toBeLessThan(
-      mocks.saveTodayDailyCheckIn.mock
+      mocks.saveDailyCheckInForDate.mock
         .invocationCallOrder[0],
     )
     expect(
-      mocks.saveTodayDailyCheckIn.mock
+      mocks.saveDailyCheckInForDate.mock
         .invocationCallOrder[0],
     ).toBeLessThan(
       mocks.completeWeeklyCheckIn.mock
@@ -899,8 +951,9 @@ describe('useWeeklyCheckIn submission', () => {
     })
 
     expect(
-      mocks.saveTodayDailyCheckIn,
+      mocks.saveDailyCheckInForDate,
     ).toHaveBeenCalledWith(
+      '2026-08-16',
       expect.objectContaining({
         coaching_plan_id: 'plan-1',
         morning_weight: 150.5,
@@ -961,8 +1014,9 @@ describe('useWeeklyCheckIn submission', () => {
     })
 
     expect(
-      mocks.saveTodayDailyCheckIn,
+      mocks.saveDailyCheckInForDate,
     ).toHaveBeenCalledWith(
+      '2026-08-16',
       expect.objectContaining({
         water_goal_met: null,
         alcohol_consumed: null,
@@ -1226,7 +1280,7 @@ describe('useWeeklyCheckIn submission', () => {
 
     expect(submitted).toBe(false)
     expect(
-      mocks.saveTodayDailyCheckIn,
+      mocks.saveDailyCheckInForDate,
     ).not.toHaveBeenCalled()
     expect(
       mocks.completeWeeklyCheckIn,
@@ -1234,7 +1288,7 @@ describe('useWeeklyCheckIn submission', () => {
   })
 
   test('surfaces submission failures and does not leave saving stuck', async () => {
-    mocks.saveTodayDailyCheckIn.mockRejectedValue(
+    mocks.saveDailyCheckInForDate.mockRejectedValue(
       new Error('Daily bridge failed'),
     )
 

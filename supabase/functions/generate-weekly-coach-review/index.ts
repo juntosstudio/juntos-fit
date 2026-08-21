@@ -251,7 +251,12 @@ Deno.serve(async (req) => {
         stress_level,
         menstrual_cycle_context,
         weekly_reflection,
-        questions_for_coach
+        questions_for_coach,
+        nutrition_adherence_percent,
+        nutrition_adherence_days_reported,
+        nutrition_adherence_expected_days,
+        nutrition_adherence_coverage_percent,
+        nutrition_adherence_policy_version
       `)
       .eq('id', weeklyCheckInId)
       .maybeSingle()

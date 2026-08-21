@@ -20,6 +20,9 @@ import {
   getTodayDateKey,
 } from '../utils/dates'
 import {
+  calculateNutritionAdherence,
+} from '../utils/nutritionAdherence'
+import {
   fromCanonicalMeasurement,
   getMeasurementUnit,
   normalizeUnitSystem,
@@ -110,16 +113,25 @@ function formatPercent(value) {
   return `${Math.round(Number(value))}%`
 }
 
-function getAdherenceState(value) {
+function getAdherenceState(
+  value,
+  coveragePercent,
+) {
   if (!Number.isFinite(Number(value))) {
     return 'is-neutral'
   }
 
-  if (Number(value) >= 80) {
+  const coverage = Number(coveragePercent)
+
+  if (
+    Number(value) >= 85 &&
+    Number.isFinite(coverage) &&
+    coverage >= 80
+  ) {
     return 'is-positive'
   }
 
-  if (Number(value) >= 60) {
+  if (Number(value) >= 80) {
     return 'is-watch'
   }
 
@@ -1001,15 +1013,50 @@ export function WeeklySummaryPage({
         'meal_plan_score',
       )
 
-    const averageMealScore =
-      average(mealScores)
-
-    const adherence =
-      Number.isFinite(
-        averageMealScore,
+    const calculatedNutritionAdherence =
+      calculateNutritionAdherence(
+        summary.dailyRows,
+        { expectedDays: 7 },
       )
-        ? averageMealScore * 20
-        : null
+
+    const frozenAdherenceRaw =
+      summary.week?.nutrition_adherence_percent
+    const frozenCoverageRaw =
+      summary.week?.nutrition_adherence_coverage_percent
+    const frozenDaysReportedRaw =
+      summary.week?.nutrition_adherence_days_reported
+    const frozenExpectedDaysRaw =
+      summary.week?.nutrition_adherence_expected_days
+
+    const hasFrozenNumber = (value) =>
+      value !== null &&
+      value !== undefined &&
+      value !== '' &&
+      Number.isFinite(Number(value))
+
+    const adherence = hasFrozenNumber(
+      frozenAdherenceRaw,
+    )
+      ? Number(frozenAdherenceRaw)
+      : calculatedNutritionAdherence.adherencePercent
+
+    const adherenceCoverage = hasFrozenNumber(
+      frozenCoverageRaw,
+    )
+      ? Number(frozenCoverageRaw)
+      : calculatedNutritionAdherence.coveragePercent
+
+    const daysReported = hasFrozenNumber(
+      frozenDaysReportedRaw,
+    )
+      ? Number(frozenDaysReportedRaw)
+      : calculatedNutritionAdherence.daysReported
+
+    const expectedDays = hasFrozenNumber(
+      frozenExpectedDaysRaw,
+    )
+      ? Number(frozenExpectedDaysRaw)
+      : calculatedNutritionAdherence.expectedDays
 
     const mealBreakdown =
       buildMealBreakdown(
@@ -1108,10 +1155,12 @@ export function WeeklySummaryPage({
       adherenceState:
         getAdherenceState(
           adherence,
+          adherenceCoverage,
         ),
+      adherenceCoverage,
       mealBreakdown,
-      daysReported:
-        mealScores.length,
+      daysReported,
+      expectedDays,
       cheatMealDays,
 
       workoutsCompleted,
@@ -1569,7 +1618,8 @@ export function WeeklySummaryPage({
 
               <div>
                 <strong>
-                  {calculations.daysReported}
+                  {calculations.daysReported}/
+                  {calculations.expectedDays}
                 </strong>
                 <span>
                   Days Reported

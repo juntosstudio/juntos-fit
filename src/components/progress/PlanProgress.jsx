@@ -77,6 +77,13 @@ function getPlanProgressRows(
         weekNumber <
           currentWeekNumber
       ) {
+        if (weekData?.canCompleteWeekly) {
+          return {
+            ...weekData,
+            weekNumber,
+            status: 'weekly-overdue',
+          }
+        }
 
         if (
           weekData?.weeklyStatus ===
@@ -110,6 +117,8 @@ export function PlanProgress({
   weeks,
   onOpenCurrentWeek,
   onOpenWeeklyReview,
+  onOpenWeeklyCheckIn,
+  onShowAllWeeks,
   initialShowAll = false,
 }) {
   const [
@@ -263,6 +272,29 @@ export function PlanProgress({
 
     if (
       row.status ===
+      'weekly-overdue'
+    ) {
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>
+              Week {row.weekNumber}
+            </strong>
+
+            <span className="plan-progress-status is-overdue">
+              Weekly Overdue
+            </span>
+          </div>
+
+          <span className="plan-progress-subtext">
+            Complete your Weekly Check-In while this week is still open
+          </span>
+        </>
+      )
+    }
+
+    if (
+      row.status ===
       'no-weekly'
     ) {
       const hasDailyData =
@@ -383,6 +415,37 @@ export function PlanProgress({
 
             if (
               row.status ===
+                'weekly-overdue' &&
+              onOpenWeeklyCheckIn
+            ) {
+              return (
+                <button
+                  type="button"
+                  className="plan-progress-row is-clickable is-weekly-overdue"
+                  key={row.weekNumber}
+                  onClick={() =>
+                    onOpenWeeklyCheckIn(
+                      row.weeklyDueDate,
+                    )
+                  }
+                  aria-label={`Complete Week ${row.weekNumber} Weekly Check-In`}
+                >
+                  <span className="plan-progress-row-content">
+                    {renderRowContent(row)}
+                  </span>
+
+                  <span
+                    className="plan-progress-chevron"
+                    aria-hidden="true"
+                  >
+                    ›
+                  </span>
+                </button>
+              )
+            }
+
+            if (
+              row.status ===
               'current' &&
               onOpenCurrentWeek
             ) {
@@ -432,25 +495,20 @@ export function PlanProgress({
         )}
       </div>
 
-      {(hasHiddenWeeks ||
-        showAllWeeks) &&
+      {!initialShowAll &&
+        hasHiddenWeeks &&
         rows.length > 0 && (
           <button
             type="button"
             className="text-button plan-progress-toggle"
-            onClick={() =>
-              setShowAllWeeks(
-                (current) =>
-                  !current,
-              )
-            }
-            aria-expanded={
-              showAllWeeks
+            onClick={
+              onShowAllWeeks
+                ? onShowAllWeeks
+                : () =>
+                    setShowAllWeeks(true)
             }
           >
-            {showAllWeeks
-              ? 'Show Less'
-              : '•••  Show All Weeks'}
+            •••  Show All Weeks
           </button>
         )}
     </section>

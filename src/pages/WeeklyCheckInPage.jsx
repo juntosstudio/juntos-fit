@@ -84,6 +84,7 @@ export function WeeklyCheckInPage({
   target,
   cardioCompleted,
   settings,
+  checkinDate = null,
   onSaved,
   onBack,
 }) {
@@ -103,6 +104,7 @@ export function WeeklyCheckInPage({
 
   const {
     today,
+    currentDate,
     weekNumber,
     photosRequired,
     isFinalWeekly,
@@ -131,8 +133,16 @@ export function WeeklyCheckInPage({
       unitSystem,
       settings,
       onSaved,
+      checkinDate,
     },
   )
+
+  const isLateWeekly =
+    Boolean(
+      today &&
+      currentDate &&
+      today < currentDate,
+    )
 
   const savedMenstrualCycleTracking =
     typeof form
@@ -914,6 +924,13 @@ export function WeeklyCheckInPage({
             </p>
           )}
 
+          {isLateWeekly && (
+            <p className="weekly-late-checkin-notice">
+              Completing your overdue Week {weekNumber} Weekly Check-In
+              for {formatDate(today)}.
+            </p>
+          )}
+
           <h1>
             {isCompleted
               ? `Week ${weekNumber} Check-In`
@@ -930,6 +947,7 @@ export function WeeklyCheckInPage({
             form={form}
             target={target}
             today={today}
+            isHistorical={isLateWeekly}
             weekNumber={weekNumber}
             plan={plan}
             photos={photos}
@@ -1072,6 +1090,13 @@ export function WeeklyCheckInPage({
 
         <p>{formatDate(today)}</p>
 
+        {isLateWeekly && (
+          <p className="weekly-late-checkin-notice">
+            This Weekly Check-In was due on {formatDate(today)}.
+            Complete it now to close Week {weekNumber}.
+          </p>
+        )}
+
         {(error || pageError) && (
           <p role="alert">
             {error || pageError}
@@ -1113,6 +1138,8 @@ export function WeeklyCheckInPage({
           validationByField={
             validationByField
           }
+          checkInDate={today}
+          isHistorical={isLateWeekly}
         />
 
         <div className="wizard-actions">

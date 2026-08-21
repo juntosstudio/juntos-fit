@@ -115,6 +115,73 @@ describe('Program check-in streak', () => {
     ).toBe(1)
   })
 
+
+  test('a backfilled Daily does not repair a missed-day streak', () => {
+    expect(
+      calculateProgramCheckInStreak({
+        planStartDate,
+        today: '2026-08-20',
+        timeZone: 'America/Chicago',
+        startCheckIn: {
+          status: 'completed',
+          checkin_date: planStartDate,
+          completed_at: '2026-07-26T13:00:00Z',
+        },
+        dailyCheckInDates: [
+          {
+            checkin_date: '2026-08-18',
+            created_at: '2026-08-18T13:00:00Z',
+          },
+          {
+            // Aug 19 was missed and entered late on Aug 20.
+            checkin_date: '2026-08-19',
+            created_at: '2026-08-20T15:00:00Z',
+          },
+        ],
+      }),
+    ).toBe(1)
+  })
+
+  test('a late Weekly starts a new streak on the day it is submitted', () => {
+    expect(
+      calculateProgramCheckInStreak({
+        planStartDate,
+        today: '2026-08-20',
+        timeZone: 'America/Chicago',
+        dailyCheckInDates: [
+          {
+            checkin_date: '2026-08-18',
+            created_at: '2026-08-18T13:00:00Z',
+          },
+        ],
+        weeklyCheckInDates: [
+          {
+            checkin_date: '2026-08-19',
+            status: 'completed',
+            submitted_at: '2026-08-20T16:00:00Z',
+          },
+        ],
+      }),
+    ).toBe(1)
+  })
+
+  test('uses the plan time zone when deciding the actual submission day', () => {
+    expect(
+      calculateProgramCheckInStreak({
+        planStartDate,
+        today: '2026-08-20',
+        timeZone: 'America/Chicago',
+        dailyCheckInDates: [
+          {
+            checkin_date: '2026-08-19',
+            // 2026-08-20 UTC, but still Aug 19 in Chicago.
+            created_at: '2026-08-20T03:30:00Z',
+          },
+        ],
+      }),
+    ).toBe(1)
+  })
+
   test('returns zero before the plan starts', () => {
     expect(
       calculateProgramCheckInStreak({

@@ -610,6 +610,31 @@ fieldset textarea {
   letter-spacing: 0.01em;
 }
 
+
+.dashboard-overdue-weekly {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.25rem 0 0.25rem;
+  border: 1px solid rgb(var(--color-interaction-rgb) / 42%);
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.1rem;
+  background: rgb(var(--color-interaction-rgb) / 8%);
+}
+
+.dashboard-overdue-weekly strong {
+  color: var(--color-primary-dark);
+}
+
+.dashboard-overdue-weekly p {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.dashboard-overdue-weekly button {
+  width: 100%;
+}
+
 /* Daily / Weekly check-in button */
 
 .dashboard-check-in {
@@ -878,6 +903,11 @@ button.plan-progress-row:hover:not(:disabled) {
   border-color: rgb(var(--color-interaction-rgb) / 42%);
 }
 
+.plan-progress-row.is-weekly-overdue {
+  border-color: rgb(var(--color-interaction-rgb) / 54%);
+  background: rgb(var(--color-interaction-rgb) / 8%);
+}
+
 .plan-progress-row.is-no-weekly {
   border-color: var(--color-border);
   background: rgb(247 247 251 / 82%);
@@ -926,6 +956,11 @@ button.plan-progress-row:hover:not(:disabled) {
 
 .plan-progress-status.is-needs-review {
   background: rgb(var(--color-interaction-rgb) / 12%);
+  color: var(--color-primary-dark);
+}
+
+.plan-progress-status.is-overdue {
+  background: rgb(var(--color-interaction-rgb) / 14%);
   color: var(--color-primary-dark);
 }
 

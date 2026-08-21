@@ -22,9 +22,9 @@ import {
 describe('Weekly grace period', () => {
   const due = '2026-08-16'
 
-  test('uses a three-calendar-day grace period', () => {
-    expect(WEEKLY_GRACE_DAYS).toBe(3)
-    expect(getWeeklyGraceEndDate(due)).toBe('2026-08-19')
+  test('uses a two-calendar-day grace period', () => {
+    expect(WEEKLY_GRACE_DAYS).toBe(2)
+    expect(getWeeklyGraceEndDate(due)).toBe('2026-08-18')
   })
 
   test('is due on the scheduled Weekly date', () => {
@@ -34,8 +34,8 @@ describe('Weekly grace period', () => {
     })).toBe(WEEKLY_DUE_STATE.DUE)
   })
 
-  test('is overdue during all three grace days', () => {
-    for (const date of ['2026-08-17', '2026-08-18', '2026-08-19']) {
+  test('is overdue during both grace days', () => {
+    for (const date of ['2026-08-17', '2026-08-18']) {
       expect(getWeeklyDueState({
         weeklyDueDate: due,
         todayDate: date,
@@ -46,7 +46,7 @@ describe('Weekly grace period', () => {
   test('expires the morning after the final grace day', () => {
     expect(getWeeklyDueState({
       weeklyDueDate: due,
-      todayDate: '2026-08-20',
+      todayDate: '2026-08-19',
     })).toBe(WEEKLY_DUE_STATE.EXPIRED)
   })
 
@@ -54,17 +54,13 @@ describe('Weekly grace period', () => {
     expect(getWeeklyGraceDaysRemaining({
       weeklyDueDate: due,
       todayDate: '2026-08-17',
-    })).toBe(2)
-
-    expect(getWeeklyGraceDaysRemaining({
-      weeklyDueDate: due,
-      todayDate: '2026-08-18',
     })).toBe(1)
 
     expect(getWeeklyGraceDaysRemaining({
       weeklyDueDate: due,
-      todayDate: '2026-08-19',
+      todayDate: '2026-08-18',
     })).toBe(0)
+
   })
 })
 
@@ -230,7 +226,7 @@ describe('Catch Up button/count behavior', () => {
         type: 'weekly',
         date: '2026-08-16',
         weekNumber: 3,
-        closesOn: '2026-08-19',
+        closesOn: '2026-08-18',
       },
     ])
   })
@@ -247,14 +243,14 @@ describe('Missed week recovery', () => {
   test('is not required while Weekly remains in grace', () => {
     expect(requiresMissedWeekRecovery({
       weeklyDueDate: '2026-08-16',
-      todayDate: '2026-08-19',
+      todayDate: '2026-08-18',
     })).toBe(false)
   })
 
   test('is required after grace expires without a Weekly', () => {
     expect(requiresMissedWeekRecovery({
       weeklyDueDate: '2026-08-16',
-      todayDate: '2026-08-20',
+      todayDate: '2026-08-19',
     })).toBe(true)
   })
 

@@ -350,9 +350,6 @@ export function canContinueWeeklyStep(
   form,
   {
     bodyFatSource,
-    photosRequired,
-    photos,
-    previewMode = false,
     validationByField = {},
   } = {},
 ) {
@@ -451,11 +448,11 @@ export function canContinueWeeklyStep(
     getPhotoPoseForStep(step)
 
   if (photoPose) {
-    if (!photosRequired || previewMode) {
-      return true
-    }
-
-    return Boolean(photos?.[photoPose])
+    // Progress-photo weeks schedule the photo prompts,
+    // but photos themselves are optional. A selected
+    // photo still autosaves immediately; skipping one
+    // must never block Weekly completion.
+    return true
   }
 
   // Menstrual context, photo tips, and the final

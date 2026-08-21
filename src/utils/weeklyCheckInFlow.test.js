@@ -627,7 +627,7 @@ describe('Weekly step continuation', () => {
     ).toBe(true)
   })
 
-  test('requires persisted progress photos when photos are required', () => {
+  test('keeps scheduled progress-photo steps optional', () => {
     expect(
       canContinueWeeklyStep(
         WEEKLY_CHECKIN_STEP_IDS.FRONT_PHOTO,
@@ -640,7 +640,7 @@ describe('Weekly step continuation', () => {
           },
         },
       ),
-    ).toBe(false)
+    ).toBe(true)
 
     expect(
       canContinueWeeklyStep(

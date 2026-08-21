@@ -16,6 +16,12 @@ import {
   CARDIO_INTENSITY_OPTIONS,
   CARDIO_TYPE_OPTIONS,
 } from '../../utils/cardio'
+import {
+  addDays,
+} from '../../utils/dates'
+import {
+  formatDate,
+} from '../../utils/formatters'
 import '../../styles/cardio.css'
 
 const MEAL_PLAN_LABELS = {
@@ -86,12 +92,28 @@ export function DailyCheckInStep({
   target,
   cardioCompleted,
   validationByField = {},
+  checkInDate = null,
+  isHistorical = false,
 }) {
+  const behaviorDate =
+    checkInDate
+      ? addDays(checkInDate, -1)
+      : null
+
+  const behaviorReference =
+    isHistorical && behaviorDate
+      ? formatDate(behaviorDate)
+      : 'yesterday'
+
   if (step === STEP.WEIGHT) {
     return (
       <WeightQuestion
         id="daily-morning-weight"
-        title="What was your weight this morning?"
+        title={
+          isHistorical && checkInDate
+            ? `What was your weight on ${formatDate(checkInDate)}?`
+            : 'What was your weight this morning?'
+        }
         label="Morning weight"
         value={form.morning_weight}
         status={form.weight_status}
@@ -115,7 +137,11 @@ export function DailyCheckInStep({
 
   if (step === STEP.MEAL_PLAN_SCORE) {
     return (
-      <WizardQuestion title="How closely did you follow your meal plan yesterday?">
+      <WizardQuestion title={`How closely did you follow your meal plan ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}>
         <WizardSlider
           name="meal-plan-score"
           value={form.meal_plan_score}
@@ -192,8 +218,12 @@ export function DailyCheckInStep({
       DEVIATION.CHEAT_PLUS
 
     const title = cheatMealWasIncluded
-      ? 'What else was different from yesterday’s meal plan, and why?'
-      : 'What was different from yesterday’s meal plan, and why?'
+      ? isHistorical
+        ? `What else was different from your meal plan on ${behaviorReference}, and why?`
+        : 'What else was different from yesterday’s meal plan, and why?'
+      : isHistorical
+        ? `What was different from your meal plan on ${behaviorReference}, and why?`
+        : 'What was different from yesterday’s meal plan, and why?'
 
     return (
       <WizardQuestion title={title}>
@@ -221,7 +251,11 @@ export function DailyCheckInStep({
 
   if (step === STEP.HUNGER) {
     return (
-      <WizardQuestion title="How hungry were you overall yesterday?">
+      <WizardQuestion title={`How hungry were you overall ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}>
         <WizardSlider
           name="hunger-score"
           value={form.hunger_score}
@@ -237,7 +271,11 @@ export function DailyCheckInStep({
 
   if (step === STEP.WORKOUT_STATUS) {
     return (
-      <WizardQuestion title="Did you complete your scheduled workout yesterday?">
+      <WizardQuestion title={`Did you complete your scheduled workout ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}>
         <WizardChoiceGroup
           name="workout-status"
           value={form.workout_status}
@@ -258,10 +296,18 @@ export function DailyCheckInStep({
     STEP.WORKOUT_INCOMPLETE_REASON
   ) {
     return (
-      <WizardQuestion title="What prevented you from completing yesterday’s workout?">
+      <WizardQuestion title={
+        isHistorical
+          ? `What prevented you from completing your workout on ${behaviorReference}?`
+          : 'What prevented you from completing yesterday’s workout?'
+      }>
         <WizardTextarea
           id="daily-workout-incomplete-reason"
-          ariaLabel="What prevented you from completing yesterday’s workout?"
+          ariaLabel={
+          isHistorical
+            ? `What prevented you from completing your workout on ${behaviorReference}?`
+            : 'What prevented you from completing yesterday’s workout?'
+        }
           value={
             form.workout_incomplete_reason
           }
@@ -279,7 +325,11 @@ export function DailyCheckInStep({
 
   if (step === STEP.TRAINING_PROBLEM) {
     return (
-      <WizardQuestion title="Did you have any pain, difficulty, or problems during yesterday’s training?">
+      <WizardQuestion title={
+        isHistorical
+          ? `Did you have any pain, difficulty, or problems during training on ${behaviorReference}?`
+          : 'Did you have any pain, difficulty, or problems during yesterday’s training?'
+      }>
         <WizardChoiceGroup
           name="training-problem"
           value={form.training_problem}
@@ -300,10 +350,18 @@ export function DailyCheckInStep({
     STEP.TRAINING_PROBLEM_DETAILS
   ) {
     return (
-      <WizardQuestion title="Describe what happened during yesterday’s training.">
+      <WizardQuestion title={
+        isHistorical
+          ? `Describe what happened during training on ${behaviorReference}.`
+          : 'Describe what happened during yesterday’s training.'
+      }>
         <WizardTextarea
           id="daily-training-problem-details"
-          ariaLabel="Describe what happened during yesterday’s training."
+          ariaLabel={
+          isHistorical
+            ? `Describe what happened during training on ${behaviorReference}.`
+            : 'Describe what happened during yesterday’s training.'
+        }
           value={
             form.training_problem_details
           }
@@ -326,15 +384,25 @@ export function DailyCheckInStep({
 
     return (
       <WizardQuestion
-        title="How many minutes of cardio did you complete yesterday?"
+        title={`How many minutes of cardio did you complete ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}
         helper={
-          <>
-            This week:{' '}
-            <strong>{cardioCompleted}</strong>{' '}
-            of{' '}
-            <strong>{cardioTarget}</strong>{' '}
-            minutes
-          </>
+          isHistorical
+            ? <>
+                Weekly cardio target:{' '}
+                <strong>{cardioTarget}</strong>{' '}
+                minutes
+              </>
+            : <>
+                This week:{' '}
+                <strong>{cardioCompleted}</strong>{' '}
+                of{' '}
+                <strong>{cardioTarget}</strong>{' '}
+                minutes
+              </>
         }
       >
         <WizardNumberField
@@ -456,7 +524,11 @@ export function DailyCheckInStep({
 
     return (
       <WizardQuestion
-        title="Did you hit your water goal yesterday?"
+        title={`Did you hit your water goal ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}
         helper={
           <>
             Your goal:{' '}
@@ -481,7 +553,11 @@ export function DailyCheckInStep({
 
   if (step === STEP.ALCOHOL) {
     return (
-      <WizardQuestion title="Did you drink alcohol yesterday?">
+      <WizardQuestion title={`Did you drink alcohol ${
+          isHistorical
+            ? `on ${behaviorReference}`
+            : behaviorReference
+        }?`}>
         <WizardChoiceGroup
           name="alcohol"
           value={form.alcohol_consumed}
@@ -499,10 +575,18 @@ export function DailyCheckInStep({
 
   if (step === STEP.ALCOHOL_DETAILS) {
     return (
-      <WizardQuestion title="What did you drink yesterday, and how much?">
+      <WizardQuestion title={
+        isHistorical
+          ? `What did you drink on ${behaviorReference}, and how much?`
+          : 'What did you drink yesterday, and how much?'
+      }>
         <WizardTextarea
           id="daily-alcohol-details"
-          ariaLabel="What did you drink yesterday, and how much?"
+          ariaLabel={
+          isHistorical
+            ? `What did you drink on ${behaviorReference}, and how much?`
+            : 'What did you drink yesterday, and how much?'
+        }
           value={form.alcohol_details}
           onChange={(value) =>
             setField(

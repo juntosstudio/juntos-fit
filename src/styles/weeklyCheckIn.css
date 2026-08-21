@@ -231,3 +231,14 @@
   font-size: 0.95rem;
   line-height: 1.5;
 }
+
+.weekly-late-checkin-notice {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid rgb(var(--color-interaction-rgb) / 35%);
+  border-radius: var(--radius-lg);
+  padding: 0.8rem 0.9rem;
+  background: rgb(var(--color-interaction-rgb) / 8%);
+  color: var(--color-primary-dark);
+  font-weight: 700;
+  line-height: 1.45;
+}

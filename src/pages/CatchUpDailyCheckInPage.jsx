@@ -109,6 +109,7 @@ export function CatchUpDailyCheckInPage({
   cardioCompleted,
   settings,
   checkinDate,
+  fromWeeklyPreflight = false,
   onSaved,
   onBack,
 }) {
@@ -414,7 +415,7 @@ export function CatchUpDailyCheckInPage({
           </div>
 
           <h2 id="catchup-saved-title">
-            Check-In Saved
+            Daily Check-In Saved
           </h2>
 
           <p>
@@ -422,11 +423,20 @@ export function CatchUpDailyCheckInPage({
             complete.
           </p>
 
+          {fromWeeklyPreflight && (
+            <p className="catchup-return-note">
+              Next, you’ll return to your Weekly
+              Check-In.
+            </p>
+          )}
+
           <button
             type="button"
             onClick={onBack}
           >
-            Continue
+            {fromWeeklyPreflight
+              ? 'Return to Weekly Check-In'
+              : 'Continue'}
           </button>
         </section>
       </div>
@@ -435,6 +445,21 @@ export function CatchUpDailyCheckInPage({
 
   const feedback = error ? (
     <p role="alert">{error}</p>
+  ) : fromWeeklyPreflight ? (
+    <aside
+      className="catchup-daily-context"
+      aria-label="Missing Daily Check-In context"
+    >
+      <strong>
+        You’re completing a missing Daily
+        Check-In first.
+      </strong>
+      <span>
+        Save this Daily, then Juntos will bring
+        you back to your overdue Weekly
+        Check-In.
+      </span>
+    </aside>
   ) : (
     <p className="catchup-context-note">
       You’re filling the answers that belonged
@@ -448,7 +473,7 @@ export function CatchUpDailyCheckInPage({
       <>
         <WizardPage
           className="daily-checkin-page"
-          title="Review Missed Check-In"
+          title="Review Missing Daily Check-In"
           subtitle={formatDate(checkinDate)}
           status={feedback}
           onBack={onBack}
@@ -488,7 +513,7 @@ export function CatchUpDailyCheckInPage({
     <>
       <WizardPage
         className="daily-checkin-page"
-        title="Complete Missed Daily Check-In"
+        title="Complete Missing Daily Check-In"
         subtitle={formatDate(checkinDate)}
         status={feedback}
         progress={progress}

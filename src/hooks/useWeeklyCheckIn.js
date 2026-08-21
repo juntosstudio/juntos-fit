@@ -34,7 +34,7 @@ import {
 } from '../services/weeklyCheckInPhotoService'
 import {
   loadLastCardioContext,
-  saveTodayDailyCheckIn,
+  saveDailyCheckInForDate,
 } from '../services/dailyCheckInService'
 import {
   getErrorMessage,
@@ -431,9 +431,12 @@ export function useWeeklyCheckIn(
     unitSystem,
     settings,
     onSaved,
+    checkinDate = null,
   } = {},
 ) {
-  const today = getTodayDateKey()
+  const currentDate = getTodayDateKey()
+  const activeCheckInDate =
+    checkinDate ?? currentDate
 
   const planLength = Number(
     plan?.program_length_weeks,
@@ -443,7 +446,7 @@ export function useWeeklyCheckIn(
     getWeeklyCheckInNumber(
       plan?.start_date,
       plan?.checkin_day,
-      today,
+      activeCheckInDate,
     )
 
   const exactWeekNumber =
@@ -458,7 +461,7 @@ export function useWeeklyCheckIn(
     getPreviewWeeklyCheckInNumber(
       plan?.start_date,
       plan?.checkin_day,
-      today,
+      activeCheckInDate,
     )
 
   const calculatedWeekNumber =
@@ -637,7 +640,7 @@ export function useWeeklyCheckIn(
           await createWeeklyCheckInDraft({
             userId: plan.user_id,
             coachingPlanId: plan.id,
-            checkinDate: today,
+            checkinDate: activeCheckInDate,
             weekNumber:
               exactWeekNumber,
             photosRequired:
@@ -661,7 +664,7 @@ export function useWeeklyCheckIn(
           !hasSavedCardioType
             ? await loadLastCardioContext(
                 plan.id,
-                today,
+                activeCheckInDate,
               )
             : null
 
@@ -721,7 +724,7 @@ export function useWeeklyCheckIn(
       plan?.id,
       plan?.user_id,
       plan?.measurement_side,
-      today,
+      activeCheckInDate,
       exactWeekNumber,
       persistenceEnabled,
       cadencePhotosRequired,
@@ -969,7 +972,8 @@ export function useWeeklyCheckIn(
       )
 
       const daily =
-        await saveTodayDailyCheckIn(
+        await saveDailyCheckInForDate(
+          activeCheckInDate,
           buildDailyValues({
             plan,
             form,
@@ -1000,7 +1004,7 @@ export function useWeeklyCheckIn(
         completed,
       )
       setSaveMessage('Submitted')
-      await onSaved?.()
+      await onSaved?.(completed)
 
       return true
     } catch (submitError) {
@@ -1053,7 +1057,12 @@ export function useWeeklyCheckIn(
   }
 
   return {
-    today,
+    // `today` remains as a compatibility alias for the check-in
+    // date used by the existing Weekly UI/tests. A late Weekly
+    // deliberately points at its scheduled historical date.
+    today: activeCheckInDate,
+    checkInDate: activeCheckInDate,
+    currentDate,
     weekNumber,
     photosRequired,
     isFinalWeekly,

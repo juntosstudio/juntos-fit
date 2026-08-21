@@ -516,3 +516,35 @@
     animation: none;
   }
 }
+
+
+/*
+ * Catch-up Daily context. When a missing Daily is opened
+ * from Weekly preflight, make the handoff unmistakable.
+ */
+.catchup-daily-context {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.9rem 0 0;
+  border: 1px solid rgb(var(--color-interaction-rgb) / 45%);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 0.95rem;
+  background: rgb(var(--color-interaction-rgb) / 7%);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.catchup-daily-context strong {
+  color: var(--color-primary-dark);
+}
+
+.catchup-daily-context span,
+.catchup-return-note {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.catchup-return-note {
+  margin: 0.25rem 0 0.85rem;
+}

@@ -14,6 +14,7 @@ import '../styles/checkInHistory.css'
 export function WeeklyPreflightPage({
   userId,
   plan,
+  checkinDate,
   onCompleteDay,
   onContinue,
   onBack,
@@ -40,7 +41,10 @@ export function WeeklyPreflightPage({
 
     try {
       const next =
-        await loadWeeklyPreflight(plan)
+        await loadWeeklyPreflight(
+          plan,
+          checkinDate,
+        )
       setPreflight(next)
     } catch (loadError) {
       setError(
@@ -56,7 +60,7 @@ export function WeeklyPreflightPage({
     load()
     // This screen remounts when returning from catch-up.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan?.id])
+  }, [plan?.id, checkinDate])
 
   useEffect(() => {
     if (
@@ -116,6 +120,26 @@ export function WeeklyPreflightPage({
     )
   }
 
+  if (preflight?.expired) {
+    return (
+      <main className="container weekly-preflight-page">
+        <button
+          type="button"
+          className="text-button"
+          onClick={onBack}
+        >
+          ← Back to Today
+        </button>
+
+        <h1>Weekly Check-In Closed</h1>
+        <p>
+          Week {preflight.weekNumber} is outside the late-check-in window.
+          Your existing plan stays in place until the next Weekly Check-In.
+        </p>
+      </main>
+    )
+  }
+
   if (!plan) {
     return (
       <main className="container weekly-preflight-page">
@@ -151,9 +175,10 @@ export function WeeklyPreflightPage({
         </h1>
 
         <p>
-          A few Daily Check-Ins are still unresolved.
-          Complete the day, or tell Juntos you don’t
-          have the data. You never need to guess.
+          Before you can complete this Weekly, finish
+          any missing Daily Check-Ins below. After you
+          save each Daily, Juntos will bring you back
+          here automatically.
         </p>
       </header>
 
@@ -172,8 +197,8 @@ export function WeeklyPreflightPage({
                 key={date}
               >
                 <div>
-                  <strong>{formatDate(date)}</strong>
-                  <span>Daily Check-In</span>
+                  <strong>Missing Daily Check-In</strong>
+                  <span>{formatDate(date)}</span>
                 </div>
 
                 <div className="weekly-preflight-actions">
@@ -183,7 +208,7 @@ export function WeeklyPreflightPage({
                       onCompleteDay(date)
                     }
                   >
-                    Complete This Day
+                    Complete Missing Daily
                   </button>
 
                   {confirmDate !== date ? (

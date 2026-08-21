@@ -1,6 +1,6 @@
 import { addDays } from './dates'
 
-export const WEEKLY_GRACE_DAYS = 3
+export const WEEKLY_GRACE_DAYS = 2
 
 export const WEEKLY_DUE_STATE = {
   UPCOMING: 'upcoming',

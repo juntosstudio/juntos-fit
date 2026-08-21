@@ -13,6 +13,7 @@ export function ProgressPage({
   onOpenToday,
   onOpenCurrentWeek,
   onOpenWeeklyReview,
+  onOpenWeeklyCheckIn,
   onOpenPlan,
   onOpenSettings,
 }) {
@@ -69,6 +70,9 @@ export function ProgressPage({
             }
             onOpenWeeklyReview={
               onOpenWeeklyReview
+            }
+            onOpenWeeklyCheckIn={
+              onOpenWeeklyCheckIn
             }
             initialShowAll
           />

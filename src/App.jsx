@@ -42,6 +42,11 @@ function App() {
     setWeeklyReviewJustCompleted,
   ] = useState(false)
 
+  const [
+    weeklyCheckInDate,
+    setWeeklyCheckInDate,
+  ] = useState(null)
+
   // Final Weekly submit refreshes the dashboard first, then
   // routes directly to Weekly Review. The Weekly page still
   // calls its normal onBack callback after submit, so this ref
@@ -149,6 +154,7 @@ function App() {
 
   function returnToDashboard() {
     setWeeklyReviewJustCompleted(false)
+    setWeeklyCheckInDate(null)
     setCurrentPage(PAGE_DASHBOARD)
   }
 
@@ -162,13 +168,29 @@ function App() {
     setCurrentPage(PAGE_WEEKLY_SUMMARY)
   }
 
-  async function handleWeeklySaved() {
+  function openWeeklyCheckIn(
+    checkinDate = activeDate,
+  ) {
+    setWeeklyCheckInDate(
+      checkinDate ?? activeDate,
+    )
+    setCurrentPage(
+      PAGE_WEEKLY_PREFLIGHT,
+    )
+  }
+
+  async function handleWeeklySaved(
+    completedCheckIn = null,
+  ) {
     const refreshedDashboard =
       await refreshDashboard()
 
     const completedWeekly =
-      refreshedDashboard
-        ?.todayWeeklyCheckIn
+      completedCheckIn?.status ===
+        'completed'
+        ? completedCheckIn
+        : refreshedDashboard
+            ?.todayWeeklyCheckIn
 
     if (
       completedWeekly?.status ===
@@ -323,6 +345,10 @@ function App() {
         }
         settings={dashboard?.settings}
         checkinDate={catchUpDate}
+        fromWeeklyPreflight={
+          catchUpReturnPage ===
+          PAGE_WEEKLY_PREFLIGHT
+        }
         onSaved={refreshDashboard}
         onBack={returnFromCatchUp}
       />
@@ -332,10 +358,13 @@ function App() {
   if (currentPage === PAGE_WEEKLY_PREFLIGHT) {
     return (
       <WeeklyPreflightPage
-        key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        key={`${weeklyCheckInDate ?? activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
         userId={user.id}
         plan={dashboard?.plan}
         profile={dashboard?.profile}
+        checkinDate={
+          weeklyCheckInDate ?? activeDate
+        }
         onCompleteDay={(date) =>
           openCatchUpDaily(
             date,
@@ -355,7 +384,7 @@ function App() {
   if (currentPage === PAGE_WEEKLY_CHECK_IN) {
     return (
       <WeeklyCheckInPage
-        key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
+        key={`${weeklyCheckInDate ?? activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
         plan={dashboard?.plan}
         profile={dashboard?.profile}
         target={dashboard?.target}
@@ -363,6 +392,9 @@ function App() {
           dashboard?.cardioCompleted ?? 0
         }
         settings={dashboard?.settings}
+        checkinDate={
+          weeklyCheckInDate ?? activeDate
+        }
         weekSummary={
           dashboard?.weekAtAGlance ?? null
         }
@@ -470,7 +502,7 @@ function App() {
           )
         }
         onOpenWeeklyCheckIn={() =>
-          setCurrentPage(PAGE_WEEKLY_PREFLIGHT)
+          openWeeklyCheckIn(activeDate)
         }
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
@@ -499,6 +531,9 @@ function App() {
         onOpenWeeklyReview={
           openWeeklyReview
         }
+        onOpenWeeklyCheckIn={
+          openWeeklyCheckIn
+        }
         onOpenPlan={() =>
           setCurrentPage(PAGE_PLAN)
         }
@@ -523,10 +558,8 @@ function App() {
       onOpenDailyCheckIn={() =>
         openDailyCheckIn()
       }
-      onOpenWeeklyCheckIn={() =>
-        setCurrentPage(
-          PAGE_WEEKLY_PREFLIGHT,
-        )
+      onOpenWeeklyCheckIn={
+        openWeeklyCheckIn
       }
       onOpenCurrentWeek={() =>
         setCurrentPage(PAGE_CURRENT_WEEK)

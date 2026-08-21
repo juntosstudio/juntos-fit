@@ -491,15 +491,13 @@ function PhotoQuestion({
     >
       <p className="weekly-preview-note">
         {persistenceEnabled
-          ? 'Your photo saves as soon as you select it, so it will still be here if you Save & Exit.'
-          : 'DEV preview: photos are not uploaded or saved outside the real Weekly Check-In date.'}
+          ? 'Optional — add a photo now or tap Next to skip. If you add one, it saves immediately and will still be here if you Exit Check-In.'
+          : 'Optional — add a photo or tap Next to skip. DEV preview photos are not uploaded or saved.'}
       </p>
 
       <label
         className={`weekly-photo-card ${
-          photo
-            ? 'has-answer'
-            : 'needs-answer'
+          photo ? 'has-answer' : ''
         }`}
         htmlFor={inputId}
       >
@@ -551,6 +549,8 @@ export function WeeklyCheckInStep({
   onSkipBodyFat,
   unitSystem,
   validationByField = {},
+  checkInDate = null,
+  isHistorical = false,
 }) {
   if (step === STEP.GET_STARTED) {
     return (
@@ -621,6 +621,8 @@ export function WeeklyCheckInStep({
         validationByField={
           validationByField
         }
+        checkInDate={checkInDate}
+        isHistorical={isHistorical}
       />
     )
   }

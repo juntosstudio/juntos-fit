@@ -9,6 +9,9 @@ import {
 import {
   getPlanWeekNumber,
 } from '../utils/planProgress'
+import {
+  formatDate,
+} from '../utils/formatters'
 
 function formatPercent(value) {
   if (
@@ -65,18 +68,26 @@ function isWeeklyGoalMet(value, target) {
   )
 }
 
-function getAdherenceState(value) {
+function getAdherenceState(
+  value,
+  coveragePercent,
+) {
   if (!hasNumericValue(value)) {
     return ''
   }
 
   const percent = Number(value)
+  const coverage = Number(coveragePercent)
 
-  if (percent >= 80) {
+  if (
+    percent >= 85 &&
+    Number.isFinite(coverage) &&
+    coverage >= 80
+  ) {
     return 'is-adherence-good'
   }
 
-  if (percent >= 60) {
+  if (percent >= 80) {
     return 'is-adherence-watch'
   }
 
@@ -147,6 +158,7 @@ export function DashboardPage({
 
   const adherenceState = getAdherenceState(
     weekly?.mealPlanAdherencePercent,
+    weekly?.mealPlanCoveragePercent,
   )
 
   // Keep the Start Check-In card visible before and on
@@ -175,6 +187,8 @@ export function DashboardPage({
     )
 
   const todayWeeklyCheckIn = dashboard?.todayWeeklyCheckIn ?? null
+  const overdueWeeklyCheckIn =
+    dashboard?.overdueWeeklyCheckIn ?? null
   const hasCompletedWeeklyCheckIn =
     todayWeeklyCheckIn?.status === 'completed'
   const hasWeeklyDraft = todayWeeklyCheckIn?.status === 'draft'
@@ -248,6 +262,36 @@ export function DashboardPage({
 
       {dashboard && plan && (
         <>
+          {canCheckIn && overdueWeeklyCheckIn && (
+            <section
+              className="dashboard-overdue-weekly"
+              aria-label={`Week ${overdueWeeklyCheckIn.weekNumber} Weekly Check-In overdue`}
+            >
+              <div>
+                <strong>
+                  Week {overdueWeeklyCheckIn.weekNumber} Weekly Check-In is overdue
+                </strong>
+
+                <p>
+                  Complete it by {formatDate(overdueWeeklyCheckIn.graceEndDate)}
+                  {' '}to close last week. Week {planProgressCurrentWeekNumber}
+                  {' '}stays current.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenWeeklyCheckIn(
+                    overdueWeeklyCheckIn.checkinDate,
+                  )
+                }
+              >
+                Complete Weekly Check-In
+              </button>
+            </section>
+          )}
+
           {canCheckIn && weeklyCheckInDue && (
             <section
               className="dashboard-check-in"
@@ -262,7 +306,8 @@ export function DashboardPage({
                         onOpenWeeklyReview(
                           reportingWeekNumber,
                         )
-                    : onOpenWeeklyCheckIn
+                    : () =>
+                        onOpenWeeklyCheckIn(today)
                 }
               >
                 {weeklyCheckInLabel}
@@ -447,6 +492,8 @@ export function DashboardPage({
                 : null
             }
             onOpenWeeklyReview={onOpenWeeklyReview}
+            onOpenWeeklyCheckIn={onOpenWeeklyCheckIn}
+            onShowAllWeeks={onOpenHistory}
           />
 
           {import.meta.env.DEV && (
@@ -481,7 +528,9 @@ export function DashboardPage({
                 <button
                   type="button"
                   className="text-button"
-                  onClick={onOpenWeeklyCheckIn}
+                  onClick={() =>
+                    onOpenWeeklyCheckIn(today)
+                  }
                 >
                   Preview Weekly Check-In Wizard
                 </button>

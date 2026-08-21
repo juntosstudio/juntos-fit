@@ -5,6 +5,8 @@ import {
   getReportingWeekForDate,
   getReportingWeekRange,
   getTodayDateKey,
+  dateKeyToUtcMilliseconds,
+  getWeeklyCheckInDateForWeek,
 } from '../utils/dates'
 import {
   getPlanProgressWeekNumber,
@@ -13,6 +15,15 @@ import {
 import {
   calculateProgramCheckInStreak,
 } from '../utils/checkInStreak'
+import {
+  calculateNutritionAdherence,
+} from '../utils/nutritionAdherence'
+import {
+  WEEKLY_DUE_STATE,
+  getWeeklyDueState,
+  getWeeklyGraceEndDate,
+  getWeeklyGraceDaysRemaining,
+} from '../utils/checkInCatchUpRules'
 
 const PLAN_FIELDS = `
   id,
@@ -56,6 +67,8 @@ const WEEKLY_CHECKIN_FIELDS = `
   checkin_date,
   morning_weight,
   meal_plan_score,
+  meal_plan_deviation_details,
+  planned_cheat_meal_status,
   water_goal_met,
   workout_status,
   cardio_minutes,
@@ -66,18 +79,26 @@ const PLAN_PROGRESS_WEEKLY_FIELDS = `
   id,
   week_number,
   status,
-  submitted_at
+  submitted_at,
+  nutrition_adherence_percent,
+  nutrition_adherence_days_reported,
+  nutrition_adherence_expected_days,
+  nutrition_adherence_coverage_percent,
+  nutrition_adherence_policy_version
 `
 
 const STREAK_WEEKLY_FIELDS = `
   checkin_date,
-  status
+  status,
+  submitted_at
 `
 
 const PLAN_PROGRESS_DAILY_FIELDS = `
   checkin_date,
   morning_weight,
   meal_plan_score,
+  meal_plan_deviation_details,
+  planned_cheat_meal_status,
   workout_status,
   cardio_minutes
 `
@@ -198,6 +219,30 @@ async function loadTodayWeeklyCheckIn(
   return weeklyCheckIn
 }
 
+async function loadWeeklyCheckInForWeek(
+  coachingPlanId,
+  weekNumber,
+) {
+  if (!coachingPlanId || !weekNumber) {
+    return null
+  }
+
+  const { data: weeklyCheckIn, error } = await supabase
+    .from('weekly_checkins')
+    .select(
+      'id, daily_checkin_id, checkin_date, week_number, status, resume_step, submitted_at',
+    )
+    .eq('coaching_plan_id', coachingPlanId)
+    .eq('week_number', weekNumber)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return weeklyCheckIn
+}
+
 async function loadWeeklyCheckIns(
   coachingPlanId,
   weekStart,
@@ -225,7 +270,7 @@ async function loadCheckInDates(
 ) {
   const { data: checkins, error } = await supabase
     .from('daily_checkins')
-    .select('checkin_date')
+    .select('checkin_date, created_at')
     .eq('coaching_plan_id', coachingPlanId)
     .gte('checkin_date', startDate)
     .lte('checkin_date', today)
@@ -283,10 +328,13 @@ function average(values) {
 function buildWeekAtAGlance(
   checkins,
   weeklyWorkoutTarget,
+  expectedMealPlanDays = 7,
 ) {
-  const mealPlanScores = checkins
-    .map((checkin) => Number(checkin.meal_plan_score))
-    .filter(Number.isFinite)
+  const nutritionAdherence =
+    calculateNutritionAdherence(
+      checkins,
+      { expectedDays: expectedMealPlanDays },
+    )
 
   const recordedWeights = checkins
     .map((checkin) => Number(checkin.morning_weight))
@@ -312,13 +360,19 @@ function buildWeekAtAGlance(
     0,
   )
 
-  const averageMealPlanScore = average(mealPlanScores)
-
   return {
     mealPlanAdherencePercent:
-      averageMealPlanScore === null
-        ? null
-        : averageMealPlanScore * 20,
+      nutritionAdherence.adherencePercent,
+    mealPlanDaysReported:
+      nutritionAdherence.daysReported,
+    mealPlanExpectedDays:
+      nutritionAdherence.expectedDays,
+    mealPlanCoveragePercent:
+      nutritionAdherence.coveragePercent,
+    mealPlanAdherenceBand:
+      nutritionAdherence.band,
+    mealPlanDataConfidence:
+      nutritionAdherence.dataConfidence,
     workoutsCompleted,
     workoutsTarget: Number.isFinite(
       Number(weeklyWorkoutTarget),
@@ -368,16 +422,39 @@ function cappedPercent(value, target) {
 function calculateConsistencyScore(
   dailyRows,
   prescriptions,
+  frozenNutritionAdherencePercent = null,
 ) {
   const components = []
 
-  const mealScores = dailyRows
-    .map((row) => Number(row.meal_plan_score))
-    .filter(Number.isFinite)
+  const calculatedNutritionAdherence =
+    calculateNutritionAdherence(
+      dailyRows,
+      { expectedDays: 7 },
+    )
 
-  if (mealScores.length > 0) {
+  const hasFrozenNutritionAdherence =
+    frozenNutritionAdherencePercent !== null &&
+    frozenNutritionAdherencePercent !== undefined &&
+    frozenNutritionAdherencePercent !== '' &&
+    Number.isFinite(
+      Number(frozenNutritionAdherencePercent),
+    )
+
+  const nutritionAdherencePercent =
+    hasFrozenNutritionAdherence
+      ? Number(frozenNutritionAdherencePercent)
+      : calculatedNutritionAdherence.adherencePercent
+
+  if (
+    Number.isFinite(
+      Number(nutritionAdherencePercent),
+    )
+  ) {
     components.push({
-      score: Math.min(100, Math.max(0, average(mealScores) * 20)),
+      score: Math.min(
+        100,
+        Math.max(0, Number(nutritionAdherencePercent)),
+      ),
       weight: CONSISTENCY_WEIGHTS.mealPlan,
     })
   }
@@ -453,6 +530,7 @@ function calculateConsistencyScore(
 async function loadPlanProgress(
   plan,
   currentWeekNumber,
+  today,
 ) {
   if (!currentWeekNumber) {
     return []
@@ -656,6 +734,15 @@ async function loadPlanProgress(
               weight > 0,
           )
 
+      const weeklyDueState =
+        getWeeklyDueState({
+          weeklyDueDate:
+            weekRange?.weeklyDueDate ?? null,
+          todayDate: today,
+          weeklyStatus:
+            weekly?.status ?? null,
+        })
+
       return {
         weeklyCheckInId:
           weekly?.id ?? null,
@@ -663,6 +750,12 @@ async function loadPlanProgress(
         weeklyStatus:
           weekly?.status ??
           'missing',
+        weeklyDueDate:
+          weekRange?.weeklyDueDate ?? null,
+        weeklyDueState,
+        canCompleteWeekly:
+          weeklyDueState ===
+          WEEKLY_DUE_STATE.OVERDUE,
         dailyCheckInCount:
           weekDailyRows.length,
         consistencyPercent:
@@ -683,6 +776,27 @@ async function loadPlanProgress(
       }
     },
   )
+}
+
+function getElapsedReportingDays(
+  reportingWeek,
+  today,
+) {
+  const start = reportingWeek?.reportingStart
+  const end = reportingWeek?.reportingEnd
+
+  if (!start || !end || !today || today < start) {
+    return 0
+  }
+
+  const cappedToday = today < end ? today : end
+  const elapsed = Math.floor(
+    (dateKeyToUtcMilliseconds(cappedToday) -
+      dateKeyToUtcMilliseconds(start)) /
+      86_400_000,
+  ) + 1
+
+  return Math.min(7, Math.max(0, elapsed))
 }
 
 // Loads all information required by the home dashboard.
@@ -727,6 +841,7 @@ export async function loadDashboardData(userId) {
       startCheckIn: null,
       todayCheckIn: null,
       todayWeeklyCheckIn: null,
+      overdueWeeklyCheckIn: null,
       cardioCompleted: 0,
       cardioWeekStart: null,
       cardioWeekEnd: null,
@@ -752,11 +867,23 @@ export async function loadDashboardData(userId) {
   const cardioWeekEnd =
     reportingWeek?.reportingEnd ?? null
 
+  const reportingWeekNumber =
+    getPlanWeekNumber(
+      plan,
+      today,
+    )
+
+  const previousWeekNumber =
+    Number(reportingWeekNumber) > 1
+      ? Number(reportingWeekNumber) - 1
+      : null
+
   const [
     target,
     startCheckIn,
     todayCheckIn,
     todayWeeklyCheckIn,
+    previousWeeklyCheckIn,
     weeklyCheckIns,
     checkInDates,
     weeklyCheckInDates,
@@ -765,6 +892,12 @@ export async function loadDashboardData(userId) {
     loadStartCheckIn(plan.id),
     loadTodayCheckIn(plan.id, today),
     loadTodayWeeklyCheckIn(plan.id, today),
+    previousWeekNumber
+      ? loadWeeklyCheckInForWeek(
+          plan.id,
+          previousWeekNumber,
+        )
+      : Promise.resolve(null),
 
     today >= plan.start_date &&
     cardioWeekStart &&
@@ -788,12 +921,6 @@ export async function loadDashboardData(userId) {
     ),
   ])
 
-  const reportingWeekNumber =
-    getPlanWeekNumber(
-      plan,
-      today,
-    )
-
   const planProgressCurrentWeekNumber =
     getPlanProgressWeekNumber(
       plan,
@@ -805,11 +932,16 @@ export async function loadDashboardData(userId) {
     await loadPlanProgress(
       plan,
       planProgressCurrentWeekNumber,
+      today,
     )
 
   const weekAtAGlance = buildWeekAtAGlance(
     weeklyCheckIns,
     target?.weekly_workout_target,
+    getElapsedReportingDays(
+      reportingWeek,
+      today,
+    ),
   )
 
   const streakDays = calculateProgramCheckInStreak({
@@ -818,7 +950,55 @@ export async function loadDashboardData(userId) {
     startCheckIn,
     planStartDate: plan.start_date,
     today,
+    timeZone:
+      plan.time_zone ??
+      profile.time_zone ??
+      undefined,
   })
+
+  let overdueWeeklyCheckIn = null
+
+  if (previousWeekNumber) {
+    const previousWeeklyDueDate =
+      getWeeklyCheckInDateForWeek(
+        plan.start_date,
+        plan.checkin_day,
+        previousWeekNumber,
+      )
+
+    const previousWeeklyDueState =
+      getWeeklyDueState({
+        weeklyDueDate:
+          previousWeeklyDueDate,
+        todayDate: today,
+        weeklyStatus:
+          previousWeeklyCheckIn?.status ?? null,
+      })
+
+    if (
+      previousWeeklyDueState ===
+      WEEKLY_DUE_STATE.OVERDUE
+    ) {
+      overdueWeeklyCheckIn = {
+        weekNumber: previousWeekNumber,
+        checkinDate:
+          previousWeeklyDueDate,
+        status:
+          previousWeeklyCheckIn?.status ??
+          'missing',
+        graceEndDate:
+          getWeeklyGraceEndDate(
+            previousWeeklyDueDate,
+          ),
+        graceDaysRemaining:
+          getWeeklyGraceDaysRemaining({
+            weeklyDueDate:
+              previousWeeklyDueDate,
+            todayDate: today,
+          }),
+      }
+    }
+  }
 
   const dashboard = {
     profile,
@@ -828,6 +1008,7 @@ export async function loadDashboardData(userId) {
     startCheckIn,
     todayCheckIn,
     todayWeeklyCheckIn,
+    overdueWeeklyCheckIn,
     cardioCompleted: weekAtAGlance.cardioMinutes,
     cardioWeekStart,
     cardioWeekEnd,

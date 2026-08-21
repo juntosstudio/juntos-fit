@@ -39,13 +39,14 @@ async function openDailyWizard(page) {
   await page.goto('/')
   await expectDashboard(page)
 
-  const preview =
+  const dailyCheckIn =
     page.getByRole('button', {
-      name: 'Preview Daily Check-In Wizard',
+      name: 'Daily Check-In',
+      exact: true,
     })
 
-  await expect(preview).toBeVisible()
-  await preview.click()
+  await expect(dailyCheckIn).toBeVisible()
+  await dailyCheckIn.click()
 
   await expect(
     page.getByRole('heading', {
@@ -64,6 +65,29 @@ async function advanceDailyToCardio(page) {
   // weight input. Take the real no-weight branch so
   // we can reach Cardio without coupling this test
   // to unrelated weight-field timing.
+  await expect
+    .poll(
+      async () => card.innerText(),
+      {
+        message:
+          'Daily wizard should finish loading into Weight or Cardio',
+      },
+    )
+    .toMatch(
+      /What was your weight this morning\?|How many minutes of cardio did you complete yesterday\?/,
+    )
+
+  const currentText =
+    await card.innerText()
+
+  if (
+    currentText.includes(
+      'How many minutes of cardio did you complete yesterday?',
+    )
+  ) {
+    return
+  }
+
   await expect(card).toContainText(
     'What was your weight this morning?',
   )
@@ -153,6 +177,26 @@ async function openWeeklyWizard(page) {
   await page.goto('/')
   await expectDashboard(page)
 
+  // The Weekly preview already exists in DEV; it lives
+  // inside a collapsed <details> section.
+  const devTools =
+    page.locator(
+      'details.dashboard-dev-tools',
+    )
+
+  await expect(devTools).toBeVisible()
+
+  const isOpen =
+    await devTools.evaluate(
+      (details) => details.open,
+    )
+
+  if (!isOpen) {
+    await devTools
+      .locator('summary')
+      .click()
+  }
+
   const preview =
     page.getByRole('button', {
       name:
@@ -162,12 +206,29 @@ async function openWeeklyWizard(page) {
   await expect(preview).toBeVisible()
   await preview.click()
 
+  // Weekly now enters through the real preflight. If the
+  // preflight is clear, continue into the real wizard.
+  const continueButton =
+    page.getByRole('button', {
+      name:
+        'Continue to Weekly Check-In',
+    })
+
+  if (
+    await continueButton
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await continueButton.click()
+  }
+
   await expect(
-    page.getByRole('heading', {
-      name: /Week \d+ Check-In/,
-    }),
+    page.locator(
+      'main.weekly-checkin-page',
+    ),
   ).toBeVisible()
 }
+
 
 async function advanceWeeklyToCardio(page) {
   const root = page.locator(
@@ -181,8 +242,32 @@ async function advanceWeeklyToCardio(page) {
   ) {
     await expect(root).toBeVisible()
 
-    const text =
+    let text =
       await root.innerText()
+
+    if (
+      text.includes(
+        'Loading your check-in...',
+      ) ||
+      text.includes(
+        'Opening your Weekly Check-In...',
+      )
+    ) {
+      await expect
+        .poll(
+          async () => root.innerText(),
+          {
+            message:
+              'Weekly wizard should finish loading into a real step',
+          },
+        )
+        .not.toMatch(
+          /Loading your check-in\.\.\.|Opening your Weekly Check-In\.\.\./,
+        )
+
+      text =
+        await root.innerText()
+    }
 
     if (
       text.includes(
@@ -378,13 +463,14 @@ test.describe(
 
       await expect(
         page.getByRole('heading', {
-          name: 'History',
+          name: 'Plan Progress',
         }),
       ).toBeVisible()
 
       await page
         .getByRole('button', {
-          name: 'Back to Dashboard',
+          name: 'Today',
+          exact: true,
         })
         .click()
 
@@ -398,7 +484,7 @@ test.describe(
 
       await page
         .getByRole('button', {
-          name: 'Back to Dashboard',
+          name: 'Exit Check-In',
         })
         .click()
 

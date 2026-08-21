@@ -490,6 +490,7 @@ function getExactWeeklyNumber(
 
 export async function loadWeeklyPreflight(
   plan,
+  checkinDate = getTodayDateKey(),
   today = getTodayDateKey(),
 ) {
   if (!plan?.id) {
@@ -501,7 +502,10 @@ export async function loadWeeklyPreflight(
   }
 
   const weekNumber =
-    getExactWeeklyNumber(plan, today)
+    getExactWeeklyNumber(
+      plan,
+      checkinDate,
+    )
 
   // DEV/off-schedule Weekly preview remains untouched.
   if (!weekNumber) {
@@ -519,9 +523,9 @@ export async function loadWeeklyPreflight(
     )
 
   const dailyStart =
-    expectedDailyDates[0] ?? today
+    expectedDailyDates[0] ?? checkinDate
   const dailyEnd =
-    expectedDailyDates.at(-1) ?? today
+    expectedDailyDates.at(-1) ?? checkinDate
 
   const [dailyRows, weeklyResult, resolutions] =
     await Promise.all([
@@ -558,6 +562,30 @@ export async function loadWeeklyPreflight(
     }
   }
 
+  const weeklyDueState =
+    getWeeklyDueState({
+      weeklyDueDate: checkinDate,
+      todayDate: today,
+      weeklyStatus:
+        weeklyRow?.status ?? null,
+    })
+
+  if (
+    weeklyDueState ===
+      WEEKLY_DUE_STATE.EXPIRED ||
+    weeklyDueState ===
+      WEEKLY_DUE_STATE.MISSED
+  ) {
+    return {
+      bypass: false,
+      expired: true,
+      weekNumber,
+      weeklyRow,
+      expectedDailyDates,
+      unresolvedDailyDates: [],
+    }
+  }
+
   const completedDailyDates =
     dailyRows.map((row) => row.checkin_date)
   const unavailableDailyDates =
@@ -574,7 +602,7 @@ export async function loadWeeklyPreflight(
       completedDailyDates,
       unavailableDailyDates,
       todayDate: today,
-      weeklyDueDate: today,
+      weeklyDueDate: checkinDate,
     })
 
   return {

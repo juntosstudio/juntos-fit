@@ -99,6 +99,7 @@ export function WeeklyCheckInReview({
   form,
   target,
   today,
+  isHistorical = false,
   weekNumber,
   plan,
   photos,
@@ -149,6 +150,7 @@ export function WeeklyCheckInReview({
           target={target}
           today={today}
           settings={settings}
+          isHistorical={isHistorical}
           showCoachNotes={false}
         />
       </section>
