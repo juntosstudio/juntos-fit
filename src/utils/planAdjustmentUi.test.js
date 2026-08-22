@@ -9,6 +9,8 @@ import {
   getPlanAdjustmentHandoffState,
   isHoldPlanAdjustment,
   isPlanAdjustmentOpen,
+  isPlanAdjustmentWindowExpired,
+  PLAN_ADJUSTMENT_WINDOW_HOURS,
 } from './planAdjustmentUi'
 
 describe('planAdjustmentUi', () => {
@@ -142,6 +144,68 @@ describe('planAdjustmentUi', () => {
 
     expect(
       getPlanAdjustmentHandoffState({ status: 'expired' }),
+    ).toMatchObject({
+      state: 'expired',
+      buttonLabel: 'View Plan Adjustment',
+    })
+  })
+
+  test('closes the adjustment exactly 24 hours after Weekly finalization', () => {
+    expect(PLAN_ADJUSTMENT_WINDOW_HOURS).toBe(24)
+
+    expect(
+      isPlanAdjustmentWindowExpired({
+        weeklySubmittedAt: '2026-08-22T19:30:00.000Z',
+        now: '2026-08-23T19:29:59.999Z',
+      }),
+    ).toBe(false)
+
+    expect(
+      isPlanAdjustmentWindowExpired({
+        weeklySubmittedAt: '2026-08-22T19:30:00.000Z',
+        now: '2026-08-23T19:30:00.000Z',
+      }),
+    ).toBe(true)
+  })
+
+  test('does not treat an expired proposed revision as open', () => {
+    expect(
+      isPlanAdjustmentOpen(
+        {
+          status: 'proposed',
+          expires_at: '2026-08-23T19:30:00.000Z',
+        },
+        {
+          now: '2026-08-23T19:30:00.000Z',
+        },
+      ),
+    ).toBe(false)
+  })
+
+  test('shows a closed non-actionable handoff when no proposal was opened in time', () => {
+    expect(
+      getPlanAdjustmentHandoffState(null, {
+        weeklySubmittedAt: '2026-08-22T19:30:00.000Z',
+        now: '2026-08-23T19:30:00.000Z',
+      }),
+    ).toMatchObject({
+      state: 'expired',
+      title: 'Adjustment window closed',
+      buttonLabel: null,
+    })
+  })
+
+  test('keeps an expired generated recommendation viewable but not actionable', () => {
+    expect(
+      getPlanAdjustmentHandoffState(
+        {
+          status: 'proposed',
+          expires_at: '2026-08-23T19:30:00.000Z',
+        },
+        {
+          now: '2026-08-23T19:30:00.000Z',
+        },
+      ),
     ).toMatchObject({
       state: 'expired',
       buttonLabel: 'View Plan Adjustment',

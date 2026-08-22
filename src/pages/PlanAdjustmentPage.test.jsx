@@ -361,4 +361,49 @@ describe('PlanAdjustmentPage', () => {
       }),
     ).toBeNull()
   })
+
+  test('does not generate a recommendation after the 24-hour Weekly window closes', async () => {
+    mocks.loadLatest.mockResolvedValue(null)
+
+    renderPage({
+      weeklySubmittedAt: '2026-08-20T12:00:00.000Z',
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Plan Adjustment Window Closed',
+      }),
+    ).toBeTruthy()
+    expect(mocks.generate).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole('button', {
+        name: 'Accept & Update Plan',
+      }),
+    ).toBeNull()
+  })
+
+  test('renders an overdue proposed recommendation as expired and read-only', async () => {
+    mocks.loadLatest.mockResolvedValue(
+      proposal({
+        expires_at: '2026-08-20T12:00:00.000Z',
+      }),
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Plan Adjustment Expired',
+      }),
+    ).toBeTruthy()
+    expect(
+      screen.queryByLabelText('Message Juntos Coach'),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('button', {
+        name: 'Accept & Update Plan',
+      }),
+    ).toBeNull()
+  })
+
 })

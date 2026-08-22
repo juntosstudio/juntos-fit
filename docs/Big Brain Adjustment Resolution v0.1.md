@@ -36,7 +36,7 @@ The conversation validator now uses the same rule. If an action ID is still lega
 
 ## Transactional database gate
 
-Migration `20260821123600_bb_adjustment_resolution.sql` adds security-definer RPC `resolve_coaching_adjustment_proposal(...)`.
+Migration `20260821123600_bb_adjustment_resolution.sql` adds security-definer RPC `resolve_coaching_adjustment_proposal(...)`. Migration `20260822192500_bb_adjustment_24h_window.sql` tightens that lifecycle to the V1 24-hour decision window.
 
 The transaction:
 
@@ -61,12 +61,9 @@ Target insert + proposal acceptance occur in one database transaction. There is 
 
 An unresolved proposal cannot remain actionable forever.
 
-For v0.1, acceptance expires when either:
+For v0.1, the entire actionable Plan Adjustment window is **24 hours from `weekly_checkins.submitted_at`**. The clock starts when the Weekly is finalized, not when the user first opens Plan Adjustment. Conversation and revisions do not reset or extend the deadline. After 24 hours, accept, decline, conversation, and revision are all closed; the adjustment becomes view-only history and the current prescription remains in place.
 
-- the intended next plan week has ended, or
-- a later Weekly Check-In has already been completed.
-
-A proposal also becomes stale if its canonical base prescription materially changed after the proposal was formed.
+A proposal also becomes stale if a later Weekly is completed or its canonical base prescription materially changed after the proposal was formed.
 
 Expired/stale proposals are not applied.
 
@@ -74,9 +71,9 @@ Expired/stale proposals are not applied.
 
 The proposed effective date remains the next plan-week boundary, as originally designed.
 
-If the user accepts after that date but still within the intended plan week, the **actual** effective date becomes the user's local acceptance date. The system does not pretend that earlier days used a prescription the user had not yet accepted.
+If the user accepts after the proposed next-week boundary but still inside the 24-hour decision window, the **actual** effective date becomes the user's local acceptance date. The system does not pretend that earlier days used a prescription the user had not yet accepted.
 
-This intentionally creates a split-week prescription, which the existing Weekly prescription snapshot model already supports.
+This can still create a short, truthful split week, but the 24-hour limit prevents late-week prescription changes from contaminating the next coaching review.
 
 ## HOLD and decline
 
@@ -89,23 +86,19 @@ This intentionally creates a split-week prescription, which the existing Weekly 
 
 1. **Acceptance re-checks current deterministic legality and exact prescription math.** A once-legal proposal is not permanently entitled to persistence.
 2. **Late acceptance is never backdated.** Actual effective date is the later of the proposed plan-week start or the user's local acceptance date.
-3. **Proposal lifetime is one intended plan week.** Once that week ends or a later Weekly is finalized, use newer evidence instead of applying an old recommendation.
+3. **Proposal lifetime is 24 hours from Weekly finalization.** The deadline is anchored to `weekly_checkins.submitted_at`; opening the screen or starting a conversation never resets it.
 4. **Materially equivalent target rows do not automatically stale a proposal merely because their row IDs differ.** Staleness compares the actual prescription fields, not provenance/row identity.
 5. **A target already scheduled on the exact application date wins.** BB does not overwrite it or claim it as its own.
 6. **HOLD acceptance creates no redundant target row.** The audit event belongs on the proposal; prescription history should contain actual prescription changes.
-7. **Decline does not require policy re-evaluation.** A user may always decline an unresolved recommendation.
+7. **Decline does not require policy re-evaluation, but it is still a decision action.** It is available only during the same 24-hour window; after that the proposal is history-only.
 8. **Same-resolution retries are idempotent; opposite-resolution retries are conflicts.** Resolution history is immutable.
 9. **Plan timezone controls the acceptance date.** Database UTC must not move a user's prescription to the wrong calendar day.
 10. **The database, not the Edge Function or AI, constructs the applied target from frozen proposal columns.** This is the final enforcement of deterministic persistence.
 
-## Explicitly not implemented in this pass
+## Still explicitly deferred
 
-- Plan Adjustment UI
-- Accept / Decline buttons in React
-- visual confirmation / proposed-prescription review screen
-- post-acceptance success UI
 - active Calorie Reset week-by-week ramp state machine
 - maintenance policy
 - muscle-gain policy
 
-The backend contract and persistence wall are now ready for the UI layer to consume.
+The persistence wall is live and consumed by the Plan Adjustment UI.

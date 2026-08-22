@@ -1,5 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { buildAdjustmentJudgmentContext } from '../_shared/brain/adjustmentJudgmentContext.ts'
+import {
+  isAdjustmentWindowExpired,
+  resolveAdjustmentWindowDeadline,
+} from '../_shared/brain/adjustmentWindow.ts'
 import { runAdjustmentJudgment } from '../_shared/brain/adjustmentJudgmentProvider.ts'
 import {
   finishAiRun,
@@ -10,6 +14,7 @@ import { ADJUSTMENT_JUDGMENT_PROTOCOL } from '../_shared/brain/judgmentProtocol.
 import { loadRelevantMemory } from '../_shared/brain/memoryProvider.ts'
 import {
   createInitialAdjustmentProposal,
+  expireOpenAdjustmentProposalIfNeeded,
   loadLatestAdjustmentProposal,
   toPublicAdjustmentProposal,
 } from '../_shared/brain/planAdjustmentRepository.ts'
@@ -307,13 +312,41 @@ Deno.serve(async (req) => {
       )
 
     if (existingProposal) {
+      const currentProposal =
+        await expireOpenAdjustmentProposalIfNeeded({
+          admin,
+          proposal: existingProposal,
+          weeklyCheckIn,
+        })
+
       return jsonResponse({
         proposal:
           toPublicAdjustmentProposal(
-            existingProposal,
+            currentProposal,
           ),
         cached: true,
       })
+    }
+
+    const expiresAt = resolveAdjustmentWindowDeadline({
+      weeklySubmittedAt: weeklyCheckIn.submitted_at,
+    })
+
+    if (
+      isAdjustmentWindowExpired({
+        expiresAt,
+        weeklySubmittedAt: weeklyCheckIn.submitted_at,
+      })
+    ) {
+      return jsonResponse(
+        {
+          error:
+            'The 24-hour Plan Adjustment window for this Weekly Check-In has closed. No prescription change was applied.',
+          adjustment_expired: true,
+          expires_at: expiresAt,
+        },
+        409,
+      )
     }
 
     const packet = await buildCoachingPacket({
@@ -411,6 +444,34 @@ Deno.serve(async (req) => {
       })
 
       throw error
+    }
+
+    if (
+      isAdjustmentWindowExpired({
+        expiresAt,
+        weeklySubmittedAt: weeklyCheckIn.submitted_at,
+      })
+    ) {
+      await safeFinishRun({
+        admin,
+        runId: aiRun.id,
+        status: 'failed',
+        aiMeta: aiResult.meta,
+        outputSnapshot: aiResult.judgment,
+        errorCode: 'ADJUSTMENT_WINDOW_EXPIRED',
+        errorMessage:
+          'The 24-hour Plan Adjustment window closed before the recommendation could be frozen.',
+      })
+
+      return jsonResponse(
+        {
+          error:
+            'The 24-hour Plan Adjustment window for this Weekly Check-In has closed. No prescription change was applied.',
+          adjustment_expired: true,
+          expires_at: expiresAt,
+        },
+        409,
+      )
     }
 
     let proposal

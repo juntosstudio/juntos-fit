@@ -19,6 +19,7 @@ import {
   formatPlanAdjustmentStatus,
   isHoldPlanAdjustment,
   isPlanAdjustmentOpen,
+  isPlanAdjustmentWindowExpired,
 } from '../utils/planAdjustmentUi'
 import '../styles/planAdjustment.css'
 
@@ -247,6 +248,7 @@ function ResolutionSummary({ proposal }) {
 export function PlanAdjustmentPage({
   weeklyCheckInId,
   weekNumber,
+  weeklySubmittedAt,
   onBack,
   onResolved,
   onOpenToday,
@@ -265,6 +267,8 @@ export function PlanAdjustmentPage({
     useState(null)
   const [pendingRetry, setPendingRetry] =
     useState(null)
+  const [windowClosedWithoutProposal, setWindowClosedWithoutProposal] =
+    useState(false)
 
   async function refreshConversation() {
     const nextMessages =
@@ -326,6 +330,19 @@ export function PlanAdjustmentPage({
 
         let nextProposal = existingProposal
 
+        if (
+          !nextProposal &&
+          isPlanAdjustmentWindowExpired({
+            weeklySubmittedAt,
+          })
+        ) {
+          if (!cancelled) {
+            setWindowClosedWithoutProposal(true)
+            setMessages(existingMessages)
+          }
+          return
+        }
+
         if (!nextProposal) {
           nextProposal =
             await generatePlanAdjustment(
@@ -337,6 +354,7 @@ export function PlanAdjustmentPage({
           return
         }
 
+        setWindowClosedWithoutProposal(false)
         setProposal(nextProposal)
         setMessages(existingMessages)
 
@@ -369,7 +387,7 @@ export function PlanAdjustmentPage({
     return () => {
       cancelled = true
     }
-  }, [weeklyCheckInId])
+  }, [weeklyCheckInId, weeklySubmittedAt])
 
   async function retryLoad() {
     if (!weeklyCheckInId || loading) {
@@ -380,14 +398,29 @@ export function PlanAdjustmentPage({
     setError('')
 
     try {
-      const nextProposal =
-        (await loadLatestPlanAdjustment(
+      let nextProposal =
+        await loadLatestPlanAdjustment(
           weeklyCheckInId,
-        )) ??
+        )
+
+      if (
+        !nextProposal &&
+        isPlanAdjustmentWindowExpired({
+          weeklySubmittedAt,
+        })
+      ) {
+        setWindowClosedWithoutProposal(true)
+        setProposal(null)
+        return
+      }
+
+      nextProposal =
+        nextProposal ??
         (await generatePlanAdjustment(
           weeklyCheckInId,
         ))
 
+      setWindowClosedWithoutProposal(false)
       setProposal(nextProposal)
       await refreshConversation()
     } catch (loadError) {
@@ -549,8 +582,21 @@ export function PlanAdjustmentPage({
     }
   }
 
-  const open = isPlanAdjustmentOpen(proposal)
-  const hold = isHoldPlanAdjustment(proposal)
+  const windowExpired =
+    isPlanAdjustmentWindowExpired({
+      proposal,
+      weeklySubmittedAt,
+    })
+  const displayProposal =
+    proposal?.status === 'proposed' &&
+    windowExpired
+      ? { ...proposal, status: 'expired' }
+      : proposal
+  const open = isPlanAdjustmentOpen(
+    displayProposal,
+    { weeklySubmittedAt },
+  )
+  const hold = isHoldPlanAdjustment(displayProposal)
   const retryingSavedTurn = Boolean(
     pendingRetry &&
       String(pendingRetry.content ?? '').trim() ===
@@ -616,9 +662,21 @@ export function PlanAdjustmentPage({
           </section>
         )}
 
+        {!loading && windowClosedWithoutProposal && (
+          <section className="plan-adjustment-resolution">
+            <h2>Plan Adjustment Window Closed</h2>
+            <p>
+              The 24-hour decision window for this Weekly
+              Check-In has closed. No prescription change
+              was applied. Your next completed Weekly
+              Check-In will create a fresh coaching decision.
+            </p>
+          </section>
+        )}
+
         {!loading && proposal && (
           <>
-            <ProposalCard proposal={proposal} />
+            <ProposalCard proposal={displayProposal} />
 
             {open && (
               <section className="plan-adjustment-discussion-card">
@@ -680,12 +738,12 @@ export function PlanAdjustmentPage({
             )}
 
             <ProposedPrescriptionCard
-              proposal={proposal}
+              proposal={displayProposal}
             />
 
             {!open && (
               <ResolutionSummary
-                proposal={proposal}
+                proposal={displayProposal}
               />
             )}
 

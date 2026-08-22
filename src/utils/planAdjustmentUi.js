@@ -18,6 +18,75 @@ const STATUS_LABELS = {
   expired: 'Expired',
 }
 
+export const PLAN_ADJUSTMENT_WINDOW_HOURS = 24
+const PLAN_ADJUSTMENT_WINDOW_MS =
+  PLAN_ADJUSTMENT_WINDOW_HOURS * 60 * 60 * 1000
+
+function validTimestamp(value) {
+  if (!value) {
+    return null
+  }
+
+  const ms = Date.parse(String(value))
+  return Number.isFinite(ms) ? ms : null
+}
+
+export function getPlanAdjustmentDeadline({
+  proposal,
+  weeklySubmittedAt,
+} = {}) {
+  const explicit = validTimestamp(
+    proposal?.expires_at,
+  )
+
+  if (explicit !== null) {
+    return new Date(explicit).toISOString()
+  }
+
+  const submitted = validTimestamp(
+    weeklySubmittedAt,
+  )
+
+  if (submitted === null) {
+    return null
+  }
+
+  return new Date(
+    submitted + PLAN_ADJUSTMENT_WINDOW_MS,
+  ).toISOString()
+}
+
+export function isPlanAdjustmentWindowExpired({
+  proposal,
+  weeklySubmittedAt,
+  now = Date.now(),
+} = {}) {
+  if (proposal?.status === 'expired') {
+    return true
+  }
+
+  const deadline = getPlanAdjustmentDeadline({
+    proposal,
+    weeklySubmittedAt,
+  })
+
+  if (!deadline) {
+    return false
+  }
+
+  const nowMs =
+    now instanceof Date
+      ? now.getTime()
+      : typeof now === 'number'
+        ? now
+        : Date.parse(String(now))
+
+  return (
+    Number.isFinite(nowMs) &&
+    nowMs >= Date.parse(deadline)
+  )
+}
+
 export function formatPlanAdjustmentAction(actionId) {
   return (
     ACTION_LABELS[actionId] ??
@@ -29,8 +98,17 @@ export function formatPlanAdjustmentStatus(status) {
   return STATUS_LABELS[status] ?? 'Plan Adjustment'
 }
 
-export function isPlanAdjustmentOpen(proposal) {
-  return proposal?.status === 'proposed'
+export function isPlanAdjustmentOpen(
+  proposal,
+  options = {},
+) {
+  return (
+    proposal?.status === 'proposed' &&
+    !isPlanAdjustmentWindowExpired({
+      proposal,
+      ...options,
+    })
+  )
 }
 
 export function isHoldPlanAdjustment(proposal) {
@@ -40,7 +118,10 @@ export function isHoldPlanAdjustment(proposal) {
   )
 }
 
-export function getPlanAdjustmentHandoffState(proposal) {
+export function getPlanAdjustmentHandoffState(
+  proposal,
+  options = {},
+) {
   const status = proposal?.status
 
   if (status === 'accepted') {
@@ -76,13 +157,30 @@ export function getPlanAdjustmentHandoffState(proposal) {
     }
   }
 
-  if (status === 'expired') {
+  if (
+    status === 'expired' ||
+    isPlanAdjustmentWindowExpired({
+      proposal,
+      ...options,
+    })
+  ) {
+    if (!proposal) {
+      return {
+        state: 'expired',
+        eyebrow: 'Plan adjustment · Closed',
+        title: 'Adjustment window closed',
+        description:
+          'The 24-hour decision window for this week has closed. Your prescription stayed unchanged and the next Weekly Check-In will create a fresh coaching decision.',
+        buttonLabel: null,
+      }
+    }
+
     return {
       state: 'expired',
       eyebrow: 'Plan adjustment · Expired',
       title: 'Recommendation expired',
       description:
-        'This recommendation is no longer actionable, but you can still view it as part of this week’s coaching history.',
+        'The 24-hour decision window has closed. This recommendation is view-only and cannot change the current week.',
       buttonLabel: 'View Plan Adjustment',
     }
   }
@@ -103,7 +201,7 @@ export function getPlanAdjustmentHandoffState(proposal) {
     eyebrow: 'Next week',
     title: 'Plan Adjustment',
     description:
-      'Review Juntos Coach’s recommendation, discuss it if you want, and explicitly accept or decline it. Nothing changes until you accept.',
+      'Review Juntos Coach’s recommendation, discuss it if you want, and explicitly accept or decline it within 24 hours of completing Weekly. Nothing changes until you accept.',
     buttonLabel: 'Review Plan Adjustment',
   }
 }

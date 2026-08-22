@@ -1269,8 +1269,15 @@ export function WeeklySummaryPage({
       () =>
         getPlanAdjustmentHandoffState(
           planAdjustment,
+          {
+            weeklySubmittedAt:
+              summary?.week?.submitted_at,
+          },
         ),
-      [planAdjustment],
+      [
+        planAdjustment,
+        summary?.week?.submitted_at,
+      ],
     )
 
   if (!plan) {
@@ -1653,18 +1660,22 @@ export function WeeklySummaryPage({
                 <p>
                   {planAdjustmentHandoff.description}
                 </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onOpenPlanAdjustment?.({
-                      weeklyCheckInId:
-                        summary.week.id,
-                      weekNumber: selectedWeek,
-                    })
-                  }
-                >
-                  {planAdjustmentHandoff.buttonLabel}
-                </button>
+                {planAdjustmentHandoff.buttonLabel && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenPlanAdjustment?.({
+                        weeklyCheckInId:
+                          summary.week.id,
+                        weekNumber: selectedWeek,
+                        weeklySubmittedAt:
+                          summary.week.submitted_at,
+                      })
+                    }
+                  >
+                    {planAdjustmentHandoff.buttonLabel}
+                  </button>
+                )}
               </section>
             )}
 

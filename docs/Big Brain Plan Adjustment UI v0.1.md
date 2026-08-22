@@ -28,8 +28,8 @@ User flow:
 6. **An interrupted coach reply blocks resolution until retried.**
    Conversation reads now include `client_message_id`. If a persisted user turn has no coach reply, the UI restores that exact message, reuses its UUID, and disables Accept/Decline until the reply is completed. This prevents applying an older proposal while the user's challenge/question is still unresolved.
 
-7. **Resolved proposals are read-only.**
-   Accepted, declined, and expired states hide the conversation composer and resolution controls. Decline remains final for that proposal revision under the current backend contract.
+7. **Resolved and time-expired proposals are read-only.**
+   Accepted, declined, and expired states hide the conversation composer and resolution controls. A proposed revision is also treated as expired in the UI once its 24-hour Weekly-finalization deadline passes, even before a round-trip that persists the expired status.
 
 8. **Coach Review no longer claims the prescription was held.**
    Coach Review explicitly says no prescription changes happen in that stage. The actual recommendation lives in Plan Adjustment.
@@ -39,6 +39,9 @@ User flow:
 
 10. **Returning from Plan Adjustment preserves the Weekly being reviewed.**
     `WeeklySummaryPage` now consumes the `initialWeekNumber` that `App` was already passing. This fixes an existing navigation gap exposed by the new flow.
+
+11. **The actionable UI expires 24 hours after Weekly finalization.**
+    Weekly Review derives the same deadline from `submitted_at` / proposal `expires_at`. A generated expired recommendation remains viewable as history; if the user never opened Plan Adjustment before the window closed, Weekly Review shows the closed state without offering a button that could generate a stale recommendation.
 
 ## Still intentionally deferred
 

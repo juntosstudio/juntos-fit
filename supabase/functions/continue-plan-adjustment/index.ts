@@ -17,6 +17,7 @@ import {
 import { buildCoachingPacket } from '../_shared/brain/coachingPacket.ts'
 import { loadRelevantMemory } from '../_shared/brain/memoryProvider.ts'
 import {
+  expireOpenAdjustmentProposalIfNeeded,
   loadLatestAdjustmentProposal,
   toPublicAdjustmentProposal,
 } from '../_shared/brain/planAdjustmentRepository.ts'
@@ -328,13 +329,13 @@ Deno.serve(async (req) => {
       )
     }
 
-    const currentProposal =
+    const loadedProposal =
       await loadLatestAdjustmentProposal(
         admin,
         weeklyCheckIn.id,
       )
 
-    if (!currentProposal) {
+    if (!loadedProposal) {
       return jsonResponse(
         {
           error:
@@ -344,11 +345,26 @@ Deno.serve(async (req) => {
       )
     }
 
+    const currentProposal =
+      await expireOpenAdjustmentProposalIfNeeded({
+        admin,
+        proposal: loadedProposal,
+        weeklyCheckIn,
+      })
+
     if (currentProposal.status !== 'proposed') {
       return jsonResponse(
         {
           error:
-            'This Plan Adjustment is already resolved.',
+            currentProposal.status === 'expired'
+              ? 'The 24-hour Plan Adjustment window has closed. This coaching decision is now view-only.'
+              : 'This Plan Adjustment is already resolved.',
+          adjustment_expired:
+            currentProposal.status === 'expired',
+          proposal:
+            toPublicAdjustmentProposal(
+              currentProposal,
+            ),
         },
         409,
       )

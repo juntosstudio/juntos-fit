@@ -179,6 +179,7 @@ function App() {
   function openPlanAdjustment({
     weeklyCheckInId,
     weekNumber,
+    weeklySubmittedAt,
   }) {
     if (!weeklyCheckInId) {
       return
@@ -190,6 +191,8 @@ function App() {
         Number.isFinite(Number(weekNumber))
           ? Number(weekNumber)
           : null,
+      weeklySubmittedAt:
+        weeklySubmittedAt ?? null,
     })
 
     if (Number.isFinite(Number(weekNumber))) {
@@ -458,6 +461,9 @@ function App() {
         }
         weekNumber={
           planAdjustmentContext?.weekNumber
+        }
+        weeklySubmittedAt={
+          planAdjustmentContext?.weeklySubmittedAt
         }
         onBack={returnFromPlanAdjustment}
         onResolved={refreshDashboard}

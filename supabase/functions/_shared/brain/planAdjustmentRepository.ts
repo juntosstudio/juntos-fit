@@ -1,4 +1,8 @@
 import type { ValidatedAdjustmentJudgment } from './judgmentTypes.ts'
+import {
+  isAdjustmentWindowExpired,
+  resolveAdjustmentWindowDeadline,
+} from './adjustmentWindow.ts'
 
 const DAY_MS = 86_400_000
 
@@ -148,6 +152,75 @@ export async function loadLatestAdjustmentProposal(
   return data ?? null
 }
 
+export async function expireOpenAdjustmentProposalIfNeeded({
+  admin,
+  proposal,
+  weeklyCheckIn,
+  now = Date.now(),
+}: {
+  admin: any
+  proposal: any
+  weeklyCheckIn: any
+  now?: string | number | Date
+}) {
+  if (!proposal || proposal.status !== 'proposed') {
+    return proposal ?? null
+  }
+
+  const expiresAt = resolveAdjustmentWindowDeadline({
+    expiresAt: proposal.expires_at,
+    weeklySubmittedAt: weeklyCheckIn?.submitted_at,
+  })
+
+  if (
+    !isAdjustmentWindowExpired({
+      expiresAt,
+      weeklySubmittedAt: weeklyCheckIn?.submitted_at,
+      now,
+    })
+  ) {
+    return proposal
+  }
+
+  const { data, error } = await admin
+    .from('coaching_adjustment_proposals')
+    .update({
+      status: 'expired',
+      expires_at: expiresAt,
+      resolution_reason_code:
+        'PROPOSAL_WINDOW_EXPIRED',
+      resolution_note:
+        'The 24-hour Plan Adjustment decision window closed.',
+    })
+    .eq('id', proposal.id)
+    .eq('status', 'proposed')
+    .select('*')
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  // A concurrent resolver may have changed the status first. Reload so
+  // callers always receive the canonical committed lifecycle state.
+  if (!data) {
+    const { data: reloaded, error: reloadError } =
+      await admin
+        .from('coaching_adjustment_proposals')
+        .select('*')
+        .eq('id', proposal.id)
+        .maybeSingle()
+
+    if (reloadError) {
+      throw reloadError
+    }
+
+    return reloaded ?? proposal
+  }
+
+  return data
+}
+
 export async function createInitialAdjustmentProposal({
   admin,
   weeklyCheckIn,
@@ -165,6 +238,26 @@ export async function createInitialAdjustmentProposal({
 }) {
   const action = judgment.selected_action
   const prescription = action.proposed_prescription
+  const expiresAt = resolveAdjustmentWindowDeadline({
+    weeklySubmittedAt: weeklyCheckIn.submitted_at,
+  })
+
+  if (!expiresAt) {
+    throw new Error(
+      'Plan Adjustment cannot resolve the 24-hour decision deadline from Weekly finalization.',
+    )
+  }
+
+  if (
+    isAdjustmentWindowExpired({
+      expiresAt,
+      weeklySubmittedAt: weeklyCheckIn.submitted_at,
+    })
+  ) {
+    throw new Error(
+      'The 24-hour Plan Adjustment window closed before the recommendation could be frozen.',
+    )
+  }
 
   if (!prescription) {
     throw new Error(
@@ -205,6 +298,7 @@ export async function createInitialAdjustmentProposal({
       prescription.nutrition_ownership,
     proposed_effective_date:
       resolveProposalEffectiveDate(packet),
+    expires_at: expiresAt,
     reason_codes: action.reason_codes,
     user_explanation:
       judgment.user_explanation,
