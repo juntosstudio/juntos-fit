@@ -144,6 +144,7 @@ const PLAN_ADJUSTMENT_MESSAGE_FIELDS = `
   role,
   content,
   in_reply_to_message_id,
+  client_message_id,
   created_at
 `
 

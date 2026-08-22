@@ -414,3 +414,44 @@
   justify-content: center;
 }
 
+
+.weekly-plan-adjustment-handoff {
+  margin-top: 1rem;
+  border: 1px solid rgb(var(--color-interaction-rgb) / 45%);
+  border-radius: var(--radius-xl);
+  padding: clamp(1rem, 4vw, 1.4rem);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface),
+    var(--color-accent-soft)
+  );
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.weekly-plan-adjustment-eyebrow {
+  margin: 0;
+  color: var(--color-interaction);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weekly-plan-adjustment-handoff h2 {
+  margin: 0.25rem 0 0;
+  color: var(--color-primary-dark);
+  font-size: 1.2rem;
+}
+
+.weekly-plan-adjustment-handoff p:not(.weekly-plan-adjustment-eyebrow) {
+  margin: 0.7rem auto 1rem;
+  max-width: 32rem;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.weekly-plan-adjustment-handoff button {
+  width: min(100%, 22rem);
+}

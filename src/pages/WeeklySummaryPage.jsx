@@ -590,7 +590,7 @@ function CoachReviewCard({ review }) {
 
       <p className="weekly-coach-footnote">
         Brain Lite · {review.protocol_version}
-        {' · '}Current prescription held
+        {' · '}No prescription changes happen in Coach Review
       </p>
     </section>
   )
@@ -636,11 +636,13 @@ function getDevPreviewWeekNumber(plan) {
 export function WeeklySummaryPage({
   plan,
   profile,
+  initialWeekNumber,
   onBack,
   onOpenToday,
   onOpenHistory,
   onOpenPlan,
   onOpenSettings,
+  onOpenPlanAdjustment,
 }) {
   const [completedWeeks, setCompletedWeeks] =
     useState([])
@@ -692,10 +694,25 @@ export function WeeklySummaryPage({
 
         setCompletedWeeks(weeks)
 
+        const requestedWeek = Number(
+          initialWeekNumber,
+        )
+        const requestedWeekAvailable =
+          Number.isFinite(requestedWeek) &&
+          (weeks.some(
+            (week) =>
+              Number(week.week_number) ===
+              requestedWeek,
+          ) ||
+            Number(devPreviewWeekNumber) ===
+              requestedWeek)
+
         setSelectedWeek(
-          weeks[0]?.week_number ??
-            devPreviewWeekNumber ??
-            null,
+          requestedWeekAvailable
+            ? requestedWeek
+            : weeks[0]?.week_number ??
+                devPreviewWeekNumber ??
+                null,
         )
       } catch (loadError) {
         if (!cancelled) {
@@ -719,6 +736,7 @@ export function WeeklySummaryPage({
   }, [
     plan?.id,
     devPreviewWeekNumber,
+    initialWeekNumber,
   ])
 
   useEffect(() => {
@@ -1560,6 +1578,39 @@ export function WeeklySummaryPage({
               </p>
             </section>
           )}
+
+          {!summary.preview &&
+            coachReview &&
+            summary.week?.id &&
+            Number(selectedWeek) ===
+              Number(
+                completedWeeks[0]?.week_number,
+              ) && (
+              <section className="weekly-plan-adjustment-handoff">
+                <p className="weekly-plan-adjustment-eyebrow">
+                  Next week
+                </p>
+                <h2>Plan Adjustment</h2>
+                <p>
+                  Review Juntos Coach’s recommendation,
+                  discuss it if you want, and explicitly
+                  accept or decline it. Nothing changes
+                  until you accept.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenPlanAdjustment?.({
+                      weeklyCheckInId:
+                        summary.week.id,
+                      weekNumber: selectedWeek,
+                    })
+                  }
+                >
+                  Review Plan Adjustment
+                </button>
+              </section>
+            )}
 
           <section className="weekly-summary-section">
             <h2>Your Prescription</h2>

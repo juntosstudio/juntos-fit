@@ -13,6 +13,7 @@ import { WeeklySummaryPage } from './pages/WeeklySummaryPage'
 import { CurrentWeekPage } from './pages/CurrentWeekPage'
 import { ProgressPage } from './pages/ProgressPage'
 import { WeeklyPreflightPage } from './pages/WeeklyPreflightPage'
+import { PlanAdjustmentPage } from './pages/PlanAdjustmentPage'
 import { CatchUpDailyCheckInPage } from './pages/CatchUpDailyCheckInPage'
 import { getTodayDateKey } from './utils/dates'
 import './App.css'
@@ -29,6 +30,7 @@ const PAGE_CURRENT_WEEK = 'current-week'
 const PAGE_CATCH_UP_DAILY = 'catch-up-daily'
 const PAGE_PLAN = 'plan'
 const PAGE_SETTINGS = 'settings'
+const PAGE_PLAN_ADJUSTMENT = 'plan-adjustment'
 
 function App() {
   const [currentPage, setCurrentPage] =
@@ -71,6 +73,11 @@ function App() {
     useState(null)
   const [catchUpReturnPage, setCatchUpReturnPage] =
     useState(PAGE_PROGRESS)
+
+  const [
+    planAdjustmentContext,
+    setPlanAdjustmentContext,
+  ] = useState(null)
 
   const {
     user,
@@ -154,6 +161,7 @@ function App() {
 
   function returnToDashboard() {
     setWeeklyReviewJustCompleted(false)
+    setPlanAdjustmentContext(null)
     setWeeklyCheckInDate(null)
     setCurrentPage(PAGE_DASHBOARD)
   }
@@ -165,6 +173,33 @@ function App() {
         ? Number(weekNumber)
         : null,
     )
+    setCurrentPage(PAGE_WEEKLY_SUMMARY)
+  }
+
+  function openPlanAdjustment({
+    weeklyCheckInId,
+    weekNumber,
+  }) {
+    if (!weeklyCheckInId) {
+      return
+    }
+
+    setPlanAdjustmentContext({
+      weeklyCheckInId,
+      weekNumber:
+        Number.isFinite(Number(weekNumber))
+          ? Number(weekNumber)
+          : null,
+    })
+
+    if (Number.isFinite(Number(weekNumber))) {
+      setWeeklyReviewWeek(Number(weekNumber))
+    }
+
+    setCurrentPage(PAGE_PLAN_ADJUSTMENT)
+  }
+
+  function returnFromPlanAdjustment() {
     setCurrentPage(PAGE_WEEKLY_SUMMARY)
   }
 
@@ -415,6 +450,31 @@ function App() {
     )
   }
 
+  if (currentPage === PAGE_PLAN_ADJUSTMENT) {
+    return (
+      <PlanAdjustmentPage
+        weeklyCheckInId={
+          planAdjustmentContext?.weeklyCheckInId
+        }
+        weekNumber={
+          planAdjustmentContext?.weekNumber
+        }
+        onBack={returnFromPlanAdjustment}
+        onResolved={refreshDashboard}
+        onOpenToday={returnToDashboard}
+        onOpenHistory={() =>
+          setCurrentPage(PAGE_PROGRESS)
+        }
+        onOpenPlan={() =>
+          setCurrentPage(PAGE_PLAN)
+        }
+        onOpenSettings={() =>
+          setCurrentPage(PAGE_SETTINGS)
+        }
+      />
+    )
+  }
+
   if (currentPage === PAGE_WEEKLY_SUMMARY) {
     return (
       <WeeklySummaryPage
@@ -435,6 +495,7 @@ function App() {
         onOpenSettings={() =>
           setCurrentPage(PAGE_SETTINGS)
         }
+        onOpenPlanAdjustment={openPlanAdjustment}
       />
     )
   }

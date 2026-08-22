@@ -1,0 +1,360 @@
+.plan-adjustment-page {
+  padding-bottom: 8rem;
+}
+
+.plan-adjustment-page-header {
+  margin: 1rem 0 1.35rem;
+  text-align: center;
+}
+
+.plan-adjustment-page-header h1 {
+  margin: 0.2rem 0 0;
+  color: var(--color-primary);
+  font-size: clamp(1.8rem, 7vw, 2.35rem);
+  line-height: 1.15;
+}
+
+.plan-adjustment-page-header > p:last-child {
+  max-width: 34rem;
+  margin: 0.65rem auto 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.plan-adjustment-eyebrow {
+  margin: 0;
+  color: var(--color-interaction);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plan-adjustment-loading,
+.plan-adjustment-error,
+.plan-adjustment-proposal-card,
+.plan-adjustment-prescription-card,
+.plan-adjustment-discussion-card,
+.plan-adjustment-decision-card,
+.plan-adjustment-resolution {
+  margin-top: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: clamp(1rem, 4vw, 1.4rem);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.plan-adjustment-loading,
+.plan-adjustment-resolution {
+  text-align: center;
+}
+
+.plan-adjustment-loading h2,
+.plan-adjustment-error strong,
+.plan-adjustment-resolution h2 {
+  color: var(--color-primary-dark);
+}
+
+.plan-adjustment-loading h2,
+.plan-adjustment-resolution h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.plan-adjustment-loading p,
+.plan-adjustment-error p,
+.plan-adjustment-resolution p {
+  color: var(--color-text-muted);
+}
+
+.plan-adjustment-error {
+  border-color: rgb(166 61 64 / 35%);
+  background: var(--color-error-soft);
+}
+
+.plan-adjustment-error button {
+  margin-top: 0.3rem;
+}
+
+.plan-adjustment-proposal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.plan-adjustment-proposal-header > div {
+  min-width: min(100%, 18rem);
+  flex: 1;
+}
+
+.plan-adjustment-proposal-header h2 {
+  margin: 0.25rem 0 0;
+  color: var(--color-primary-dark);
+  font-size: clamp(1.25rem, 5vw, 1.55rem);
+}
+
+.plan-adjustment-status {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.32rem 0.65rem;
+  background: var(--color-background);
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.plan-adjustment-status.is-accepted {
+  border-color: rgb(40 122 91 / 25%);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.plan-adjustment-status.is-declined,
+.plan-adjustment-status.is-expired {
+  color: var(--color-text-muted);
+}
+
+.plan-adjustment-revision {
+  margin: 0.55rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.plan-adjustment-explanation {
+  margin: 1rem 0;
+  line-height: 1.6;
+}
+
+.plan-adjustment-prescription {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-background);
+}
+
+.plan-adjustment-prescription-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.plan-adjustment-metric {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.45rem;
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.plan-adjustment-metric strong {
+  color: var(--color-primary-dark);
+  font-size: 1.15rem;
+}
+
+.plan-adjustment-metric span {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.plan-adjustment-activity-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1rem;
+  margin-top: 0.8rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.plan-adjustment-effective-date {
+  margin: 0.8rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.plan-adjustment-section-heading h2,
+.plan-adjustment-prescription-card h2,
+.plan-adjustment-decision-card h2 {
+  margin: 0.25rem 0 0;
+  color: var(--color-primary-dark);
+  font-size: 1.15rem;
+}
+
+.plan-adjustment-prescription-card > .plan-adjustment-prescription {
+  margin-top: 1rem;
+}
+
+.plan-adjustment-conversation-empty {
+  margin: 0.9rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.plan-adjustment-conversation {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.plan-adjustment-message {
+  width: min(88%, 30rem);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.plan-adjustment-message.is-coach {
+  justify-self: start;
+  background: var(--color-background);
+}
+
+.plan-adjustment-message.is-user {
+  justify-self: end;
+  border-color: rgb(108 91 212 / 25%);
+  background: var(--color-accent-soft);
+}
+
+.plan-adjustment-message strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--color-primary-dark);
+  font-size: 0.72rem;
+}
+
+.plan-adjustment-message p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.plan-adjustment-composer {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.plan-adjustment-composer label {
+  color: var(--color-primary-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.plan-adjustment-composer textarea {
+  width: 100%;
+  min-height: 7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.8rem;
+  background: var(--color-surface);
+}
+
+.plan-adjustment-composer textarea[readonly] {
+  background: var(--color-background);
+}
+
+.plan-adjustment-composer-footer {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.plan-adjustment-composer-footer small {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.plan-adjustment-composer-footer button {
+  width: 100%;
+}
+
+.plan-adjustment-decision-card {
+  text-align: center;
+}
+
+.plan-adjustment-decision-card > p:not(.plan-adjustment-eyebrow) {
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.plan-adjustment-decision-actions,
+.plan-adjustment-confirm-actions {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.plan-adjustment-decline-button {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.plan-adjustment-decline-button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-background);
+  color: var(--color-primary-dark);
+}
+
+.plan-adjustment-resolution.is-accepted {
+  border-color: rgb(40 122 91 / 25%);
+  background: var(--color-success-soft);
+}
+
+.plan-adjustment-resolution-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  margin: 0 auto 0.8rem;
+  border: 2px solid var(--color-success);
+  border-radius: 50%;
+  color: var(--color-success);
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+@media (min-width: 36rem) {
+  .plan-adjustment-prescription-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .plan-adjustment-composer-footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .plan-adjustment-composer-footer button {
+    width: auto;
+    min-width: 8rem;
+  }
+
+  .plan-adjustment-decision-actions,
+  .plan-adjustment-confirm-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.plan-adjustment-pending-note {
+  margin: 0.85rem auto 0;
+  color: var(--color-interaction);
+  font-size: 0.75rem;
+  font-weight: 750;
+}

@@ -205,6 +205,11 @@ describe('Plan Adjustment conversation service', () => {
     expect(mocks.from).toHaveBeenCalledWith(
       'coaching_adjustment_messages',
     )
+    expect(select).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'client_message_id',
+      ),
+    )
   })
 
   test('sends the client message id with the discussion turn', async () => {
