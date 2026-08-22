@@ -29,11 +29,11 @@ const MEAL_PLAN_LABELS = {
 }
 
 const HUNGER_LABELS = {
-  1: 'Not hungry',
-  2: 'Slightly hungry',
-  3: 'Manageable hunger',
-  4: 'Very hungry',
-  5: 'Extremely hungry',
+  1: 'Barely hungry',
+  2: 'Comfortable',
+  3: 'Noticeably hungry',
+  4: 'Very hungry / distracting',
+  5: 'Extremely hungry / hard to ignore',
 }
 
 const WORKOUT_LABELS = {

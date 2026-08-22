@@ -1,7 +1,7 @@
 import type { CoachingProtocol } from './types.ts'
 
 export const WEEKLY_COACH_PROTOCOL: CoachingProtocol = {
-  version: 'weekly_coach_v0.1',
+  version: 'weekly_coach_v0.2',
   name: 'Juntos Weekly Coach Lite',
   purpose:
     'Give a concise first-pass coaching assessment of one completed program week without changing the prescription.',
@@ -10,6 +10,7 @@ export const WEEKLY_COACH_PROTOCOL: CoachingProtocol = {
     'Consider adherence before judging whether the prescription is working.',
     'Use waist and body-fat data as supporting signals alongside weight; never let body-fat alone drive the assessment.',
     'Consider hunger, sleep, energy, recovery, stress, illness/travel/life context, and the user reflection when present.',
+    'Interpret hunger_score and average_hunger_score strictly as hunger severity/burden: 1 = barely hungry, 2 = comfortable, 3 = noticeably hungry, 4 = very hungry or distracting, 5 = extremely hungry or hard to ignore. Never call hunger manageable, and never treat hunger severity as evidence that the user resisted eating or adhered to the nutrition prescription.',
     'Do not overreact to one week or normal day-to-day scale noise.',
     'Treat incomplete or low-confidence data cautiously and say so when it materially limits the assessment.',
     'Do not invent calories, macros, workouts, symptoms, or events that are not in the coaching packet.',

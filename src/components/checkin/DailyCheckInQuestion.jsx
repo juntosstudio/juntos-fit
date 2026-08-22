@@ -7,11 +7,11 @@ const MEAL_PLAN_OPTIONS = [
 ]
 
 const HUNGER_OPTIONS = [
-  { value: '1', label: '1 — Not hungry' },
-  { value: '2', label: '2 — Slightly hungry' },
-  { value: '3', label: '3 — Manageable hunger' },
-  { value: '4', label: '4 — Very hungry' },
-  { value: '5', label: '5 — Extremely hungry' },
+  { value: '1', label: '1 — Barely hungry' },
+  { value: '2', label: '2 — Comfortable' },
+  { value: '3', label: '3 — Noticeably hungry' },
+  { value: '4', label: '4 — Very hungry / distracting' },
+  { value: '5', label: '5 — Extremely hungry / hard to ignore' },
 ]
 
 const CHEAT_MEAL_OPTIONS = [
