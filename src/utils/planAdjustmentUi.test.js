@@ -6,6 +6,7 @@ import {
 import {
   findPendingPlanAdjustmentTurn,
   formatPlanAdjustmentAction,
+  getPlanAdjustmentHandoffState,
   isHoldPlanAdjustment,
   isPlanAdjustmentOpen,
 } from './planAdjustmentUi'
@@ -89,4 +90,62 @@ describe('planAdjustmentUi', () => {
       ]),
     ).toBeNull()
   })
+  test('shows unresolved adjustments as an action item', () => {
+    expect(
+      getPlanAdjustmentHandoffState(null),
+    ).toMatchObject({
+      state: 'pending',
+      buttonLabel: 'Review Plan Adjustment',
+    })
+
+    expect(
+      getPlanAdjustmentHandoffState({ status: 'proposed' }),
+    ).toMatchObject({
+      state: 'pending',
+      buttonLabel: 'Review Plan Adjustment',
+    })
+  })
+
+  test('keeps accepted HOLD adjustments viewable without presenting unfinished work', () => {
+    expect(
+      getPlanAdjustmentHandoffState({
+        status: 'accepted',
+        action_id: 'hold',
+      }),
+    ).toMatchObject({
+      state: 'accepted',
+      title: 'Current prescription kept',
+      buttonLabel: 'View Plan Adjustment',
+    })
+  })
+
+  test('labels accepted prescription changes as resolved history', () => {
+    expect(
+      getPlanAdjustmentHandoffState({
+        status: 'accepted',
+        action_id: 'nutrition_decrease_100',
+      }),
+    ).toMatchObject({
+      state: 'accepted',
+      title: 'Prescription update accepted',
+      buttonLabel: 'View Plan Adjustment',
+    })
+  })
+
+  test('keeps declined and expired adjustments viewable as history', () => {
+    expect(
+      getPlanAdjustmentHandoffState({ status: 'declined' }),
+    ).toMatchObject({
+      state: 'declined',
+      buttonLabel: 'View Plan Adjustment',
+    })
+
+    expect(
+      getPlanAdjustmentHandoffState({ status: 'expired' }),
+    ).toMatchObject({
+      state: 'expired',
+      buttonLabel: 'View Plan Adjustment',
+    })
+  })
+
 })

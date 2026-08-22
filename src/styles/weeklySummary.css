@@ -455,3 +455,33 @@
 .weekly-plan-adjustment-handoff button {
   width: min(100%, 22rem);
 }
+
+.weekly-plan-adjustment-handoff.is-accepted {
+  border-color: var(--color-success);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface),
+    var(--color-success-soft)
+  );
+}
+
+.weekly-plan-adjustment-handoff.is-accepted
+  .weekly-plan-adjustment-eyebrow {
+  color: var(--color-success);
+}
+
+.weekly-plan-adjustment-handoff.is-declined,
+.weekly-plan-adjustment-handoff.is-expired,
+.weekly-plan-adjustment-handoff.is-superseded {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.weekly-plan-adjustment-handoff.is-declined
+  .weekly-plan-adjustment-eyebrow,
+.weekly-plan-adjustment-handoff.is-expired
+  .weekly-plan-adjustment-eyebrow,
+.weekly-plan-adjustment-handoff.is-superseded
+  .weekly-plan-adjustment-eyebrow {
+  color: var(--color-text-muted);
+}

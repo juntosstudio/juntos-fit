@@ -13,6 +13,12 @@ import {
   generateWeeklyCoachReview,
 } from '../services/weeklyCoachService'
 import {
+  loadLatestPlanAdjustment,
+} from '../services/planAdjustmentService'
+import {
+  getPlanAdjustmentHandoffState,
+} from '../utils/planAdjustmentUi'
+import {
   formatDate,
 } from '../utils/formatters'
 import {
@@ -660,6 +666,8 @@ export function WeeklySummaryPage({
     useState(false)
   const [coachError, setCoachError] =
     useState('')
+  const [planAdjustment, setPlanAdjustment] =
+    useState(null)
   const coachAttempts = useRef(new Set())
 
   const unitSystem =
@@ -810,6 +818,44 @@ export function WeeklySummaryPage({
     plan,
     selectedWeek,
     completedWeeks,
+  ])
+
+  useEffect(() => {
+    const weeklyCheckInId =
+      summary?.week?.id
+
+    if (
+      !weeklyCheckInId ||
+      summary?.preview
+    ) {
+      setPlanAdjustment(null)
+      return undefined
+    }
+
+    let cancelled = false
+    setPlanAdjustment(null)
+
+    loadLatestPlanAdjustment(
+      weeklyCheckInId,
+    )
+      .then((proposal) => {
+        if (!cancelled) {
+          setPlanAdjustment(proposal)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // Weekly Review stays usable even if status lookup fails.
+          setPlanAdjustment(null)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    summary?.week?.id,
+    summary?.preview,
   ])
 
   useEffect(() => {
@@ -1218,6 +1264,15 @@ export function WeeklySummaryPage({
     summary,
   ])
 
+  const planAdjustmentHandoff =
+    useMemo(
+      () =>
+        getPlanAdjustmentHandoffState(
+          planAdjustment,
+        ),
+      [planAdjustment],
+    )
+
   if (!plan) {
     return (
       <main className="container">
@@ -1586,16 +1641,17 @@ export function WeeklySummaryPage({
               Number(
                 completedWeeks[0]?.week_number,
               ) && (
-              <section className="weekly-plan-adjustment-handoff">
+              <section
+                className={`weekly-plan-adjustment-handoff is-${planAdjustmentHandoff.state}`}
+              >
                 <p className="weekly-plan-adjustment-eyebrow">
-                  Next week
+                  {planAdjustmentHandoff.eyebrow}
                 </p>
-                <h2>Plan Adjustment</h2>
+                <h2>
+                  {planAdjustmentHandoff.title}
+                </h2>
                 <p>
-                  Review Juntos Coach’s recommendation,
-                  discuss it if you want, and explicitly
-                  accept or decline it. Nothing changes
-                  until you accept.
+                  {planAdjustmentHandoff.description}
                 </p>
                 <button
                   type="button"
@@ -1607,7 +1663,7 @@ export function WeeklySummaryPage({
                     })
                   }
                 >
-                  Review Plan Adjustment
+                  {planAdjustmentHandoff.buttonLabel}
                 </button>
               </section>
             )}

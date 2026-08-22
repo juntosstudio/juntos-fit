@@ -40,6 +40,74 @@ export function isHoldPlanAdjustment(proposal) {
   )
 }
 
+export function getPlanAdjustmentHandoffState(proposal) {
+  const status = proposal?.status
+
+  if (status === 'accepted') {
+    if (isHoldPlanAdjustment(proposal)) {
+      return {
+        state: 'accepted',
+        eyebrow: 'Plan adjustment · Accepted',
+        title: 'Current prescription kept',
+        description:
+          'You reviewed and accepted Juntos Coach’s recommendation. Your current prescription stays in place.',
+        buttonLabel: 'View Plan Adjustment',
+      }
+    }
+
+    return {
+      state: 'accepted',
+      eyebrow: 'Plan adjustment · Accepted',
+      title: 'Prescription update accepted',
+      description:
+        'You accepted Juntos Coach’s recommendation. View the finalized prescription and effective date.',
+      buttonLabel: 'View Plan Adjustment',
+    }
+  }
+
+  if (status === 'declined') {
+    return {
+      state: 'declined',
+      eyebrow: 'Plan adjustment · Declined',
+      title: 'Recommendation declined',
+      description:
+        'You declined this recommendation. Your current prescription remains in place.',
+      buttonLabel: 'View Plan Adjustment',
+    }
+  }
+
+  if (status === 'expired') {
+    return {
+      state: 'expired',
+      eyebrow: 'Plan adjustment · Expired',
+      title: 'Recommendation expired',
+      description:
+        'This recommendation is no longer actionable, but you can still view it as part of this week’s coaching history.',
+      buttonLabel: 'View Plan Adjustment',
+    }
+  }
+
+  if (status === 'superseded') {
+    return {
+      state: 'superseded',
+      eyebrow: 'Plan adjustment · Revised',
+      title: 'Recommendation revised',
+      description:
+        'This recommendation was replaced by a newer revision. Open Plan Adjustment to review the coaching history.',
+      buttonLabel: 'View Plan Adjustment',
+    }
+  }
+
+  return {
+    state: 'pending',
+    eyebrow: 'Next week',
+    title: 'Plan Adjustment',
+    description:
+      'Review Juntos Coach’s recommendation, discuss it if you want, and explicitly accept or decline it. Nothing changes until you accept.',
+    buttonLabel: 'Review Plan Adjustment',
+  }
+}
+
 export function findPendingPlanAdjustmentTurn(messages) {
   const rows = Array.isArray(messages) ? messages : []
   const repliedUserIds = new Set(
