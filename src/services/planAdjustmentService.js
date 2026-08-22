@@ -135,3 +135,179 @@ export async function generatePlanAdjustment(
 
   return data.proposal
 }
+
+const PLAN_ADJUSTMENT_MESSAGE_FIELDS = `
+  id,
+  coaching_plan_id,
+  weekly_checkin_id,
+  proposal_id,
+  role,
+  content,
+  in_reply_to_message_id,
+  created_at
+`
+
+export function createPlanAdjustmentClientMessageId() {
+  return crypto.randomUUID()
+}
+
+export async function loadPlanAdjustmentConversation(
+  weeklyCheckInId,
+) {
+  if (!weeklyCheckInId) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('coaching_adjustment_messages')
+    .select(PLAN_ADJUSTMENT_MESSAGE_FIELDS)
+    .eq('weekly_checkin_id', weeklyCheckInId)
+    .order('created_at', {
+      ascending: true,
+    })
+    .order('id', {
+      ascending: true,
+    })
+
+  if (error) {
+    throw error
+  }
+
+  return data ?? []
+}
+
+export async function sendPlanAdjustmentMessage({
+  weeklyCheckInId,
+  message,
+  clientMessageId,
+}) {
+  const cleanMessage = String(message ?? '').trim()
+
+  if (!weeklyCheckInId) {
+    throw new Error(
+      'A completed Weekly Check-In is required.',
+    )
+  }
+
+  if (!cleanMessage) {
+    throw new Error(
+      'Enter a message for Juntos Coach.',
+    )
+  }
+
+  if (!clientMessageId) {
+    throw new Error(
+      'A client message id is required.',
+    )
+  }
+
+  const { data, error } =
+    await supabase.functions.invoke(
+      'continue-plan-adjustment',
+      {
+        body: {
+          weekly_checkin_id: weeklyCheckInId,
+          message: cleanMessage,
+          client_message_id: clientMessageId,
+        },
+      },
+    )
+
+  if (error) {
+    let errorMessage =
+      'Juntos Coach could not continue the Plan Adjustment discussion right now.'
+
+    try {
+      const details =
+        await error.context?.json?.()
+
+      if (details?.error) {
+        errorMessage = details.error
+      }
+    } catch {
+      // Keep the user-safe fallback message.
+    }
+
+    throw new Error(errorMessage)
+  }
+
+  if (!data?.proposal || !data?.message) {
+    throw new Error(
+      'Juntos Coach did not return a complete Plan Adjustment response.',
+    )
+  }
+
+  return data
+}
+
+
+export async function resolvePlanAdjustment({
+  proposalId,
+  resolution,
+}) {
+  if (!proposalId) {
+    throw new Error(
+      'A Plan Adjustment proposal is required.',
+    )
+  }
+
+  if (
+    resolution !== 'accept' &&
+    resolution !== 'decline'
+  ) {
+    throw new Error(
+      'Plan Adjustment resolution must be accept or decline.',
+    )
+  }
+
+  const { data, error } =
+    await supabase.functions.invoke(
+      'resolve-plan-adjustment',
+      {
+        body: {
+          proposal_id: proposalId,
+          resolution,
+        },
+      },
+    )
+
+  if (error) {
+    let errorMessage =
+      'Juntos Coach could not resolve this Plan Adjustment right now.'
+
+    try {
+      const details =
+        await error.context?.json?.()
+
+      if (details?.error) {
+        errorMessage = details.error
+      }
+    } catch {
+      // Keep the user-safe fallback message.
+    }
+
+    throw new Error(errorMessage)
+  }
+
+  if (!data?.proposal || !data?.outcome) {
+    throw new Error(
+      'Juntos Coach did not return a complete Plan Adjustment resolution.',
+    )
+  }
+
+  return data
+}
+
+export function acceptPlanAdjustment(proposalId) {
+  return resolvePlanAdjustment({
+    proposalId,
+    resolution: 'accept',
+  })
+}
+
+export function declinePlanAdjustment(proposalId) {
+  return resolvePlanAdjustment({
+    proposalId,
+    resolution: 'decline',
+  })
+}
