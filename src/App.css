@@ -1540,3 +1540,213 @@ button.plan-progress-row:hover:not(:disabled) {
   width: min(100%, 13rem);
   min-height: 3rem;
 }
+
+/* Plan Progress overview tables */
+
+.plan-progress-overview {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.plan-progress-overview-header {
+  text-align: center;
+}
+
+.plan-progress-overview-header h1 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.plan-progress-overview-header p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.progress-overview-section {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.progress-overview-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.85rem;
+}
+
+.progress-overview-section-heading h3 {
+  margin: 0;
+  color: var(--color-primary-dark);
+  font-size: 1.05rem;
+}
+
+.progress-overview-section-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.progress-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.progress-table-scroll:focus-visible {
+  outline: 2px solid var(--color-interaction);
+  outline-offset: -2px;
+}
+
+.progress-data-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--color-text);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.progress-data-table th,
+.progress-data-table td {
+  min-width: 7.25rem;
+  border-top: 1px solid var(--color-border);
+  padding: 0.72rem 0.8rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.progress-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-top: 0;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+}
+
+.progress-data-table .is-sticky-column {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 5.2rem;
+  width: 5.2rem;
+  background: var(--color-surface);
+  box-shadow: 1px 0 0 var(--color-border);
+  text-align: left;
+}
+
+.progress-data-table thead .is-sticky-column {
+  z-index: 4;
+  background: var(--color-background);
+}
+
+.weekly-progress-table tbody tr.is-current-row td,
+.weekly-progress-table tbody tr.is-current-row th {
+  background: var(--color-accent-soft);
+}
+
+.progress-week-link,
+.progress-week-label {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-primary-dark);
+  font-weight: 800;
+}
+
+.progress-week-link {
+  min-width: 3rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.progress-week-link:hover {
+  color: var(--color-interaction);
+}
+
+.progress-week-link:focus-visible {
+  border-radius: 0.35rem;
+  outline: 2px solid var(--color-interaction);
+  outline-offset: 3px;
+}
+
+.progress-week-link span {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.progress-table-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.26rem 0.55rem;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.progress-table-status.is-completed {
+  color: var(--color-success);
+}
+
+.progress-table-status.is-current,
+.progress-table-status.is-needs-review,
+.progress-table-status.is-weekly-overdue {
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+}
+
+.progress-table-note {
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+  padding: 0.75rem 1rem 0.9rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .plan-progress-overview {
+    gap: 1rem;
+  }
+
+  .progress-overview-section-heading {
+    padding: 0.9rem 0.85rem 0.75rem;
+  }
+
+  .progress-data-table {
+    font-size: 0.84rem;
+  }
+
+  .progress-data-table th,
+  .progress-data-table td {
+    min-width: 6.6rem;
+    padding: 0.68rem 0.72rem;
+  }
+
+  .progress-data-table .is-sticky-column {
+    min-width: 4.7rem;
+    width: 4.7rem;
+  }
+}

@@ -1,6 +1,6 @@
 import {
-  PlanProgress,
-} from '../components/progress/PlanProgress'
+  PlanProgressOverview,
+} from '../components/progress/PlanProgressOverview'
 import {
   getTodayDateKey,
 } from '../utils/dates'
@@ -51,30 +51,18 @@ export function ProgressPage({
             </p>
           </section>
         ) : (
-          <PlanProgress
+          <PlanProgressOverview
             plan={plan}
-            currentWeekNumber={
-              currentWeekNumber
-            }
-            weeks={
-              dashboard
-                ?.planProgress
-                ?.weeks ??
-              []
-            }
+            currentWeekNumber={currentWeekNumber}
+            weeks={dashboard?.planProgress?.weeks ?? []}
+            measurements={dashboard?.planProgress?.measurements ?? []}
             onOpenCurrentWeek={
-              currentWeekNumber ===
-              reportingWeekNumber
+              currentWeekNumber === reportingWeekNumber
                 ? onOpenCurrentWeek
                 : null
             }
-            onOpenWeeklyReview={
-              onOpenWeeklyReview
-            }
-            onOpenWeeklyCheckIn={
-              onOpenWeeklyCheckIn
-            }
-            initialShowAll
+            onOpenWeeklyReview={onOpenWeeklyReview}
+            onOpenWeeklyCheckIn={onOpenWeeklyCheckIn}
           />
         )}
       </main>

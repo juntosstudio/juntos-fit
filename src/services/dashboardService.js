@@ -59,6 +59,15 @@ const START_CHECKIN_FIELDS = `
   coaching_plan_id,
   checkin_date,
   status,
+  starting_weight_lbs,
+  body_fat_percent,
+  neck_inches,
+  chest_inches,
+  waist_inches,
+  hips_inches,
+  upper_arm_inches,
+  thigh_inches,
+  calf_inches,
   completed_at,
   updated_at
 `
@@ -78,6 +87,7 @@ const WEEKLY_CHECKIN_FIELDS = `
 const PLAN_PROGRESS_WEEKLY_FIELDS = `
   id,
   week_number,
+  checkin_date,
   status,
   submitted_at,
   nutrition_adherence_percent,
@@ -108,6 +118,28 @@ const PLAN_PROGRESS_PRESCRIPTION_FIELDS = `
   week_number,
   weekly_workout_target,
   weekly_cardio_target_minutes
+`
+
+
+const PLAN_PROGRESS_MEASUREMENT_FIELDS = `
+  daily_checkin_id,
+  week_number,
+  checkin_date,
+  status,
+  measurement_side,
+  neck,
+  chest,
+  waist,
+  hips,
+  right_arm,
+  left_arm,
+  right_thigh,
+  left_thigh,
+  right_calf,
+  left_calf,
+  scale_body_fat,
+  navy_body_fat,
+  submitted_at
 `
 
 const CONSISTENCY_WEIGHTS = {
@@ -527,10 +559,121 @@ function calculateConsistencyScore(
   return Math.round(weightedTotal / totalWeight)
 }
 
+
+function selectedSideMeasurement(row, baseField, fallbackSide) {
+  const side = String(
+    row?.measurement_side ?? fallbackSide ?? 'right',
+  ).toLowerCase()
+
+  const field = side === 'left'
+    ? `left_${baseField}`
+    : `right_${baseField}`
+
+  const value = Number(row?.[field])
+  return Number.isFinite(value) ? value : null
+}
+
+async function loadPlanProgressMeasurements(plan, startCheckIn) {
+  const { data, error } = await supabase
+    .from('weekly_checkins')
+    .select(PLAN_PROGRESS_MEASUREMENT_FIELDS)
+    .eq('coaching_plan_id', plan.id)
+    .eq('status', 'completed')
+    .order('week_number', { ascending: true })
+
+  if (error) {
+    throw error
+  }
+
+  const weeklyRows = data ?? []
+  const dailyIds = weeklyRows
+    .map((row) => row.daily_checkin_id)
+    .filter(Boolean)
+
+  let weightByDailyId = new Map()
+
+  if (dailyIds.length > 0) {
+    const { data: dailyRows, error: dailyError } = await supabase
+      .from('daily_checkins')
+      .select('id, morning_weight')
+      .in('id', dailyIds)
+
+    if (dailyError) {
+      throw dailyError
+    }
+
+    weightByDailyId = new Map(
+      (dailyRows ?? []).map((row) => [
+        row.id,
+        Number.isFinite(Number(row.morning_weight))
+          ? Number(row.morning_weight)
+          : null,
+      ]),
+    )
+  }
+
+  const checkpoints = []
+
+  if (startCheckIn?.status === 'completed') {
+    checkpoints.push({
+      checkpoint: 'Start',
+      weekNumber: null,
+      checkinDate: startCheckIn.checkin_date,
+      weight: Number(startCheckIn.starting_weight_lbs) || null,
+      bodyFat: Number(startCheckIn.body_fat_percent) || null,
+      neck: Number(startCheckIn.neck_inches) || null,
+      chest: Number(startCheckIn.chest_inches) || null,
+      waist: Number(startCheckIn.waist_inches) || null,
+      hips: Number(startCheckIn.hips_inches) || null,
+      arm: Number(startCheckIn.upper_arm_inches) || null,
+      thigh: Number(startCheckIn.thigh_inches) || null,
+      calf: Number(startCheckIn.calf_inches) || null,
+      measurementSide: plan.measurement_side ?? null,
+    })
+  }
+
+  for (const row of weeklyRows) {
+    const hasFullMeasurements = [
+      row.neck,
+      row.chest,
+      row.hips,
+      row.left_arm,
+      row.right_arm,
+      row.left_thigh,
+      row.right_thigh,
+      row.left_calf,
+      row.right_calf,
+    ].some((value) => value !== null && value !== undefined)
+
+    if (!hasFullMeasurements) {
+      continue
+    }
+
+    checkpoints.push({
+      checkpoint: `Week ${row.week_number}`,
+      weekNumber: Number(row.week_number),
+      checkinDate: row.checkin_date,
+      weight: weightByDailyId.get(row.daily_checkin_id) ?? null,
+      bodyFat: Number(row.scale_body_fat ?? row.navy_body_fat) || null,
+      neck: Number(row.neck) || null,
+      chest: Number(row.chest) || null,
+      waist: Number(row.waist) || null,
+      hips: Number(row.hips) || null,
+      arm: selectedSideMeasurement(row, 'arm', plan.measurement_side),
+      thigh: selectedSideMeasurement(row, 'thigh', plan.measurement_side),
+      calf: selectedSideMeasurement(row, 'calf', plan.measurement_side),
+      measurementSide: row.measurement_side ?? plan.measurement_side ?? null,
+    })
+  }
+
+  return checkpoints
+}
+
 async function loadPlanProgress(
   plan,
   currentWeekNumber,
   today,
+  currentTarget = null,
 ) {
   if (!currentWeekNumber) {
     return []
@@ -710,13 +853,21 @@ async function loadPlanProgress(
           weekNumber,
         ) ?? null
 
-      const weekPrescriptions =
+      let weekPrescriptions =
         prescriptions.filter(
           (item) =>
             Number(
               item.week_number,
             ) === weekNumber,
         )
+
+      if (
+        weekPrescriptions.length === 0 &&
+        weekNumber === Number(currentWeekNumber) &&
+        currentTarget
+      ) {
+        weekPrescriptions = [currentTarget]
+      }
 
       const recordedWeights =
         weekDailyRows
@@ -758,6 +909,36 @@ async function loadPlanProgress(
           WEEKLY_DUE_STATE.OVERDUE,
         dailyCheckInCount:
           weekDailyRows.length,
+        reportingStart: dailyStart,
+        reportingEnd: dailyEnd,
+        nutritionAdherencePercent:
+          weekly?.status === 'completed' &&
+          Number.isFinite(Number(weekly?.nutrition_adherence_percent))
+            ? Number(weekly.nutrition_adherence_percent)
+            : calculateNutritionAdherence(
+                weekDailyRows,
+                { expectedDays: 7 },
+              ).adherencePercent,
+        workoutsCompleted:
+          weekDailyRows.filter(
+            (row) => row.workout_status === 'completed',
+          ).length,
+        workoutsTarget:
+          stablePrescriptionValue(
+            weekPrescriptions,
+            'weekly_workout_target',
+          ),
+        cardioMinutes:
+          weekDailyRows.reduce(
+            (total, row) =>
+              total + (Number(row.cardio_minutes) || 0),
+            0,
+          ),
+        cardioTarget:
+          stablePrescriptionValue(
+            weekPrescriptions,
+            'weekly_cardio_target_minutes',
+          ),
         consistencyPercent:
           weekly?.status ===
           'completed'
@@ -850,6 +1031,7 @@ export async function loadDashboardData(userId) {
       planProgress: {
         currentWeekNumber: null,
         weeks: [],
+        measurements: [],
       },
       streakDays: 0,
     }
@@ -933,6 +1115,13 @@ export async function loadDashboardData(userId) {
       plan,
       planProgressCurrentWeekNumber,
       today,
+      target,
+    )
+
+  const planProgressMeasurements =
+    await loadPlanProgressMeasurements(
+      plan,
+      startCheckIn,
     )
 
   const weekAtAGlance = buildWeekAtAGlance(
@@ -1018,6 +1207,7 @@ export async function loadDashboardData(userId) {
       currentWeekNumber:
         planProgressCurrentWeekNumber,
       weeks: planProgressWeeks,
+      measurements: planProgressMeasurements,
     },
     streakDays,
   }

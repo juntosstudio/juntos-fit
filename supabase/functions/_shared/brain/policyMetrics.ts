@@ -164,8 +164,8 @@ export function hasRecoveryConcern(
     (
       lowSignals >= 1 &&
       stress !== null &&
-      stress >=
-        POLICY_THRESHOLDS.highStressScore
+      stress <=
+        POLICY_THRESHOLDS.highStressManageabilityMax
     )
   )
 }

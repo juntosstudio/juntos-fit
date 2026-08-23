@@ -490,6 +490,40 @@ describe('deterministic Big Brain policy', () => {
     ).toBe(true)
   })
 
+  test('stress score 5 means very manageable and does not create a recovery concern', () => {
+    const result = evaluateDeterministicPolicy(
+      input({
+        current_week: week(4, {
+          sleep_quality: 2,
+          energy_level: 4,
+          recovery_score: 4,
+          stress_level: 5,
+        }),
+      }),
+    )
+
+    expect(result.signals.recovery_concern).toBe(
+      false,
+    )
+  })
+
+  test('stress score 1 means overwhelming and can compound a low recovery signal', () => {
+    const result = evaluateDeterministicPolicy(
+      input({
+        current_week: week(4, {
+          sleep_quality: 2,
+          energy_level: 4,
+          recovery_score: 4,
+          stress_level: 1,
+        }),
+      }),
+    )
+
+    expect(result.signals.recovery_concern).toBe(
+      true,
+    )
+  })
+
   test('poor recovery blocks both a further cut and a cardio increase', () => {
     const result = evaluateDeterministicPolicy(
       input({

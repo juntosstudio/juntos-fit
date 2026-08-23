@@ -168,6 +168,43 @@ function normalizeWeeklyQuestion(
   return questionText
 }
 
+function selectedSideMeasurement(
+  weekly: any,
+  rightField: string,
+  leftField: string,
+) {
+  const side = String(
+    weekly?.measurement_side ?? '',
+  ).toLowerCase()
+
+  if (side === 'left') {
+    return numericOrNull(weekly?.[leftField])
+  }
+
+  if (side === 'right') {
+    return numericOrNull(weekly?.[rightField])
+  }
+
+  return (
+    numericOrNull(weekly?.[rightField]) ??
+    numericOrNull(weekly?.[leftField])
+  )
+}
+
+function deltaFromStart(
+  current: unknown,
+  start: unknown,
+) {
+  const currentValue = numericOrNull(current)
+  const startValue = numericOrNull(start)
+
+  if (currentValue === null || startValue === null) {
+    return null
+  }
+
+  return round(currentValue - startValue, 2)
+}
+
 function summarizeCardioGroup(
   rows: any[],
   field: 'cardio_type' | 'cardio_intensity',
@@ -786,7 +823,13 @@ export async function buildCoachingPacket({
       .from('start_checkins')
       .select(`
         starting_weight_lbs,
+        neck_inches,
+        chest_inches,
         waist_inches,
+        hips_inches,
+        upper_arm_inches,
+        thigh_inches,
+        calf_inches,
         body_fat_percent,
         body_fat_status,
         body_fat_method,
@@ -865,7 +908,17 @@ export async function buildCoachingPacket({
             id,
             week_number,
             status,
+            neck,
+            chest,
             waist,
+            hips,
+            right_arm,
+            left_arm,
+            right_thigh,
+            left_thigh,
+            right_calf,
+            left_calf,
+            measurement_side,
             body_fat_percent,
             body_fat_source,
             body_fat_method,
@@ -1081,8 +1134,34 @@ export async function buildCoachingPacket({
         weekly_context: weekly
           ? {
               status: weekly.status,
+              measurement_side:
+                weekly.measurement_side ?? null,
+              neck_inches:
+                weekly.neck ?? null,
+              chest_inches:
+                weekly.chest ?? null,
               waist_inches:
                 weekly.waist ?? null,
+              hips_inches:
+                weekly.hips ?? null,
+              arm_inches:
+                selectedSideMeasurement(
+                  weekly,
+                  'right_arm',
+                  'left_arm',
+                ),
+              thigh_inches:
+                selectedSideMeasurement(
+                  weekly,
+                  'right_thigh',
+                  'left_thigh',
+                ),
+              calf_inches:
+                selectedSideMeasurement(
+                  weekly,
+                  'right_calf',
+                  'left_calf',
+                ),
               body_fat_percent:
                 weekly.body_fat_percent ?? null,
               body_fat_source:
@@ -1143,6 +1222,26 @@ export async function buildCoachingPacket({
       ? previousWaist
       : startWaist
 
+  const currentArm = selectedSideMeasurement(
+    weeklyCheckIn,
+    'right_arm',
+    'left_arm',
+  )
+  const currentThigh = selectedSideMeasurement(
+    weeklyCheckIn,
+    'right_thigh',
+    'left_thigh',
+  )
+  const currentCalf = selectedSideMeasurement(
+    weeklyCheckIn,
+    'right_calf',
+    'left_calf',
+  )
+
+  const currentBodyFat = numericOrNull(
+    weeklyCheckIn.body_fat_percent,
+  )
+
   return {
     packet_version: 'coaching_packet_v0.1',
 
@@ -1152,6 +1251,31 @@ export async function buildCoachingPacket({
         profileResult.data?.date_of_birth ?? null,
         weekRange.week_end,
       ),
+    },
+
+    score_semantics: {
+      stress_level: {
+        meaning: 'stress_manageability',
+        direction: 'higher_is_better_less_stress_burden',
+        labels: {
+          1: 'overwhelming',
+          2: 'difficult',
+          3: 'manageable',
+          4: 'mostly_manageable',
+          5: 'very_manageable',
+        },
+      },
+      hunger_score: {
+        meaning: 'hunger_severity_burden',
+        direction: 'higher_is_more_hunger_burden',
+        labels: {
+          1: 'barely_hungry',
+          2: 'comfortable',
+          3: 'noticeably_hungry',
+          4: 'very_hungry_or_distracting',
+          5: 'extremely_hungry_or_hard_to_ignore',
+        },
+      },
     },
 
     tracking_settings: {
@@ -1181,8 +1305,20 @@ export async function buildCoachingPacket({
       starting_weight_lbs:
         startResult.data?.starting_weight_lbs ??
         null,
+      starting_neck_inches:
+        startResult.data?.neck_inches ?? null,
+      starting_chest_inches:
+        startResult.data?.chest_inches ?? null,
       starting_waist_inches:
         startResult.data?.waist_inches ?? null,
+      starting_hips_inches:
+        startResult.data?.hips_inches ?? null,
+      starting_arm_inches:
+        startResult.data?.upper_arm_inches ?? null,
+      starting_thigh_inches:
+        startResult.data?.thigh_inches ?? null,
+      starting_calf_inches:
+        startResult.data?.calf_inches ?? null,
       starting_body_fat_percent:
         startResult.data?.body_fat_percent ?? null,
       starting_body_fat_status:
@@ -1241,6 +1377,58 @@ export async function buildCoachingPacket({
             : startWaist !== null
               ? 'start_day'
               : null,
+        plan_start_progress: {
+          weight_change_lbs: deltaFromStart(
+            currentAverageWeight,
+            startResult.data?.starting_weight_lbs,
+          ),
+          neck_change_inches: deltaFromStart(
+            weeklyCheckIn.neck,
+            startResult.data?.neck_inches,
+          ),
+          chest_change_inches: deltaFromStart(
+            weeklyCheckIn.chest,
+            startResult.data?.chest_inches,
+          ),
+          waist_change_inches: deltaFromStart(
+            currentWaist,
+            startResult.data?.waist_inches,
+          ),
+          hips_change_inches: deltaFromStart(
+            weeklyCheckIn.hips,
+            startResult.data?.hips_inches,
+          ),
+          arm_change_inches: deltaFromStart(
+            currentArm,
+            startResult.data?.upper_arm_inches,
+          ),
+          thigh_change_inches: deltaFromStart(
+            currentThigh,
+            startResult.data?.thigh_inches,
+          ),
+          calf_change_inches: deltaFromStart(
+            currentCalf,
+            startResult.data?.calf_inches,
+          ),
+          body_fat_change_points: deltaFromStart(
+            currentBodyFat,
+            startResult.data?.body_fat_percent,
+          ),
+        },
+        full_measurements: {
+          measurement_side:
+            weeklyCheckIn.measurement_side ?? null,
+          neck_inches:
+            numericOrNull(weeklyCheckIn.neck),
+          chest_inches:
+            numericOrNull(weeklyCheckIn.chest),
+          waist_inches: currentWaist,
+          hips_inches:
+            numericOrNull(weeklyCheckIn.hips),
+          arm_inches: currentArm,
+          thigh_inches: currentThigh,
+          calf_inches: currentCalf,
+        },
         body_fat_percent:
           weeklyCheckIn.body_fat_percent ?? null,
         body_fat_source:

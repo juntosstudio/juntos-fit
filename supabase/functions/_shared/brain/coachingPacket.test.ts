@@ -243,7 +243,13 @@ describe('coaching packet deterministic-policy data path', () => {
         {
           coaching_plan_id: 'plan-1',
           starting_weight_lbs: 162,
+          neck_inches: 14,
+          chest_inches: 37,
           waist_inches: 32.5,
+          hips_inches: 38.5,
+          upper_arm_inches: 11,
+          thigh_inches: 22.3,
+          calf_inches: 14.5,
           body_fat_percent: 31,
           body_fat_status: 'provided',
           body_fat_method: 'scale',
@@ -397,7 +403,17 @@ describe('coaching packet deterministic-policy data path', () => {
       status: 'completed',
       submitted_at: '2026-08-23T12:00:00Z',
       updated_at: '2026-08-23T12:00:00Z',
+      neck: 13.2,
+      chest: 36,
       waist: 32,
+      hips: 38.5,
+      right_arm: null,
+      left_arm: 10.2,
+      right_thigh: null,
+      left_thigh: 21.5,
+      right_calf: null,
+      left_calf: 14.2,
+      measurement_side: 'left',
       body_fat_percent: 30,
       body_fat_source: 'scale',
       body_fat_method: 'scale',
@@ -428,6 +444,40 @@ describe('coaching packet deterministic-policy data path', () => {
     expect(
       packet.baseline.pre_plan_deficit_weeks,
     ).toBe(6)
+    expect(packet.baseline).toMatchObject({
+      starting_neck_inches: 14,
+      starting_chest_inches: 37,
+      starting_waist_inches: 32.5,
+      starting_hips_inches: 38.5,
+      starting_arm_inches: 11,
+      starting_thigh_inches: 22.3,
+      starting_calf_inches: 14.5,
+    })
+    expect(
+      packet.current_week.outcomes.full_measurements,
+    ).toEqual({
+      measurement_side: 'left',
+      neck_inches: 13.2,
+      chest_inches: 36,
+      waist_inches: 32,
+      hips_inches: 38.5,
+      arm_inches: 10.2,
+      thigh_inches: 21.5,
+      calf_inches: 14.2,
+    })
+    expect(
+      packet.current_week.outcomes.plan_start_progress,
+    ).toMatchObject({
+      neck_change_inches: -0.8,
+      chest_change_inches: -1,
+      waist_change_inches: -0.5,
+      hips_change_inches: 0,
+      arm_change_inches: -0.8,
+      thigh_change_inches: -0.8,
+      calf_change_inches: -0.3,
+      body_fat_change_points: -1,
+    })
+
     expect(
       packet.current_week.prescription[0],
     ).toMatchObject({

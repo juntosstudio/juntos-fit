@@ -40,7 +40,7 @@ export const POLICY_THRESHOLDS = Object.freeze({
 
   highHungerScore: 4,
   lowRecoveryScore: 2,
-  highStressScore: 4,
+  highStressManageabilityMax: 2,
 })
 
 export const POLICY_CONSTRAINTS = Object.freeze([

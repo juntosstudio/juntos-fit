@@ -1787,8 +1787,11 @@ export function WeeklySummaryPage({
                     }{' '}
                     {calculations
                       .cheatMealDays === 1
-                      ? 'day'
-                      : 'days'}
+                      ? 'reported day'
+                      : 'reported days'}
+                    {' '}
+                    (included in the meal-plan
+                    breakdown above)
                   </dd>
                 </div>
               )}
