@@ -432,10 +432,40 @@
 .weekly-plan-adjustment-eyebrow {
   margin: 0;
   color: var(--color-interaction);
-  font-size: 0.72rem;
-  font-weight: 850;
+  font-size: 0.9rem;
+  font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.weekly-plan-adjustment-handoff.is-pending {
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 1px rgb(var(--color-interaction-rgb) / 12%),
+    0 0 18px rgb(var(--color-interaction-rgb) / 18%);
+  animation: weekly-plan-adjustment-attention 2.8s ease-in-out infinite;
+}
+
+@keyframes weekly-plan-adjustment-attention {
+  0%,
+  100% {
+    box-shadow:
+      var(--shadow-card),
+      0 0 0 1px rgb(var(--color-interaction-rgb) / 10%),
+      0 0 12px rgb(var(--color-interaction-rgb) / 12%);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-card),
+      0 0 0 1px rgb(var(--color-interaction-rgb) / 18%),
+      0 0 22px rgb(var(--color-interaction-rgb) / 24%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-plan-adjustment-handoff.is-pending {
+    animation: none;
+  }
 }
 
 .weekly-plan-adjustment-handoff h2 {
@@ -463,10 +493,23 @@
     var(--color-surface),
     var(--color-success-soft)
   );
+  box-shadow: var(--shadow-card);
 }
 
 .weekly-plan-adjustment-handoff.is-accepted
   .weekly-plan-adjustment-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.weekly-plan-adjustment-handoff.is-accepted
+  .weekly-plan-adjustment-eyebrow .weekly-goal-check {
   color: var(--color-success);
 }
 

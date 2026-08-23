@@ -1805,7 +1805,19 @@ export function WeeklySummaryPage({
                 className={`weekly-plan-adjustment-handoff is-${planAdjustmentHandoff.state}`}
               >
                 <p className="weekly-plan-adjustment-eyebrow">
-                  NEXT STEP
+                  {planAdjustmentHandoff.state === 'accepted' ? (
+                    <>
+                      <span
+                        className="weekly-goal-check"
+                        aria-hidden="true"
+                      >
+                        ✓
+                      </span>
+                      <span>Recommendation Accepted</span>
+                    </>
+                  ) : (
+                    'NEXT STEP'
+                  )}
                 </p>
 
                 {planAdjustmentLoading ? (
@@ -1822,7 +1834,11 @@ export function WeeklySummaryPage({
                   </>
                 ) : planAdjustment ? (
                   <>
-                    <h2>Juntos Coach Recommendation</h2>
+                    {planAdjustmentHandoff.state !== 'accepted' && (
+                      <h2 className="weekly-plan-adjustment-context">
+                        Juntos Coach Recommendation
+                      </h2>
+                    )}
                     <strong className="weekly-plan-adjustment-action">
                       {formatPlanAdjustmentAction(
                         planAdjustment.action_id,
@@ -1859,7 +1875,7 @@ export function WeeklySummaryPage({
                               setShowAcceptConfirmation(true)
                             }
                           >
-                            Accept Recommendation
+                            Accept
                           </button>
                           <button
                             type="button"
@@ -1875,11 +1891,11 @@ export function WeeklySummaryPage({
                               })
                             }
                           >
-                            Discuss With Coach
+                            Discuss
                           </button>
                         </div>
                         <small className="weekly-plan-adjustment-window-note">
-                          You have 24 hours after completing your Weekly Check-In to decide. Nothing changes unless you accept.
+                          Decide within 24 hours. Nothing changes unless you accept.
                         </small>
                       </>
                     ) : (
