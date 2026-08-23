@@ -1834,11 +1834,6 @@ export function WeeklySummaryPage({
                   </>
                 ) : planAdjustment ? (
                   <>
-                    {planAdjustmentHandoff.state !== 'accepted' && (
-                      <h2 className="weekly-plan-adjustment-context">
-                        Juntos Coach Recommendation
-                      </h2>
-                    )}
                     <strong className="weekly-plan-adjustment-action">
                       {formatPlanAdjustmentAction(
                         planAdjustment.action_id,
