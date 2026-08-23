@@ -125,7 +125,7 @@ describe('PlanAdjustmentPage', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }),
     )
 
@@ -275,7 +275,7 @@ describe('PlanAdjustmentPage', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }).disabled,
     ).toBe(true)
 
@@ -315,7 +315,7 @@ describe('PlanAdjustmentPage', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }),
     )
     fireEvent.click(
@@ -357,7 +357,7 @@ describe('PlanAdjustmentPage', () => {
     ).toBeNull()
     expect(
       screen.queryByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }),
     ).toBeNull()
   })
@@ -377,7 +377,7 @@ describe('PlanAdjustmentPage', () => {
     expect(mocks.generate).not.toHaveBeenCalled()
     expect(
       screen.queryByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }),
     ).toBeNull()
   })
@@ -401,7 +401,7 @@ describe('PlanAdjustmentPage', () => {
     ).toBeNull()
     expect(
       screen.queryByRole('button', {
-        name: 'Accept & Update Plan',
+        name: 'Accept Recommendation',
       }),
     ).toBeNull()
   })

@@ -1750,3 +1750,117 @@ button.plan-progress-row:hover:not(:disabled) {
     width: 4.7rem;
   }
 }
+
+/* Plan Progress transposed comparison tables */
+.progress-transposed-table th,
+.progress-transposed-table td {
+  min-width: 6.8rem;
+}
+
+.progress-transposed-table .is-sticky-metric-column {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 7.25rem;
+  width: 7.25rem;
+  background: var(--color-surface);
+  box-shadow: 1px 0 0 var(--color-border);
+  text-align: left;
+  font-weight: 800;
+}
+
+.progress-transposed-table thead .is-sticky-metric-column {
+  z-index: 7;
+  background: var(--color-background);
+}
+
+.progress-transposed-table .is-sticky-start-column {
+  position: sticky;
+  left: 7.25rem;
+  z-index: 4;
+  background: var(--color-surface);
+  box-shadow: 1px 0 0 var(--color-border), 7px 0 10px -10px rgba(0, 0, 0, 0.45);
+}
+
+.progress-transposed-table thead .is-sticky-start-column {
+  z-index: 6;
+  background: var(--color-background);
+}
+
+.weekly-progress-table .is-current-column {
+  background: var(--color-accent-soft);
+}
+
+.weekly-progress-table thead .is-current-column {
+  background: var(--color-accent-soft);
+}
+
+.progress-week-column-label,
+.progress-week-column-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  color: var(--color-primary-dark);
+  font-weight: 900;
+}
+
+.progress-week-column-button {
+  min-width: 4.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  background: var(--color-surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.progress-week-column-button:hover,
+.progress-week-column-button:focus-visible {
+  border-color: var(--color-interaction);
+  color: var(--color-interaction);
+}
+
+.progress-week-column-button:focus-visible {
+  outline: 2px solid var(--color-interaction);
+  outline-offset: 2px;
+}
+
+.progress-week-arrow {
+  font-size: 1.3rem;
+  line-height: 0.8;
+}
+
+.progress-table-actions {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--color-border);
+  padding: 0.7rem 1rem 0.8rem;
+}
+
+.progress-table-toggle {
+  border: 0;
+  padding: 0.35rem 0.6rem;
+  background: transparent;
+  color: var(--color-interaction);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.progress-table-toggle:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .progress-transposed-table .is-sticky-metric-column {
+    min-width: 6.4rem;
+    width: 6.4rem;
+  }
+
+  .progress-transposed-table .is-sticky-start-column {
+    left: 6.4rem;
+  }
+}

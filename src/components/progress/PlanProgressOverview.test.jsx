@@ -26,24 +26,37 @@ const plan = {
   checkin_day: 0,
 }
 
+const startMeasurement = {
+  checkpoint: 'Start',
+  checkinDate: '2026-07-26',
+  weight: 160,
+  bodyFat: 29.9,
+  waist: 36.5,
+}
+
 afterEach(() => cleanup())
 
 describe('PlanProgressOverview', () => {
-  test('shows all plan weeks as compact table rows', () => {
+  test('shows start through current week by default and can reveal future weeks', () => {
     render(
       <PlanProgressOverview
         plan={plan}
         currentWeekNumber={4}
         weeks={[]}
-        measurements={[]}
+        measurements={[startMeasurement]}
       />,
     )
 
+    expect(screen.getAllByText('Start')).toHaveLength(2)
     expect(screen.getByText('W1')).toBeTruthy()
-    expect(screen.getByText('W12')).toBeTruthy()
+    expect(screen.getByText('W4')).toBeTruthy()
+    expect(screen.queryByText('W12')).toBeNull()
     expect(screen.getByText('Avg Weight')).toBeTruthy()
     expect(screen.getByText('Nutrition')).toBeTruthy()
     expect(screen.getByText('Consistency')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show remaining weeks (8)' }))
+    expect(screen.getByText('W12')).toBeTruthy()
   })
 
   test('keeps completed and current week navigation actionable', () => {
@@ -66,33 +79,27 @@ describe('PlanProgressOverview', () => {
             averageWeight: 156.8,
           },
         ]}
-        measurements={[]}
+        measurements={[startMeasurement]}
         onOpenWeeklyReview={onOpenWeeklyReview}
         onOpenCurrentWeek={onOpenCurrentWeek}
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Week 3' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Open Week 4' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open W3' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open W4' }))
 
     expect(onOpenWeeklyReview).toHaveBeenCalledWith(3)
     expect(onOpenCurrentWeek).toHaveBeenCalledTimes(1)
   })
 
-  test('shows every full-measurement checkpoint as a row', () => {
+  test('shows full measurements as checkpoints across columns', () => {
     render(
       <PlanProgressOverview
         plan={plan}
         currentWeekNumber={4}
         weeks={[]}
         measurements={[
-          {
-            checkpoint: 'Start',
-            checkinDate: '2026-07-26',
-            weight: 160,
-            bodyFat: 29.9,
-            waist: 36.5,
-          },
+          startMeasurement,
           {
             checkpoint: 'Week 4',
             checkinDate: '2026-08-23',
@@ -104,9 +111,34 @@ describe('PlanProgressOverview', () => {
       />,
     )
 
-    expect(screen.getByText('Start')).toBeTruthy()
     expect(screen.getByText('Week 4')).toBeTruthy()
     expect(screen.getByText('36.5')).toBeTruthy()
     expect(screen.getByText('34.0')).toBeTruthy()
+  })
+
+  test('does not turn missing current-week values into zeroes', () => {
+    render(
+      <PlanProgressOverview
+        plan={plan}
+        currentWeekNumber={4}
+        weeks={[{
+          weekNumber: 4,
+          weeklyStatus: 'missing',
+          dailyCheckInCount: 0,
+          averageWeight: null,
+          nutritionAdherencePercent: 0,
+          workoutsCompleted: 0,
+          workoutsTarget: 3,
+          cardioMinutes: 0,
+          cardioTarget: 90,
+        }]}
+        measurements={[startMeasurement]}
+      />,
+    )
+
+    expect(screen.queryByText('0.0')).toBeNull()
+    expect(screen.queryByText('0%')).toBeNull()
+    expect(screen.queryByText('0/3')).toBeNull()
+    expect(screen.queryByText('0/90')).toBeNull()
   })
 })

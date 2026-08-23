@@ -97,14 +97,14 @@ describe('planAdjustmentUi', () => {
       getPlanAdjustmentHandoffState(null),
     ).toMatchObject({
       state: 'pending',
-      buttonLabel: 'Review Plan Adjustment',
+      buttonLabel: 'Discuss With Coach',
     })
 
     expect(
       getPlanAdjustmentHandoffState({ status: 'proposed' }),
     ).toMatchObject({
       state: 'pending',
-      buttonLabel: 'Review Plan Adjustment',
+      buttonLabel: 'Discuss With Coach',
     })
   })
 

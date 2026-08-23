@@ -13,10 +13,16 @@ import {
   generateWeeklyCoachReview,
 } from '../services/weeklyCoachService'
 import {
+  acceptPlanAdjustment,
+  generatePlanAdjustment,
   loadLatestPlanAdjustment,
 } from '../services/planAdjustmentService'
 import {
+  formatPlanAdjustmentAction,
   getPlanAdjustmentHandoffState,
+  isHoldPlanAdjustment,
+  isPlanAdjustmentOpen,
+  isPlanAdjustmentWindowExpired,
 } from '../utils/planAdjustmentUi'
 import {
   formatDate,
@@ -602,6 +608,58 @@ function CoachReviewCard({ review }) {
   )
 }
 
+function getRecommendationDetail(proposal) {
+  if (!proposal) {
+    return ''
+  }
+
+  if (isHoldPlanAdjustment(proposal)) {
+    return 'No changes are recommended for next week.'
+  }
+
+  const prescription =
+    proposal.proposed_prescription ?? {}
+  const actionId = String(proposal.action_id ?? '')
+
+  if (
+    actionId.startsWith('nutrition_') ||
+    actionId.startsWith('calorie_reset_')
+  ) {
+    const calories =
+      prescription.calorie_target ??
+      proposal.proposed_calorie_target
+    const protein =
+      prescription.protein_grams ??
+      proposal.proposed_protein_grams
+    const carbs =
+      prescription.carb_grams ??
+      proposal.proposed_carb_grams
+    const fat =
+      prescription.fat_grams ??
+      proposal.proposed_fat_grams
+
+    if (
+      [calories, protein, carbs, fat].every(
+        (value) => value !== null && value !== undefined,
+      )
+    ) {
+      return `Next week: ${calories} calories · ${protein}g protein · ${carbs}g carbs · ${fat}g fat.`
+    }
+  }
+
+  if (actionId.startsWith('cardio_')) {
+    const cardio =
+      prescription.weekly_cardio_target_minutes ??
+      proposal.proposed_weekly_cardio_target_minutes
+
+    if (cardio !== null && cardio !== undefined) {
+      return `Next week: ${cardio} cardio minutes per week.`
+    }
+  }
+
+  return 'Review the recommendation below and accept it now, or discuss it with Juntos Coach.'
+}
+
 function getDevPreviewWeekNumber(plan) {
   if (
     !import.meta.env.DEV ||
@@ -649,6 +707,7 @@ export function WeeklySummaryPage({
   onOpenPlan,
   onOpenSettings,
   onOpenPlanAdjustment,
+  onPlanAdjustmentResolved,
 }) {
   const [completedWeeks, setCompletedWeeks] =
     useState([])
@@ -668,6 +727,14 @@ export function WeeklySummaryPage({
     useState('')
   const [planAdjustment, setPlanAdjustment] =
     useState(null)
+  const [planAdjustmentLoading, setPlanAdjustmentLoading] =
+    useState(false)
+  const [planAdjustmentError, setPlanAdjustmentError] =
+    useState('')
+  const [acceptingPlanAdjustment, setAcceptingPlanAdjustment] =
+    useState(false)
+  const [showAcceptConfirmation, setShowAcceptConfirmation] =
+    useState(false)
   const coachAttempts = useRef(new Set())
 
   const unitSystem =
@@ -823,39 +890,78 @@ export function WeeklySummaryPage({
   useEffect(() => {
     const weeklyCheckInId =
       summary?.week?.id
+    const latestCompletedWeek = Number(
+      completedWeeks[0]?.week_number,
+    )
+    const isLatestCompletedWeek =
+      Number(selectedWeek) === latestCompletedWeek
 
     if (
       !weeklyCheckInId ||
-      summary?.preview
+      summary?.preview ||
+      !coachReview ||
+      !isLatestCompletedWeek
     ) {
       setPlanAdjustment(null)
+      setPlanAdjustmentLoading(false)
+      setPlanAdjustmentError('')
       return undefined
     }
 
     let cancelled = false
     setPlanAdjustment(null)
+    setPlanAdjustmentLoading(true)
+    setPlanAdjustmentError('')
 
-    loadLatestPlanAdjustment(
-      weeklyCheckInId,
-    )
-      .then((proposal) => {
+    async function loadRecommendation() {
+      try {
+        let proposal =
+          await loadLatestPlanAdjustment(
+            weeklyCheckInId,
+          )
+
+        if (
+          !proposal &&
+          !isPlanAdjustmentWindowExpired({
+            weeklySubmittedAt:
+              summary?.week?.submitted_at,
+          })
+        ) {
+          proposal =
+            await generatePlanAdjustment(
+              weeklyCheckInId,
+            )
+        }
+
         if (!cancelled) {
           setPlanAdjustment(proposal)
         }
-      })
-      .catch(() => {
+      } catch (loadError) {
         if (!cancelled) {
-          // Weekly Review stays usable even if status lookup fails.
-          setPlanAdjustment(null)
+          setPlanAdjustmentError(
+            loadError?.message ||
+              'Juntos Coach could not prepare your recommendation right now.',
+          )
         }
-      })
+      } finally {
+        if (!cancelled) {
+          setPlanAdjustmentLoading(false)
+        }
+      }
+    }
+
+    loadRecommendation()
 
     return () => {
       cancelled = true
     }
   }, [
     summary?.week?.id,
+    summary?.week?.submitted_at,
     summary?.preview,
+    coachReview,
+    selectedWeek,
+    completedWeeks,
   ])
 
   useEffect(() => {
@@ -967,6 +1073,53 @@ export function WeeklySummaryPage({
       )
     } finally {
       setCoachLoading(false)
+    }
+  }
+
+  async function acceptRecommendation() {
+    if (
+      !planAdjustment?.id ||
+      acceptingPlanAdjustment
+    ) {
+      return
+    }
+
+    setAcceptingPlanAdjustment(true)
+    setPlanAdjustmentError('')
+
+    try {
+      const result =
+        await acceptPlanAdjustment(
+          planAdjustment.id,
+        )
+
+      setPlanAdjustment(result.proposal)
+      setShowAcceptConfirmation(false)
+
+      try {
+        await onPlanAdjustmentResolved?.(result)
+      } catch {
+        // The recommendation is already resolved. Keep the
+        // successful state visible even if dashboard refresh fails.
+      }
+    } catch (resolutionError) {
+      setShowAcceptConfirmation(false)
+      setPlanAdjustmentError(
+        resolutionError?.message ||
+          'Juntos Coach could not accept this recommendation right now.',
+      )
+
+      try {
+        const latest =
+          await loadLatestPlanAdjustment(
+            summary?.week?.id,
+          )
+        setPlanAdjustment(latest)
+      } catch {
+        // Preserve the resolution error and current proposal.
+      }
+    } finally {
+      setAcceptingPlanAdjustment(false)
     }
   }
 
@@ -1652,29 +1805,108 @@ export function WeeklySummaryPage({
                 className={`weekly-plan-adjustment-handoff is-${planAdjustmentHandoff.state}`}
               >
                 <p className="weekly-plan-adjustment-eyebrow">
-                  {planAdjustmentHandoff.eyebrow}
+                  NEXT STEP
                 </p>
-                <h2>
-                  {planAdjustmentHandoff.title}
-                </h2>
-                <p>
-                  {planAdjustmentHandoff.description}
-                </p>
-                {planAdjustmentHandoff.buttonLabel && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onOpenPlanAdjustment?.({
-                        weeklyCheckInId:
-                          summary.week.id,
-                        weekNumber: selectedWeek,
+
+                {planAdjustmentLoading ? (
+                  <>
+                    <h2>Juntos Coach Recommendation</h2>
+                    <p>
+                      Juntos Coach is preparing the recommendation for next week…
+                    </p>
+                  </>
+                ) : planAdjustmentError && !planAdjustment ? (
+                  <>
+                    <h2>Juntos Coach Recommendation</h2>
+                    <p>{planAdjustmentError}</p>
+                  </>
+                ) : planAdjustment ? (
+                  <>
+                    <h2>Juntos Coach Recommendation</h2>
+                    <strong className="weekly-plan-adjustment-action">
+                      {formatPlanAdjustmentAction(
+                        planAdjustment.action_id,
+                      )}
+                    </strong>
+                    <p className="weekly-plan-adjustment-detail">
+                      {getRecommendationDetail(
+                        planAdjustment,
+                      )}
+                    </p>
+
+                    {planAdjustmentError && (
+                      <p
+                        className="weekly-plan-adjustment-error"
+                        role="alert"
+                      >
+                        {planAdjustmentError}
+                      </p>
+                    )}
+
+                    {isPlanAdjustmentOpen(
+                      planAdjustment,
+                      {
                         weeklySubmittedAt:
                           summary.week.submitted_at,
-                      })
-                    }
-                  >
-                    {planAdjustmentHandoff.buttonLabel}
-                  </button>
+                      },
+                    ) ? (
+                      <>
+                        <div className="weekly-plan-adjustment-actions">
+                          <button
+                            type="button"
+                            disabled={acceptingPlanAdjustment}
+                            onClick={() =>
+                              setShowAcceptConfirmation(true)
+                            }
+                          >
+                            Accept Recommendation
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            disabled={acceptingPlanAdjustment}
+                            onClick={() =>
+                              onOpenPlanAdjustment?.({
+                                weeklyCheckInId:
+                                  summary.week.id,
+                                weekNumber: selectedWeek,
+                                weeklySubmittedAt:
+                                  summary.week.submitted_at,
+                              })
+                            }
+                          >
+                            Discuss With Coach
+                          </button>
+                        </div>
+                        <small className="weekly-plan-adjustment-window-note">
+                          You have 24 hours after completing your Weekly Check-In to decide. Nothing changes unless you accept.
+                        </small>
+                      </>
+                    ) : (
+                      planAdjustmentHandoff.buttonLabel && (
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() =>
+                            onOpenPlanAdjustment?.({
+                              weeklyCheckInId:
+                                summary.week.id,
+                              weekNumber: selectedWeek,
+                              weeklySubmittedAt:
+                                summary.week.submitted_at,
+                            })
+                          }
+                        >
+                          View Recommendation
+                        </button>
+                      )
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2>{planAdjustmentHandoff.title}</h2>
+                    <p>{planAdjustmentHandoff.description}</p>
+                  </>
                 )}
               </section>
             )}
@@ -2069,6 +2301,47 @@ export function WeeklySummaryPage({
           Settings
         </button>
       </nav>
+
+      {showAcceptConfirmation && planAdjustment && (
+        <div className="confirmation-overlay">
+          <section
+            className="confirmation-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="weekly-recommendation-confirm-title"
+          >
+            <h2 id="weekly-recommendation-confirm-title">
+              Accept This Recommendation?
+            </h2>
+            <p>
+              {isHoldPlanAdjustment(planAdjustment)
+                ? 'You are accepting Juntos Coach’s recommendation to keep your current prescription unchanged.'
+                : 'You are accepting Juntos Coach’s recommendation for next week. The proposed prescription will be applied according to its effective date.'}
+            </p>
+            <div className="weekly-plan-adjustment-confirm-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={acceptingPlanAdjustment}
+                onClick={() =>
+                  setShowAcceptConfirmation(false)
+                }
+              >
+                Go Back
+              </button>
+              <button
+                type="button"
+                disabled={acceptingPlanAdjustment}
+                onClick={acceptRecommendation}
+              >
+                {acceptingPlanAdjustment
+                  ? 'Saving…'
+                  : 'Yes, Accept Recommendation'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   )
 }

@@ -622,11 +622,11 @@ export function PlanAdjustmentPage({
               ? `Week ${weekNumber} coaching`
               : 'Weekly coaching'}
           </p>
-          <h1>Plan Adjustment</h1>
+          <h1>Discuss Your Recommendation</h1>
           <p>
-            Review the recommendation, discuss it with
-            Juntos Coach, then decide. Nothing changes
-            until you explicitly accept.
+            Ask questions, challenge the recommendation, or tell
+            Juntos Coach what you would prefer. You can accept or
+            decline the latest legal recommendation when you are ready.
           </p>
         </header>
 
@@ -788,9 +788,7 @@ export function PlanAdjustmentPage({
                       setResolutionPrompt('accept')
                     }
                   >
-                    {hold
-                      ? 'Agree & Keep Plan'
-                      : 'Accept & Update Plan'}
+                    Accept Recommendation
                   </button>
                 </div>
               </section>

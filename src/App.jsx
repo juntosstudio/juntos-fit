@@ -502,6 +502,7 @@ function App() {
           setCurrentPage(PAGE_SETTINGS)
         }
         onOpenPlanAdjustment={openPlanAdjustment}
+        onPlanAdjustmentResolved={refreshDashboard}
       />
     )
   }

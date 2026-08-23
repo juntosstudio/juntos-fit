@@ -198,11 +198,11 @@ export function getPlanAdjustmentHandoffState(
 
   return {
     state: 'pending',
-    eyebrow: 'Next week',
-    title: 'Plan Adjustment',
+    eyebrow: 'Next step',
+    title: 'Juntos Coach Recommendation',
     description:
-      'Review Juntos Coach’s recommendation, discuss it if you want, and explicitly accept or decline it within 24 hours of completing Weekly. Nothing changes until you accept.',
-    buttonLabel: 'Review Plan Adjustment',
+      'Review the recommendation for next week. You can accept it now or discuss it with Juntos Coach. Nothing changes unless you accept.',
+    buttonLabel: 'Discuss With Coach',
   }
 }
 

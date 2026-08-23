@@ -485,3 +485,57 @@
   .weekly-plan-adjustment-eyebrow {
   color: var(--color-text-muted);
 }
+
+/* Inline next-week coaching decision */
+.weekly-plan-adjustment-action {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--color-primary-dark);
+  font-size: clamp(1rem, 4vw, 1.15rem);
+  line-height: 1.35;
+}
+
+.weekly-plan-adjustment-handoff p.weekly-plan-adjustment-detail {
+  margin-bottom: 0.85rem;
+}
+
+.weekly-plan-adjustment-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  width: min(100%, 30rem);
+  margin: 0 auto;
+}
+
+.weekly-plan-adjustment-actions button {
+  width: 100%;
+}
+
+.weekly-plan-adjustment-window-note {
+  display: block;
+  max-width: 32rem;
+  margin: 0.75rem auto 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.weekly-plan-adjustment-handoff p.weekly-plan-adjustment-error {
+  margin: 0.65rem auto;
+  color: var(--color-danger, #a33);
+  font-weight: 700;
+}
+
+.weekly-plan-adjustment-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 420px) {
+  .weekly-plan-adjustment-actions,
+  .weekly-plan-adjustment-confirm-actions {
+    grid-template-columns: 1fr;
+  }
+}
