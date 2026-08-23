@@ -1453,7 +1453,7 @@ export function WeeklySummaryPage({
       {summary && calculations && (
         <>
           <section className="weekly-summary-section">
-            <h2>This Weeks Results</h2>
+            <h2>This Week's Results</h2>
 
             <div className="weekly-results-grid">
               <article className="weekly-result-card">
