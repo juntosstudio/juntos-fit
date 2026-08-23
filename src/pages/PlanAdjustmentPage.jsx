@@ -136,6 +136,16 @@ function ProposalCard({ proposal }) {
 
 function ProposedPrescriptionCard({ proposal }) {
   const hold = isHoldPlanAdjustment(proposal)
+  const actionId = proposal?.action_id ?? ''
+  const proposalSummary = hold
+    ? 'No Changes'
+    : actionId.startsWith('nutrition_')
+      ? 'Nutrition Changes'
+      : actionId.startsWith('cardio_')
+        ? 'Cardio Change'
+        : actionId.startsWith('calorie_reset_')
+          ? 'Calorie Reset'
+          : 'Recommended Changes'
   const effectiveDate =
     proposal?.effective_date ??
     proposal?.proposed_effective_date
@@ -145,19 +155,19 @@ function ProposedPrescriptionCard({ proposal }) {
       <p className="plan-adjustment-eyebrow">
         Final proposal
       </p>
-      <h2>Proposed Next-Week Prescription</h2>
+      <h2>Proposed Next-Week Prescription — {proposalSummary}</h2>
 
       <ProposalPrescription proposal={proposal} />
 
-      <p className="plan-adjustment-effective-date">
-        {hold
-          ? 'No prescription values will change.'
-          : `${
-              proposal?.status === 'accepted'
-                ? 'Effective'
-                : 'Proposed effective date'
-            }: ${formatDate(effectiveDate)}`}
-      </p>
+      {!hold && (
+        <p className="plan-adjustment-effective-date">
+          {`${
+            proposal?.status === 'accepted'
+              ? 'Effective'
+              : 'Proposed effective date'
+          }: ${formatDate(effectiveDate)}`}
+        </p>
+      )}
     </section>
   )
 }
@@ -758,9 +768,8 @@ export function PlanAdjustmentPage({
                     : 'Apply This Prescription?'}
                 </h2>
                 <p>
-                  Juntos Coach cannot apply this for you.
-                  Your explicit acceptance is the final
-                  step.
+                  Your acceptance is required before Juntos Coach
+                  applies this prescription.
                 </p>
 
                 {pendingRetry && (
@@ -773,6 +782,15 @@ export function PlanAdjustmentPage({
                 <div className="plan-adjustment-decision-actions">
                   <button
                     type="button"
+                    disabled={decisionBlocked}
+                    onClick={() =>
+                      setResolutionPrompt('accept')
+                    }
+                  >
+                    Accept Recommendation
+                  </button>
+                  <button
+                    type="button"
                     className="plan-adjustment-decline-button"
                     disabled={decisionBlocked}
                     onClick={() =>
@@ -780,15 +798,6 @@ export function PlanAdjustmentPage({
                     }
                   >
                     Decline Recommendation
-                  </button>
-                  <button
-                    type="button"
-                    disabled={decisionBlocked}
-                    onClick={() =>
-                      setResolutionPrompt('accept')
-                    }
-                  >
-                    Accept Recommendation
                   </button>
                 </div>
               </section>

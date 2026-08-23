@@ -1707,7 +1707,8 @@ export function WeeklySummaryPage({
                   })
                 }
               >
-                Recommendation Waiting… Review & Decide
+                <span>Recommendation Waiting…</span>
+                <span>Review &amp; Decide</span>
               </button>
             )}
 

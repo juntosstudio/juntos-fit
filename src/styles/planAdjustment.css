@@ -17,7 +17,7 @@
 .plan-adjustment-page-header > p:last-child {
   max-width: 34rem;
   margin: 0.65rem auto 0;
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   font-size: 0.9rem;
 }
 
@@ -290,7 +290,7 @@
 }
 
 .plan-adjustment-decision-card > p:not(.plan-adjustment-eyebrow) {
-  color: var(--color-text-muted);
+  color: var(--color-primary);
   font-size: 0.84rem;
 }
 

@@ -573,6 +573,12 @@
 
 /* Re-entry action: use the exact same primary action/button behavior as Today. */
 .weekly-recommendation-waiting {
-  display: block;
+  display: grid;
+  gap: 0.08rem;
   margin: 0 auto 1rem;
+  text-align: center;
+}
+
+.weekly-recommendation-waiting > span {
+  display: block;
 }
