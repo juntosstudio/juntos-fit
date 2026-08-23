@@ -660,6 +660,94 @@ function getRecommendationDetail(proposal) {
   return 'Review the recommendation below and accept it now, or discuss it with Juntos Coach.'
 }
 
+
+function getRecommendationQuestion(proposal) {
+  if (!proposal) {
+    return 'Review your recommendation for next week?'
+  }
+
+  if (isHoldPlanAdjustment(proposal)) {
+    return 'Keep your current prescription for next week?'
+  }
+
+  const prescription =
+    proposal.proposed_prescription ?? {}
+  const actionId = String(proposal.action_id ?? '')
+
+  if (
+    actionId.startsWith('nutrition_') ||
+    actionId.startsWith('calorie_reset_')
+  ) {
+    return 'Update your nutrition targets for next week?'
+  }
+
+  if (actionId === 'cardio_increase_intensity_to_moderate') {
+    return 'Increase your cardio intensity next week?'
+  }
+
+  if (actionId.startsWith('cardio_')) {
+    const cardio =
+      prescription.weekly_cardio_target_minutes ??
+      proposal.proposed_weekly_cardio_target_minutes
+
+    if (cardio !== null && cardio !== undefined) {
+      return `Increase your cardio to ${cardio} minutes next week?`
+    }
+
+    return 'Increase your cardio next week?'
+  }
+
+  return `${formatPlanAdjustmentAction(
+    proposal.action_id,
+  )}?`
+}
+
+function getPendingRecommendationDetail(proposal) {
+  if (!proposal) {
+    return ''
+  }
+
+  if (isHoldPlanAdjustment(proposal)) {
+    return 'Juntos Coach recommends no changes.'
+  }
+
+  const prescription =
+    proposal.proposed_prescription ?? {}
+  const actionId = String(proposal.action_id ?? '')
+
+  if (
+    actionId.startsWith('nutrition_') ||
+    actionId.startsWith('calorie_reset_')
+  ) {
+    const calories =
+      prescription.calorie_target ??
+      proposal.proposed_calorie_target
+    const protein =
+      prescription.protein_grams ??
+      proposal.proposed_protein_grams
+    const carbs =
+      prescription.carb_grams ??
+      proposal.proposed_carb_grams
+    const fat =
+      prescription.fat_grams ??
+      proposal.proposed_fat_grams
+
+    if (
+      [calories, protein, carbs, fat].every(
+        (value) => value !== null && value !== undefined,
+      )
+    ) {
+      return `${calories} calories · ${protein}g protein · ${carbs}g carbs · ${fat}g fat`
+    }
+  }
+
+  if (actionId.startsWith('cardio_')) {
+    return 'Your nutrition targets stay the same.'
+  }
+
+  return 'Review the recommendation and discuss it with Juntos Coach if you want to make a change.'
+}
+
 function getDevPreviewWeekNumber(plan) {
   if (
     !import.meta.env.DEV ||
@@ -1611,7 +1699,7 @@ export function WeeklySummaryPage({
             planAdjustmentHandoff.state === 'pending' && (
               <button
                 type="button"
-                className="weekly-recommendation-waiting"
+                className="daily-check-in-button is-due weekly-recommendation-waiting"
                 onClick={() =>
                   recommendationCardRef.current?.scrollIntoView({
                     behavior: 'smooth',
@@ -1619,8 +1707,7 @@ export function WeeklySummaryPage({
                   })
                 }
               >
-                <strong>Recommendation Waiting</strong>
-                <span>Click to review and decide ↓</span>
+                Recommendation Waiting… Review & Decide
               </button>
             )}
 
@@ -1836,7 +1923,7 @@ export function WeeklySummaryPage({
                       <span>Recommendation Accepted</span>
                     </>
                   ) : (
-                    'NEXT STEP'
+                    'NEXT STEP…'
                   )}
                 </p>
 
@@ -1855,14 +1942,34 @@ export function WeeklySummaryPage({
                 ) : planAdjustment ? (
                   <>
                     <strong className="weekly-plan-adjustment-action">
-                      {formatPlanAdjustmentAction(
-                        planAdjustment.action_id,
-                      )}
+                      {isPlanAdjustmentOpen(
+                        planAdjustment,
+                        {
+                          weeklySubmittedAt:
+                            summary.week.submitted_at,
+                        },
+                      )
+                        ? getRecommendationQuestion(
+                            planAdjustment,
+                          )
+                        : formatPlanAdjustmentAction(
+                            planAdjustment.action_id,
+                          )}
                     </strong>
                     <p className="weekly-plan-adjustment-detail">
-                      {getRecommendationDetail(
+                      {isPlanAdjustmentOpen(
                         planAdjustment,
-                      )}
+                        {
+                          weeklySubmittedAt:
+                            summary.week.submitted_at,
+                        },
+                      )
+                        ? getPendingRecommendationDetail(
+                            planAdjustment,
+                          )
+                        : getRecommendationDetail(
+                            planAdjustment,
+                          )}
                     </p>
 
                     {planAdjustmentError && (
