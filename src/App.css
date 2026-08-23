@@ -1864,3 +1864,24 @@ button.plan-progress-row:hover:not(:disabled) {
     left: 6.4rem;
   }
 }
+
+.dashboard-section-link.is-action-needed,
+.plan-progress-row.is-recommendation-waiting {
+  border-color: var(--color-interaction);
+  animation: check-in-breathe 2.5s ease-in-out infinite;
+}
+
+.plan-progress-status.is-recommendation-waiting {
+  background: rgb(var(--color-interaction-rgb) / 14%);
+  color: var(--color-primary-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-section-link.is-action-needed,
+  .plan-progress-row.is-recommendation-waiting {
+    animation: none;
+    box-shadow:
+      0 0 6px rgb(var(--color-interaction-rgb) / 70%),
+      0 0 14px rgb(var(--color-interaction-rgb) / 30%);
+  }
+}

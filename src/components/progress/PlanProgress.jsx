@@ -57,7 +57,10 @@ function getPlanProgressRows(
         return {
           ...weekData,
           weekNumber,
-          status: 'completed',
+          status:
+            weekData?.planAdjustmentStatus === 'proposed'
+              ? 'recommendation-waiting'
+              : 'completed',
         }
       }
 
@@ -172,6 +175,25 @@ export function PlanProgress({
   function renderRowContent(
     row,
   ) {
+    if (
+      row.status ===
+      'recommendation-waiting'
+    ) {
+      return (
+        <>
+          <div className="plan-progress-row-topline">
+            <strong>Week {row.weekNumber}</strong>
+            <span className="plan-progress-status is-recommendation-waiting">
+              Recommendation Waiting
+            </span>
+          </div>
+          <span className="plan-progress-subtext">
+            Review and decide
+          </span>
+        </>
+      )
+    }
+
     if (
       row.status ===
       'completed'
@@ -380,13 +402,17 @@ export function PlanProgress({
         {visibleRows.map(
           (row) => {
             if (
-              row.status ===
-              'completed'
+              row.status === 'completed' ||
+              row.status === 'recommendation-waiting'
             ) {
               return (
                 <button
                   type="button"
-                  className="plan-progress-row is-clickable is-completed"
+                  className={`plan-progress-row is-clickable ${
+                    row.status === 'recommendation-waiting'
+                      ? 'is-recommendation-waiting'
+                      : 'is-completed'
+                  }`}
                   key={
                     row.weekNumber
                   }

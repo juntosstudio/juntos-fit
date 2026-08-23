@@ -569,3 +569,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+.weekly-recommendation-waiting {
+  display: grid;
+  width: 100%;
+  gap: 0.2rem;
+  margin: 0 0 1rem;
+  border: 1px solid var(--color-interaction);
+  border-radius: var(--radius-lg);
+  padding: 0.8rem 1rem;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  text-align: center;
+  animation: check-in-breathe 2.5s ease-in-out infinite;
+}
+
+.weekly-recommendation-waiting strong {
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.weekly-recommendation-waiting span {
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-recommendation-waiting {
+    animation: none;
+    box-shadow:
+      0 0 6px rgb(var(--color-interaction-rgb) / 70%),
+      0 0 14px rgb(var(--color-interaction-rgb) / 30%);
+  }
+}

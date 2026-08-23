@@ -728,6 +728,7 @@ async function loadPlanProgress(
     weeklyResult,
     dailyResult,
     targetHistoryResult,
+    adjustmentResult,
   ] = await Promise.all([
     supabase
       .from('weekly_checkins')
@@ -782,6 +783,12 @@ async function loadPlanProgress(
       .eq('coaching_plan_id', plan.id)
       .lte('effective_date', lastDailyDate)
       .order('effective_date', { ascending: true }),
+
+    supabase
+      .from('coaching_adjustment_proposals')
+      .select('weekly_checkin_id, revision_number, status')
+      .eq('coaching_plan_id', plan.id)
+      .order('revision_number', { ascending: false }),
   ])
 
   if (weeklyResult.error) {
@@ -794,6 +801,23 @@ async function loadPlanProgress(
 
   if (targetHistoryResult.error) {
     throw targetHistoryResult.error
+  }
+
+  if (adjustmentResult.error) {
+    throw adjustmentResult.error
+  }
+
+  const latestAdjustmentByWeeklyId = new Map()
+  for (const proposal of adjustmentResult.data ?? []) {
+    if (
+      proposal?.weekly_checkin_id &&
+      !latestAdjustmentByWeeklyId.has(proposal.weekly_checkin_id)
+    ) {
+      latestAdjustmentByWeeklyId.set(
+        proposal.weekly_checkin_id,
+        proposal,
+      )
+    }
   }
 
   const weeklyRows =
@@ -950,6 +974,10 @@ async function loadPlanProgress(
         weeklyStatus:
           weekly?.status ??
           'missing',
+        planAdjustmentStatus:
+          weekly?.id
+            ? latestAdjustmentByWeeklyId.get(weekly.id)?.status ?? null
+            : null,
         weeklyDueDate:
           weekRange?.weeklyDueDate ?? null,
         weeklyDueState,

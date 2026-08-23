@@ -701,6 +701,7 @@ export function WeeklySummaryPage({
   plan,
   profile,
   initialWeekNumber,
+  justCompleted = false,
   onBack,
   onOpenToday,
   onOpenHistory,
@@ -736,6 +737,7 @@ export function WeeklySummaryPage({
   const [showAcceptConfirmation, setShowAcceptConfirmation] =
     useState(false)
   const coachAttempts = useRef(new Set())
+  const recommendationCardRef = useRef(null)
 
   const unitSystem =
     normalizeUnitSystem(
@@ -1605,6 +1607,23 @@ export function WeeklySummaryPage({
 
       {summary && calculations && (
         <>
+          {!justCompleted &&
+            planAdjustmentHandoff.state === 'pending' && (
+              <button
+                type="button"
+                className="weekly-recommendation-waiting"
+                onClick={() =>
+                  recommendationCardRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                  })
+                }
+              >
+                <strong>Recommendation Waiting</strong>
+                <span>Click to review and decide ↓</span>
+              </button>
+            )}
+
           <section className="weekly-summary-section">
             <h2>This Week's Results</h2>
 
@@ -1802,6 +1821,7 @@ export function WeeklySummaryPage({
                 completedWeeks[0]?.week_number,
               ) && (
               <section
+                ref={recommendationCardRef}
                 className={`weekly-plan-adjustment-handoff is-${planAdjustmentHandoff.state}`}
               >
                 <p className="weekly-plan-adjustment-eyebrow">

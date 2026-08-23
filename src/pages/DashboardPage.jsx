@@ -203,6 +203,15 @@ export function DashboardPage({
         reportingWeekNumber,
       )
 
+  const pendingRecommendationWeek =
+    (dashboard?.planProgress?.weeks ?? []).find(
+      (week) =>
+        week?.weeklyStatus === 'completed' &&
+        week?.planAdjustmentStatus === 'proposed',
+    )
+  const hasPendingRecommendation =
+    Boolean(pendingRecommendationWeek)
+
   const hasCheckedInToday =
     dashboard?.todayCheckIn?.checkin_date === today
 
@@ -462,19 +471,30 @@ export function DashboardPage({
 
               <button
                 type="button"
-                className="dashboard-section-link"
+                className={`dashboard-section-link ${
+                  hasPendingRecommendation
+                    ? 'is-action-needed'
+                    : ''
+                }`}
                 onClick={
-                  closedReportingWeekToday
+                  hasPendingRecommendation
                     ? () =>
                         onOpenWeeklyReview(
-                          reportingWeekNumber,
+                          pendingRecommendationWeek.weekNumber,
                         )
-                    : onOpenCurrentWeek
+                    : closedReportingWeekToday
+                      ? () =>
+                          onOpenWeeklyReview(
+                            reportingWeekNumber,
+                          )
+                      : onOpenCurrentWeek
                 }
               >
-                {closedReportingWeekToday
-                  ? 'See Weekly Review →'
-                  : 'See Daily Check-Ins →'}
+                {hasPendingRecommendation
+                  ? 'See Weekly Check-In →'
+                  : closedReportingWeekToday
+                    ? 'See Weekly Review →'
+                    : 'See Daily Check-Ins →'}
               </button>
             </section>
           )}
