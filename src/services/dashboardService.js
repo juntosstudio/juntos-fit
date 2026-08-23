@@ -120,6 +120,13 @@ const PLAN_PROGRESS_PRESCRIPTION_FIELDS = `
   weekly_cardio_target_minutes
 `
 
+const PLAN_PROGRESS_TARGET_FIELDS = `
+  id,
+  effective_date,
+  weekly_workout_target,
+  weekly_cardio_target_minutes
+`
+
 
 const PLAN_PROGRESS_MEASUREMENT_FIELDS = `
   daily_checkin_id,
@@ -436,6 +443,26 @@ function stablePrescriptionValue(prescriptions, field) {
   return values.length === 1 ? values[0] : null
 }
 
+function targetsEffectiveDuringRange(targets, startDate, endDate) {
+  if (!startDate || !endDate) return []
+
+  const sorted = [...(targets ?? [])]
+    .filter((target) => target?.effective_date)
+    .sort((a, b) =>
+      String(a.effective_date).localeCompare(String(b.effective_date)),
+    )
+
+  return sorted.filter((target, index) => {
+    const nextEffectiveDate =
+      sorted[index + 1]?.effective_date ?? null
+
+    return (
+      target.effective_date <= endDate &&
+      (!nextEffectiveDate || nextEffectiveDate > startDate)
+    )
+  })
+}
+
 function cappedPercent(value, target) {
   const numericValue = Number(value)
   const numericTarget = Number(target)
@@ -700,6 +727,7 @@ async function loadPlanProgress(
   const [
     weeklyResult,
     dailyResult,
+    targetHistoryResult,
   ] = await Promise.all([
     supabase
       .from('weekly_checkins')
@@ -747,6 +775,13 @@ async function loadPlanProgress(
           ascending: true,
         },
       ),
+
+    supabase
+      .from('coaching_plan_targets')
+      .select(PLAN_PROGRESS_TARGET_FIELDS)
+      .eq('coaching_plan_id', plan.id)
+      .lte('effective_date', lastDailyDate)
+      .order('effective_date', { ascending: true }),
   ])
 
   if (weeklyResult.error) {
@@ -757,10 +792,16 @@ async function loadPlanProgress(
     throw dailyResult.error
   }
 
+  if (targetHistoryResult.error) {
+    throw targetHistoryResult.error
+  }
+
   const weeklyRows =
     weeklyResult.data ?? []
   const dailyRows =
     dailyResult.data ?? []
+  const targetHistory =
+    targetHistoryResult.data ?? []
 
   const weeklyByNumber =
     new Map(
@@ -860,6 +901,14 @@ async function loadPlanProgress(
               item.week_number,
             ) === weekNumber,
         )
+
+      if (weekPrescriptions.length === 0) {
+        weekPrescriptions = targetsEffectiveDuringRange(
+          targetHistory,
+          dailyStart,
+          dailyEnd,
+        )
+      }
 
       if (
         weekPrescriptions.length === 0 &&
