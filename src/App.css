@@ -1885,3 +1885,11 @@ button.plan-progress-row:hover:not(:disabled) {
       0 0 14px rgb(var(--color-interaction-rgb) / 30%);
   }
 }
+
+.plan-progress-weight-change {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--color-primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+}

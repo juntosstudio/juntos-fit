@@ -142,3 +142,39 @@ describe('PlanProgress all-weeks navigation', () => {
   })
 })
 
+
+
+describe('PlanProgress weight change from Start', () => {
+  test('shows weight change from Start on week cards when an average exists', () => {
+    render(
+      <PlanProgress
+        plan={plan}
+        currentWeekNumber={3}
+        startWeight={160}
+        weeks={[
+          {
+            weekNumber: 1,
+            weeklyStatus: 'missing',
+            dailyCheckInCount: 5,
+            averageWeight: 156.2,
+          },
+          {
+            weekNumber: 2,
+            weeklyStatus: 'completed',
+            averageWeight: 161.1,
+            consistencyPercent: 92,
+          },
+          {
+            weekNumber: 3,
+            weeklyStatus: 'missing',
+            averageWeight: 160,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('↓ 3.8 lbs from Start')).toBeTruthy()
+    expect(screen.getByText('↑ 1.1 lbs from Start')).toBeTruthy()
+    expect(screen.getByText('No change from Start')).toBeTruthy()
+  })
+})

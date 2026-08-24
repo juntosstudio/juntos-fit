@@ -12,6 +12,26 @@ function formatWeight(value) {
     : '—'
 }
 
+function formatWeightChangeFromStart(averageWeight, startWeight) {
+  const average = Number(averageWeight)
+  const start = Number(startWeight)
+
+  if (!Number.isFinite(average) || !Number.isFinite(start)) {
+    return null
+  }
+
+  const difference = average - start
+
+  if (Math.abs(difference) < 0.05) {
+    return 'No change from Start'
+  }
+
+  const magnitude = Math.abs(difference).toFixed(1)
+  return difference < 0
+    ? `↓ ${magnitude} lbs from Start`
+    : `↑ ${magnitude} lbs from Start`
+}
+
 function getPlanProgressRows(
   plan,
   currentWeekNumber,
@@ -118,6 +138,7 @@ export function PlanProgress({
   plan,
   currentWeekNumber,
   weeks,
+  startWeight,
   onOpenCurrentWeek,
   onOpenWeeklyReview,
   onOpenWeeklyCheckIn,
@@ -171,6 +192,19 @@ export function PlanProgress({
 
   const hasHiddenWeeks =
     visibleRows.length < rows.length
+
+  function renderWeightChange(row) {
+    const weightChange = formatWeightChangeFromStart(
+      row.averageWeight,
+      startWeight,
+    )
+
+    return weightChange ? (
+      <span className="plan-progress-weight-change">
+        {weightChange}
+      </span>
+    ) : null
+  }
 
   function renderRowContent(
     row,
@@ -242,6 +276,8 @@ export function PlanProgress({
               </span>
             )}
           </div>
+
+          {renderWeightChange(row)}
         </>
       )
     }
@@ -262,9 +298,21 @@ export function PlanProgress({
             </span>
           </div>
 
-          <span className="plan-progress-subtext">
-            In progress
-          </span>
+          {Number.isFinite(Number(row.averageWeight)) ? (
+            <>
+              <div className="plan-progress-row-details">
+                <span>
+                  Avg Weight{' '}
+                  <strong>{formatWeight(row.averageWeight)}</strong>
+                </span>
+              </div>
+              {renderWeightChange(row)}
+            </>
+          ) : (
+            <span className="plan-progress-subtext">
+              In progress
+            </span>
+          )}
         </>
       )
     }
@@ -363,6 +411,8 @@ export function PlanProgress({
               No check-in data recorded
             </span>
           )}
+
+          {hasDailyData && renderWeightChange(row)}
         </>
       )
     }

@@ -505,6 +505,7 @@ export function DashboardPage({
               planProgressCurrentWeekNumber
             }
             weeks={dashboard?.planProgress?.weeks ?? []}
+            startWeight={startCheckIn?.starting_weight_lbs}
             onOpenCurrentWeek={
               planProgressCurrentWeekNumber ===
               reportingWeekNumber

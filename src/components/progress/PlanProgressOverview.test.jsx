@@ -37,7 +37,7 @@ const startMeasurement = {
 afterEach(() => cleanup())
 
 describe('PlanProgressOverview', () => {
-  test('shows start through current week by default and can reveal future weeks', () => {
+  test('shows weekly history cards through two upcoming weeks and can reveal all weeks', () => {
     render(
       <PlanProgressOverview
         plan={plan}
@@ -47,16 +47,13 @@ describe('PlanProgressOverview', () => {
       />,
     )
 
-    expect(screen.getAllByText('Start')).toHaveLength(2)
-    expect(screen.getByText('W1')).toBeTruthy()
-    expect(screen.getByText('W4')).toBeTruthy()
-    expect(screen.queryByText('W12')).toBeNull()
-    expect(screen.getByText('Avg Weight')).toBeTruthy()
-    expect(screen.getByText('Nutrition')).toBeTruthy()
-    expect(screen.getByText('Consistency')).toBeTruthy()
+    expect(screen.getByText('Weekly History')).toBeTruthy()
+    expect(screen.getByText('Week 1')).toBeTruthy()
+    expect(screen.getByText('Week 6')).toBeTruthy()
+    expect(screen.queryByText('Week 12')).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show remaining weeks (8)' }))
-    expect(screen.getByText('W12')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '••• Show All Weeks' }))
+    expect(screen.getByText('Week 12')).toBeTruthy()
   })
 
   test('keeps completed and current week navigation actionable', () => {
@@ -85,11 +82,39 @@ describe('PlanProgressOverview', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open W3' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Open W4' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Week 3' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Week 4' }))
 
     expect(onOpenWeeklyReview).toHaveBeenCalledWith(3)
     expect(onOpenCurrentWeek).toHaveBeenCalledTimes(1)
+  })
+
+  test('shows each available weekly average change from Start', () => {
+    render(
+      <PlanProgressOverview
+        plan={plan}
+        currentWeekNumber={4}
+        weeks={[
+          {
+            weekNumber: 1,
+            weeklyStatus: 'missing',
+            dailyCheckInCount: 5,
+            averageWeight: 156.2,
+          },
+          {
+            weekNumber: 3,
+            weeklyStatus: 'completed',
+            dailyCheckInCount: 7,
+            consistencyPercent: 98,
+            averageWeight: 157,
+          },
+        ]}
+        measurements={[startMeasurement]}
+      />,
+    )
+
+    expect(screen.getByText('↓ 3.8 lbs from Start')).toBeTruthy()
+    expect(screen.getByText('↓ 3.0 lbs from Start')).toBeTruthy()
   })
 
   test('shows full measurements as checkpoints across columns', () => {
@@ -111,7 +136,7 @@ describe('PlanProgressOverview', () => {
       />,
     )
 
-    expect(screen.getByText('Week 4')).toBeTruthy()
+    expect(screen.getAllByText('Week 4').length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('36.5')).toBeTruthy()
     expect(screen.getByText('34.0')).toBeTruthy()
   })
