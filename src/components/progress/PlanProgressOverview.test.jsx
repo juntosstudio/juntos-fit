@@ -166,4 +166,36 @@ describe('PlanProgressOverview', () => {
     expect(screen.queryByText('0/3')).toBeNull()
     expect(screen.queryByText('0/90')).toBeNull()
   })
+
+  test('shows a real weight dashboard card and opens the weight detail view', () => {
+    render(
+      <PlanProgressOverview
+        plan={plan}
+        currentWeekNumber={4}
+        weeks={[]}
+        measurements={[startMeasurement]}
+        weightHistory={[
+          { checkinDate: '2026-07-27', weight: 157.6 },
+          { checkinDate: '2026-08-03', weight: 157.6 },
+          { checkinDate: '2026-08-23', weight: 157.2 },
+        ]}
+        photoMarkers={[
+          { key: 'week-4', checkpoint: 'Week 4', checkinDate: '2026-08-23' },
+        ]}
+      />,
+    )
+
+    expect(screen.getAllByText('Weight').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('↓ 2.8 lbs from Start')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Weight Progress' }))
+
+    expect(screen.getByRole('heading', { name: 'Weight Progress' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'PLAN' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('Progress-photo markers appear on the dates photos were logged.')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'W' }))
+    expect(screen.getByText('Weekly Averages')).toBeTruthy()
+  })
+
 })

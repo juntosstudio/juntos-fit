@@ -151,6 +151,421 @@ function formatWeightChangeFromStart(currentWeight, startWeight) {
   }
 }
 
+
+
+function mergeWeightHistory(weightHistory, measurements) {
+  const start = (measurements ?? []).find(
+    (row) => String(row.checkpoint).toLowerCase() === 'start',
+  )
+  const byDate = new Map()
+
+  if (start?.checkinDate && numeric(start?.weight) !== null) {
+    byDate.set(start.checkinDate, {
+      checkinDate: start.checkinDate,
+      weight: Number(start.weight),
+      source: 'start',
+    })
+  }
+
+  for (const row of weightHistory ?? []) {
+    if (!row?.checkinDate || numeric(row?.weight) === null) continue
+    byDate.set(row.checkinDate, {
+      checkinDate: row.checkinDate,
+      weight: Number(row.weight),
+      source: 'daily',
+    })
+  }
+
+  return [...byDate.values()].sort((a, b) =>
+    String(a.checkinDate).localeCompare(String(b.checkinDate)),
+  )
+}
+
+function dateKeyToMs(value) {
+  if (!value) return null
+  const [year, month, day] = String(value).split('-').map(Number)
+  if (!year || !month || !day) return null
+  return Date.UTC(year, month - 1, day)
+}
+
+function addDaysToDateKey(value, days) {
+  const milliseconds = dateKeyToMs(value)
+  if (milliseconds === null) return value
+  const date = new Date(milliseconds + Number(days) * 86400000)
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function averageWeightEntries(entries) {
+  if (!entries.length) return null
+  return entries.reduce((total, entry) => total + Number(entry.weight), 0) / entries.length
+}
+
+function buildWeeklyWeightAverages(entries, plan) {
+  const length = Number(plan?.program_length_weeks) || 0
+  const weeks = []
+
+  for (let weekNumber = 1; weekNumber <= length; weekNumber += 1) {
+    const range = getReportingWeekRange(
+      plan.start_date,
+      plan.checkin_day,
+      weekNumber,
+    )
+    if (!range?.reportingStart || !range?.reportingEnd) continue
+
+    const inRange = entries.filter((entry) =>
+      entry.checkinDate >= range.reportingStart &&
+      entry.checkinDate <= range.reportingEnd,
+    )
+    const value = averageWeightEntries(inRange)
+    if (value === null) continue
+
+    weeks.push({
+      checkinDate: range.reportingEnd,
+      weight: value,
+      label: `W${weekNumber}`,
+    })
+  }
+
+  return weeks
+}
+
+function filterWeightRange(entries, range, plan) {
+  if (!entries.length) return []
+  const latestDate = entries.at(-1)?.checkinDate
+  const latestMs = dateKeyToMs(latestDate)
+
+  if (range === 'W') {
+    return buildWeeklyWeightAverages(entries, plan)
+  }
+
+  if (range === 'D') {
+    const start = addDaysToDateKey(latestDate, -6)
+    return entries.filter((entry) => entry.checkinDate >= start)
+  }
+
+  if (range === 'M') {
+    const latest = new Date(latestMs)
+    const start = [
+      latest.getUTCFullYear(),
+      String(latest.getUTCMonth() + 1).padStart(2, '0'),
+      '01',
+    ].join('-')
+    return entries.filter((entry) => entry.checkinDate >= start)
+  }
+
+  if (range === '6M') {
+    const latest = new Date(latestMs)
+    latest.setUTCMonth(latest.getUTCMonth() - 6)
+    const start = [
+      latest.getUTCFullYear(),
+      String(latest.getUTCMonth() + 1).padStart(2, '0'),
+      String(latest.getUTCDate()).padStart(2, '0'),
+    ].join('-')
+    return entries.filter((entry) => entry.checkinDate >= start)
+  }
+
+  if (range === 'Y') {
+    const latest = new Date(latestMs)
+    const start = `${latest.getUTCFullYear()}-01-01`
+    return entries.filter((entry) => entry.checkinDate >= start)
+  }
+
+  if (range === 'PLAN') {
+    return entries.filter((entry) => entry.checkinDate >= plan.start_date)
+  }
+
+  return entries
+}
+
+function buildChartGeometry(entries, width = 620, height = 210) {
+  const pad = { left: 20, right: 20, top: 20, bottom: 28 }
+  const values = entries.map((entry) => Number(entry.weight)).filter(Number.isFinite)
+
+  if (!values.length) {
+    return { points: [], path: '', min: null, max: null, guides: [] }
+  }
+
+  const rawMin = Math.min(...values)
+  const rawMax = Math.max(...values)
+  const padding = Math.max(0.8, (rawMax - rawMin) * 0.18)
+  const min = rawMin - padding
+  const max = rawMax + padding
+  const span = Math.max(0.5, max - min)
+  const plotWidth = width - pad.left - pad.right
+  const plotHeight = height - pad.top - pad.bottom
+
+  const dated = entries.map((entry) => ({
+    ...entry,
+    milliseconds: dateKeyToMs(entry.checkinDate),
+  }))
+  const minDate = Math.min(...dated.map((entry) => entry.milliseconds))
+  const maxDate = Math.max(...dated.map((entry) => entry.milliseconds))
+  const dateSpan = Math.max(86400000, maxDate - minDate)
+
+  const points = dated.map((entry, index) => {
+    const x = entries.length === 1
+      ? width / 2
+      : pad.left + ((entry.milliseconds - minDate) / dateSpan) * plotWidth
+    const y = pad.top + ((max - Number(entry.weight)) / span) * plotHeight
+    return { ...entry, index, x, y }
+  })
+
+  const path = points.map((point, index) =>
+    `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+  ).join(' ')
+
+  const guides = [0, 0.5, 1].map((ratio) => ({
+    y: pad.top + ratio * plotHeight,
+    value: max - ratio * span,
+  }))
+
+  return { points, path, min, max, guides }
+}
+
+function WeightLineChart({ entries, selectedDate, onSelect, photoMarkers = [], showPointDates = false }) {
+  const geometry = buildChartGeometry(entries)
+  const width = 620
+  const height = showPointDates ? 244 : 210
+
+  if (!geometry.points.length) {
+    return <div className="progress-weight-chart-empty">Log a weight to start your trend.</div>
+  }
+
+  const firstDate = entries[0]?.checkinDate
+  const lastDate = entries.at(-1)?.checkinDate
+  const rangeStart = dateKeyToMs(firstDate)
+  const rangeEnd = dateKeyToMs(lastDate)
+  const rangeSpan = Math.max(86400000, rangeEnd - rangeStart)
+  const photoDates = new Set((photoMarkers ?? []).map((marker) => marker?.checkinDate).filter(Boolean))
+
+  return (
+    <div className="progress-weight-chart-wrap">
+      <svg
+        className="progress-weight-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Weight trend"
+      >
+        {geometry.guides.map((guide) => (
+          <line
+            key={guide.y}
+            x1="20"
+            x2="600"
+            y1={guide.y}
+            y2={guide.y}
+            className="progress-weight-guide"
+          />
+        ))}
+
+        {geometry.path ? (
+          <path d={geometry.path} className="progress-weight-line" />
+        ) : null}
+
+        {geometry.points.map((point) => {
+          const selected = selectedDate === point.checkinDate
+          const hasPhoto = photoDates.has(point.checkinDate)
+          const pointClassName = [
+            'progress-weight-point',
+            selected ? 'is-selected' : '',
+            hasPhoto ? 'has-photo' : '',
+          ].filter(Boolean).join(' ')
+          return (
+            <circle
+              key={`${point.checkinDate}-${point.index}`}
+              cx={point.x}
+              cy={point.y}
+              r={selected ? 7 : hasPhoto ? 6 : 5}
+              className={pointClassName}
+              onClick={() => onSelect?.(point)}
+            />
+          )
+        })}
+
+        {photoMarkers
+          .filter((marker) => marker?.checkinDate >= firstDate && marker?.checkinDate <= lastDate)
+          .map((marker) => {
+            const markerMs = dateKeyToMs(marker.checkinDate)
+            const x = 20 + ((markerMs - rangeStart) / rangeSpan) * 580
+            return (
+              <g key={marker.key ?? `${marker.checkpoint}-${marker.checkinDate}`} className="progress-photo-marker">
+                <line x1={x} x2={x} y1="174" y2="187" className="progress-photo-marker-line" />
+                <circle cx={x} cy="191" r="9" className="progress-photo-marker-dot" />
+                <path d={`M ${x - 4} 191 h 8 M ${x} 187 v 8`} className="progress-photo-marker-plus" />
+              </g>
+            )
+          })}
+
+        {showPointDates ? geometry.points.map((point) => (
+          <g key={`date-${point.checkinDate}-${point.index}`} className="progress-weight-date-tick">
+            <line x1={point.x} x2={point.x} y1="199" y2="204" />
+            <text
+              x={point.x}
+              y="218"
+              textAnchor="end"
+              transform={`rotate(-38 ${point.x} 218)`}
+            >
+              {formatDate(point.checkinDate)}
+            </text>
+          </g>
+        )) : null}
+      </svg>
+
+      {!showPointDates ? (
+      <div className="progress-weight-chart-axis">
+        <span>{formatDate(firstDate)}</span>
+        <span>{formatDate(lastDate)}</span>
+      </div>
+      ) : null}
+    </div>
+  )
+}
+
+function WeightDashboardCard({ plan, measurements, weightHistory, onOpen }) {
+  const entries = mergeWeightHistory(weightHistory, measurements)
+  const start = entries[0] ?? null
+  const latest = entries.at(-1) ?? null
+  const change = formatWeightChangeFromStart(latest?.weight, start?.weight)
+
+  return (
+    <section className="progress-weight-hero" aria-labelledby="progress-weight-heading">
+      <button type="button" className="progress-weight-hero-button" onClick={onOpen} aria-label="Open Weight Progress">
+        <span className="progress-weight-hero-copy">
+          <span className="progress-dashboard-kicker" id="progress-weight-heading">Weight</span>
+          <span className="progress-weight-current">
+            {latest ? formatWeight(latest.weight) : '—'}
+            {latest ? <small> lbs</small> : null}
+          </span>
+          {change ? (
+            <span className={`progress-weight-change is-${change.direction}`}>{change.text}</span>
+          ) : null}
+        </span>
+        <span className="progress-dashboard-chevron" aria-hidden="true">›</span>
+      </button>
+
+      <WeightLineChart entries={entries} />
+
+      {start && latest ? (
+        <div className="progress-weight-hero-footer">
+          <span>Start {formatWeight(start.weight)}</span>
+          <span>Current plan</span>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHistory, photoMarkers, onBack }) {
+  const [range, setRange] = useState('PLAN')
+  const planEntries = mergeWeightHistory(weightHistory, measurements)
+  const historicalEntries = (allWeightHistory ?? []).length > 0
+    ? allWeightHistory
+    : planEntries
+  const baseEntries = ['6M', 'Y', 'ALL'].includes(range)
+    ? historicalEntries
+    : planEntries
+  const entries = filterWeightRange(baseEntries, range, plan)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const selected = entries.find((entry) => entry.checkinDate === selectedDate) ?? entries.at(-1) ?? null
+  const start = planEntries[0] ?? null
+  const latest = planEntries.at(-1) ?? null
+  const planChange = formatWeightChangeFromStart(latest?.weight, start?.weight)
+  const weeklyAverage = averageWeightEntries(entries)
+  const displayValue = range === 'W' && weeklyAverage !== null
+    ? weeklyAverage
+    : selected?.weight ?? latest?.weight ?? null
+
+  function rangeLabel() {
+    if (range === 'D') return 'Last 7 Days'
+    if (range === 'W') return 'Weekly Averages'
+    if (range === 'M') return 'This Month'
+    if (range === '6M') return 'Last 6 Months'
+    if (range === 'Y') return 'This Year'
+    if (range === 'PLAN') return 'Current Plan'
+    return 'All Available Data'
+  }
+
+  return (
+    <section className="weight-progress-detail" aria-labelledby="weight-progress-detail-heading">
+      <button type="button" className="text-button" onClick={onBack}>← Back to Plan Progress</button>
+
+      <header className="weight-progress-detail-header">
+        <div>
+          <h1 id="weight-progress-detail-heading">Weight Progress</h1>
+          <p>{entries.length ? `${formatDate(entries[0].checkinDate)} – ${formatDate(entries.at(-1).checkinDate)}` : 'No weight data yet'}</p>
+        </div>
+        <button type="button" className="weight-progress-calendar-button" aria-label="Choose date" title="Calendar view coming next">▦</button>
+      </header>
+
+      <div className="weight-progress-range-tabs" aria-label="Weight chart range">
+        {['D', 'W', 'M', '6M', 'Y', 'PLAN', 'ALL'].map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={range === option ? 'is-active' : ''}
+            aria-pressed={range === option}
+            onClick={() => {
+              setRange(option)
+              setSelectedDate(null)
+            }}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+
+      <section className="weight-progress-chart-card">
+        <div className="weight-progress-summary-row">
+          <div>
+            <span className="progress-dashboard-kicker">{rangeLabel()}</span>
+            <strong className="weight-progress-summary-value">
+              {displayValue === null ? '—' : formatWeight(displayValue)}
+              {displayValue !== null ? <small> lbs</small> : null}
+            </strong>
+            {range === 'PLAN' && planChange ? (
+              <span className={`progress-weight-change is-${planChange.direction}`}>{planChange.text.replace(' from Start', '')}</span>
+            ) : null}
+          </div>
+          {start ? (
+            <div className="weight-progress-start-stat">
+              <span>Start</span>
+              <strong>{formatWeight(start.weight)} lbs</strong>
+            </div>
+          ) : null}
+        </div>
+
+        <WeightLineChart
+          entries={entries}
+          selectedDate={selected?.checkinDate ?? null}
+          onSelect={(point) => setSelectedDate(point.checkinDate)}
+          photoMarkers={photoMarkers}
+          showPointDates
+        />
+
+        {photoMarkers?.length ? (
+          <p className="weight-progress-photo-note">Progress-photo markers appear on the dates photos were logged.</p>
+        ) : null}
+      </section>
+
+      {selected ? (
+        <section className="weight-progress-selected-entry">
+          <div>
+            <span className="progress-dashboard-kicker">Selected Entry</span>
+            <strong>{formatWeight(selected.weight)} lbs</strong>
+            <span>{formatDate(selected.checkinDate)}</span>
+          </div>
+          {photoMarkers?.some((marker) => marker.checkinDate === selected.checkinDate) ? (
+            <span className="weight-progress-selected-photo" aria-label="Progress photo available">◉</span>
+          ) : null}
+        </section>
+      ) : null}
+    </section>
+  )
+}
+
 function WeeklyHistoryCards({
   plan,
   currentWeekNumber,
@@ -402,10 +817,28 @@ export function PlanProgressOverview({
   currentWeekNumber,
   weeks,
   measurements,
+  weightHistory,
+  allWeightHistory,
+  photoMarkers,
   onOpenCurrentWeek,
   onOpenWeeklyReview,
   onOpenWeeklyCheckIn,
 }) {
+  const [detailView, setDetailView] = useState(null)
+
+  if (detailView === 'weight') {
+    return (
+      <WeightProgressDetail
+        plan={plan}
+        measurements={measurements}
+        weightHistory={weightHistory}
+        allWeightHistory={allWeightHistory}
+        photoMarkers={photoMarkers}
+        onBack={() => setDetailView(null)}
+      />
+    )
+  }
+
   return (
     <section className="plan-progress-overview" aria-labelledby="plan-progress-overview-heading">
       <header className="plan-progress-overview-header">
@@ -417,6 +850,15 @@ export function PlanProgressOverview({
             : ` · ${plan.program_length_weeks}-Week Plan`}
         </p>
       </header>
+
+      <section className="progress-dashboard-section">
+        <WeightDashboardCard
+          plan={plan}
+          measurements={measurements}
+          weightHistory={weightHistory}
+          onOpen={() => setDetailView('weight')}
+        />
+      </section>
 
       <WeeklyHistoryCards
         plan={plan}

@@ -1036,6 +1036,171 @@ async function loadPlanProgress(
   )
 }
 
+
+async function loadPlanWeightHistory(plan, today) {
+  if (!plan?.id) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('daily_checkins')
+    .select('checkin_date, morning_weight')
+    .eq('coaching_plan_id', plan.id)
+    .gte('checkin_date', plan.start_date)
+    .lte('checkin_date', today)
+    .order('checkin_date', { ascending: true })
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      checkinDate: row.checkin_date,
+      weight: Number.isFinite(Number(row.morning_weight))
+        ? Number(row.morning_weight)
+        : null,
+    }))
+    .filter((row) => row.weight !== null && row.weight > 0)
+}
+
+
+
+async function loadAllWeightHistory(userId, today) {
+  if (!userId) {
+    return []
+  }
+
+  const { data: plans, error: planHistoryError } = await supabase
+    .from('coaching_plans')
+    .select('id, start_date')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: true })
+
+  if (planHistoryError) {
+    throw planHistoryError
+  }
+
+  const planIds = (plans ?? []).map((row) => row.id).filter(Boolean)
+  if (planIds.length === 0) {
+    return []
+  }
+
+  const [dailyResult, startResult] = await Promise.all([
+    supabase
+      .from('daily_checkins')
+      .select('coaching_plan_id, checkin_date, morning_weight')
+      .in('coaching_plan_id', planIds)
+      .lte('checkin_date', today)
+      .order('checkin_date', { ascending: true }),
+    supabase
+      .from('start_checkins')
+      .select('coaching_plan_id, checkin_date, starting_weight_lbs, status')
+      .in('coaching_plan_id', planIds)
+      .eq('status', 'completed')
+      .lte('checkin_date', today)
+      .order('checkin_date', { ascending: true }),
+  ])
+
+  if (dailyResult.error) {
+    throw dailyResult.error
+  }
+  if (startResult.error) {
+    throw startResult.error
+  }
+
+  const byDate = new Map()
+
+  for (const row of startResult.data ?? []) {
+    const weight = Number(row.starting_weight_lbs)
+    if (!row.checkin_date || !Number.isFinite(weight) || weight <= 0) continue
+    byDate.set(row.checkin_date, {
+      checkinDate: row.checkin_date,
+      weight,
+      coachingPlanId: row.coaching_plan_id,
+      source: 'start',
+    })
+  }
+
+  for (const row of dailyResult.data ?? []) {
+    const weight = Number(row.morning_weight)
+    if (!row.checkin_date || !Number.isFinite(weight) || weight <= 0) continue
+    byDate.set(row.checkin_date, {
+      checkinDate: row.checkin_date,
+      weight,
+      coachingPlanId: row.coaching_plan_id,
+      source: 'daily',
+    })
+  }
+
+  return [...byDate.values()].sort((a, b) =>
+    String(a.checkinDate).localeCompare(String(b.checkinDate)),
+  )
+}
+
+async function loadPlanProgressPhotoMarkers(plan, startCheckIn) {
+  if (!plan?.id) {
+    return []
+  }
+
+  const { data: photos, error } = await supabase
+    .from('progress_photos')
+    .select('start_checkin_id, weekly_checkin_id, photo_context')
+    .eq('coaching_plan_id', plan.id)
+
+  if (error) {
+    throw error
+  }
+
+  const rows = photos ?? []
+  const markers = []
+
+  if (
+    startCheckIn?.id &&
+    rows.some((row) => row.start_checkin_id === startCheckIn.id)
+  ) {
+    markers.push({
+      key: `start-${startCheckIn.id}`,
+      label: 'Start',
+      checkinDate: startCheckIn.checkin_date,
+      checkpoint: 'Start',
+    })
+  }
+
+  const weeklyIds = [
+    ...new Set(
+      rows
+        .map((row) => row.weekly_checkin_id)
+        .filter(Boolean),
+    ),
+  ]
+
+  if (weeklyIds.length === 0) {
+    return markers
+  }
+
+  const { data: weeklyRows, error: weeklyError } = await supabase
+    .from('weekly_checkins')
+    .select('id, week_number, checkin_date')
+    .in('id', weeklyIds)
+    .order('week_number', { ascending: true })
+
+  if (weeklyError) {
+    throw weeklyError
+  }
+
+  for (const row of weeklyRows ?? []) {
+    markers.push({
+      key: `week-${row.id}`,
+      label: `Week ${row.week_number}`,
+      checkinDate: row.checkin_date,
+      checkpoint: `Week ${row.week_number}`,
+    })
+  }
+
+  return markers
+}
+
 function getElapsedReportingDays(
   reportingWeek,
   today,
@@ -1109,6 +1274,9 @@ export async function loadDashboardData(userId) {
         currentWeekNumber: null,
         weeks: [],
         measurements: [],
+        weightHistory: [],
+        allWeightHistory: [],
+        photoMarkers: [],
       },
       streakDays: 0,
     }
@@ -1201,6 +1369,17 @@ export async function loadDashboardData(userId) {
       startCheckIn,
     )
 
+
+  const [
+    planProgressWeightHistory,
+    allWeightHistory,
+    planProgressPhotoMarkers,
+  ] = await Promise.all([
+    loadPlanWeightHistory(plan, today),
+    loadAllWeightHistory(userId, today),
+    loadPlanProgressPhotoMarkers(plan, startCheckIn),
+  ])
+
   const weekAtAGlance = buildWeekAtAGlance(
     weeklyCheckIns,
     target?.weekly_workout_target,
@@ -1285,6 +1464,9 @@ export async function loadDashboardData(userId) {
         planProgressCurrentWeekNumber,
       weeks: planProgressWeeks,
       measurements: planProgressMeasurements,
+      weightHistory: planProgressWeightHistory,
+      allWeightHistory,
+      photoMarkers: planProgressPhotoMarkers,
     },
     streakDays,
   }

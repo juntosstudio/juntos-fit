@@ -2026,3 +2026,414 @@ button.weekly-history-card:hover:not(:disabled) {
   font-size: 0.84rem;
   font-weight: 800;
 }
+
+/* Plan Progress dashboard + Weight detail */
+.progress-dashboard-section {
+  min-width: 0;
+}
+
+.progress-weight-hero,
+.weight-progress-chart-card,
+.weight-progress-selected-entry {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.progress-weight-hero {
+  overflow: hidden;
+  padding: 1rem 1rem 0.85rem;
+}
+
+.progress-weight-hero-button {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.progress-weight-hero-button:hover .progress-dashboard-chevron,
+.progress-weight-hero-button:focus-visible .progress-dashboard-chevron {
+  color: var(--color-interaction);
+}
+
+.progress-weight-hero-button:focus-visible {
+  border-radius: 0.75rem;
+  outline: 2px solid var(--color-interaction);
+  outline-offset: 4px;
+}
+
+.progress-weight-hero-copy {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.progress-dashboard-kicker {
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progress-weight-current {
+  color: var(--color-primary-dark);
+  font-size: clamp(2rem, 6vw, 2.7rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.progress-weight-current small,
+.weight-progress-summary-value small {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.progress-weight-change {
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.progress-weight-change.is-down,
+.progress-weight-change.is-flat {
+  color: var(--color-success);
+}
+
+.progress-weight-change.is-up {
+  color: var(--color-interaction);
+}
+
+.progress-dashboard-chevron {
+  color: var(--color-text-muted);
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1;
+  transition: color 140ms ease;
+}
+
+.progress-weight-chart-wrap {
+  margin-top: 0.85rem;
+}
+
+.progress-weight-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.progress-weight-guide {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.progress-weight-line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.progress-weight-point {
+  fill: var(--color-accent);
+  stroke: var(--color-surface);
+  stroke-width: 2.5;
+  cursor: pointer;
+  transition: r 120ms ease, fill 120ms ease;
+}
+
+.progress-weight-point.is-selected {
+  fill: var(--color-interaction);
+}
+
+.progress-photo-marker-line {
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
+
+.progress-photo-marker-dot {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+.progress-photo-marker-plus {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.progress-weight-chart-axis,
+.progress-weight-hero-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.progress-weight-chart-axis {
+  margin-top: -0.35rem;
+}
+
+.progress-weight-hero-footer {
+  margin-top: 0.15rem;
+}
+
+.progress-weight-chart-empty {
+  display: grid;
+  min-height: 8rem;
+  place-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.weight-progress-detail {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.weight-progress-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.weight-progress-detail-header h1 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.weight-progress-detail-header p {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.weight-progress-calendar-button {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.weight-progress-calendar-button:hover,
+.weight-progress-calendar-button:focus-visible {
+  border-color: var(--color-interaction);
+  color: var(--color-interaction);
+}
+
+.weight-progress-range-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(2.7rem, 1fr));
+  gap: 0.28rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 0.28rem;
+  background: var(--color-background);
+}
+
+.weight-progress-range-tabs button {
+  min-height: 2.45rem;
+  border: 0;
+  border-radius: 0.72rem;
+  padding: 0.35rem 0.48rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.weight-progress-range-tabs button.is-active {
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: var(--shadow-card);
+}
+
+.weight-progress-range-tabs button:focus-visible {
+  outline: 2px solid var(--color-interaction);
+  outline-offset: 1px;
+}
+
+.weight-progress-chart-card {
+  padding: 1rem;
+}
+
+.weight-progress-summary-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.weight-progress-summary-row > div:first-child {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.weight-progress-summary-value {
+  color: var(--color-primary-dark);
+  font-size: clamp(2rem, 6vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weight-progress-start-stat {
+  display: grid;
+  gap: 0.1rem;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+.weight-progress-start-stat strong {
+  color: var(--color-primary-dark);
+  font-size: 0.92rem;
+}
+
+.weight-progress-photo-note {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.weight-progress-selected-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.weight-progress-selected-entry > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.weight-progress-selected-entry strong {
+  color: var(--color-primary-dark);
+  font-size: 1.35rem;
+}
+
+.weight-progress-selected-entry > div > span:last-child {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.weight-progress-selected-photo {
+  display: inline-flex;
+  width: 2.4rem;
+  height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 1.1rem;
+}
+
+@media (max-width: 600px) {
+  .progress-weight-hero,
+  .weight-progress-chart-card {
+    padding: 0.9rem;
+  }
+
+  .weight-progress-range-tabs {
+    grid-template-columns: repeat(7, minmax(2.8rem, 1fr));
+  }
+
+  .weight-progress-summary-row {
+    align-items: flex-start;
+  }
+}
+
+/* Weight chart polish: keep hover behavior consistent and make photo checkpoints visible. */
+.progress-weight-hero-button:hover,
+.progress-weight-hero-button:active,
+.progress-weight-hero-button:focus-visible {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.progress-weight-hero:hover {
+  border-color: var(--color-interaction);
+}
+
+.progress-weight-hero:hover .progress-dashboard-chevron,
+.progress-weight-hero:focus-within .progress-dashboard-chevron {
+  color: var(--color-interaction);
+}
+
+.progress-weight-point.has-photo {
+  fill: var(--color-interaction);
+  stroke: var(--color-surface);
+  stroke-width: 3;
+}
+
+.progress-weight-point.has-photo.is-selected {
+  fill: var(--color-interaction);
+  stroke: var(--color-primary-dark);
+}
+
+.progress-weight-date-tick line {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.progress-weight-date-tick text {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.weight-progress-range-tabs button:hover,
+.weight-progress-range-tabs button:active {
+  background: var(--color-accent-soft) !important;
+  color: var(--color-primary-dark) !important;
+}
+
+.weight-progress-range-tabs button.is-active,
+.weight-progress-range-tabs button.is-active:hover,
+.weight-progress-range-tabs button.is-active:active,
+.weight-progress-range-tabs button.is-active:focus-visible {
+  background: var(--color-surface) !important;
+  color: var(--color-primary-dark) !important;
+  box-shadow: var(--shadow-card);
+}
+
+.weight-progress-calendar-button:hover,
+.weight-progress-calendar-button:active,
+.weight-progress-calendar-button:focus-visible {
+  background: var(--color-surface) !important;
+  color: var(--color-interaction) !important;
+}

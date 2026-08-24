@@ -56,6 +56,9 @@ export function ProgressPage({
             currentWeekNumber={currentWeekNumber}
             weeks={dashboard?.planProgress?.weeks ?? []}
             measurements={dashboard?.planProgress?.measurements ?? []}
+            weightHistory={dashboard?.planProgress?.weightHistory ?? []}
+            allWeightHistory={dashboard?.planProgress?.allWeightHistory ?? []}
+            photoMarkers={dashboard?.planProgress?.photoMarkers ?? []}
             onOpenCurrentWeek={
               currentWeekNumber === reportingWeekNumber
                 ? onOpenCurrentWeek
