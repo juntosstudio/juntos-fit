@@ -303,7 +303,7 @@ function aggregateWeightEntries(entries, granularity) {
     .sort((a, b) => String(a.checkinDate).localeCompare(String(b.checkinDate)))
 }
 
-function buildWeightRange(rawEntries, range, plan) {
+function buildWeightRange(rawEntries, range, plan, windowOffset = 0) {
   const entries = [...(rawEntries ?? [])]
     .filter((entry) => entry?.checkinDate && numeric(entry?.weight) !== null)
     .sort((a, b) => String(a.checkinDate).localeCompare(String(b.checkinDate)))
@@ -314,6 +314,9 @@ function buildWeightRange(rawEntries, range, plan) {
       rangeStart: null,
       rangeEnd: null,
       granularity: 'day',
+      averageWeight: null,
+      earliestDate: null,
+      latestDate: null,
     }
   }
 
@@ -324,16 +327,21 @@ function buildWeightRange(rawEntries, range, plan) {
   let granularity = 'day'
 
   if (range === 'D') {
-    rangeStart = latestDate
+    rangeEnd = addDaysToDateKey(latestDate, Number(windowOffset))
+    rangeStart = rangeEnd
   } else if (range === 'W') {
-    rangeStart = addDaysToDateKey(latestDate, -6)
+    rangeEnd = addDaysToDateKey(latestDate, Number(windowOffset) * 7)
+    rangeStart = addDaysToDateKey(rangeEnd, -6)
   } else if (range === 'M') {
-    rangeStart = addDaysToDateKey(latestDate, -29)
+    rangeEnd = addDaysToDateKey(latestDate, Number(windowOffset) * 30)
+    rangeStart = addDaysToDateKey(rangeEnd, -29)
   } else if (range === '6M') {
-    rangeStart = addMonthsToDateKey(latestDate, -6)
+    rangeEnd = addMonthsToDateKey(latestDate, Number(windowOffset))
+    rangeStart = addMonthsToDateKey(rangeEnd, -6)
     granularity = 'week'
   } else if (range === 'Y') {
-    rangeStart = addMonthsToDateKey(latestDate, -12)
+    rangeEnd = addMonthsToDateKey(latestDate, Number(windowOffset))
+    rangeStart = addMonthsToDateKey(rangeEnd, -12)
     granularity = 'month'
   } else if (range === 'PLAN') {
     rangeStart = plan?.start_date ?? earliestDate
@@ -355,6 +363,9 @@ function buildWeightRange(rawEntries, range, plan) {
     rangeStart,
     rangeEnd,
     granularity,
+    averageWeight: averageWeightEntries(filtered),
+    earliestDate,
+    latestDate,
   }
 }
 
@@ -367,6 +378,12 @@ function formatLongDate(value) {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(new Date(milliseconds))
+}
+
+function formatLongDateRange(start, end) {
+  if (!start && !end) return '—'
+  if (!start || start === end) return formatLongDate(start ?? end)
+  return formatWeekRange(start, end)
 }
 
 function formatMonthYear(value) {
@@ -447,7 +464,7 @@ function buildChartGeometry(
   { rangeStart = null, rangeEnd = null, detail = false } = {},
 ) {
   const pad = detail
-    ? { left: 20, right: 20, top: 100, bottom: 42 }
+    ? { left: 20, right: 48, top: 100, bottom: 42 }
     : { left: 20, right: 20, top: 20, bottom: 28 }
   const values = entries.map((entry) => Number(entry.weight)).filter(Number.isFinite)
 
@@ -457,12 +474,49 @@ function buildChartGeometry(
 
   const rawMin = Math.min(...values)
   const rawMax = Math.max(...values)
-  const padding = Math.max(0.8, (rawMax - rawMin) * 0.18)
-  const min = rawMin - padding
-  const max = rawMax + padding
+  let min
+  let max
+  let guides
+
+  if (detail) {
+    min = Math.floor(rawMin / 10) * 10
+    max = Math.ceil(rawMax / 10) * 10
+
+    if (min === max) {
+      min -= 10
+      max += 10
+    }
+
+    while (max - min < 20) {
+      max += 10
+    }
+
+    if (rawMax >= max - 0.5) max += 10
+    if (rawMin <= min + 0.5) min -= 10
+
+    guides = []
+    for (let value = max; value >= min; value -= 10) {
+      guides.push({ value })
+    }
+  } else {
+    const padding = Math.max(0.8, (rawMax - rawMin) * 0.18)
+    min = rawMin - padding
+    max = rawMax + padding
+    guides = [
+      { value: max },
+      { value: max - (max - min) * 0.5 },
+      { value: min },
+    ]
+  }
+
   const span = Math.max(0.5, max - min)
   const plotWidth = width - pad.left - pad.right
   const plotHeight = height - pad.top - pad.bottom
+
+  guides = guides.map((guide) => ({
+    ...guide,
+    y: pad.top + ((max - Number(guide.value)) / span) * plotHeight,
+  }))
 
   const dated = entries.map((entry) => ({
     ...entry,
@@ -477,7 +531,7 @@ function buildChartGeometry(
   const points = dated.map((entry, index) => {
     const xRatio = Math.min(1, Math.max(0, (entry.milliseconds - minDate) / dateSpan))
     const x = minDate === maxDate
-      ? width / 2
+      ? pad.left + plotWidth / 2
       : pad.left + xRatio * plotWidth
     const y = pad.top + ((max - Number(entry.weight)) / span) * plotHeight
     return { ...entry, index, x, y }
@@ -488,11 +542,6 @@ function buildChartGeometry(
         `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
       ).join(' ')
     : ''
-
-  const guides = [0, 0.5, 1].map((ratio) => ({
-    y: pad.top + ratio * plotHeight,
-    value: max - ratio * span,
-  }))
 
   return {
     points,
@@ -575,28 +624,12 @@ function buildAxisTicks(range, rangeStart, rangeEnd, granularity) {
   return ticks
 }
 
-function selectedAxisLabel(entry) {
-  if (!entry) return ''
-  if (entry.bucket === 'month') return formatMonthShort(entry.periodStart)
-  if (entry.bucket === 'week') return formatDate(entry.periodStart)
-  return formatDate(entry.checkinDate)
-}
-
-function cameraMarkerPath(x, y) {
-  return [
-    `M ${x - 5.5} ${y - 3.5}`,
-    `h 2 l 1.3 -2 h 3.7 l 1.3 2 h 2.2`,
-    `a 2 2 0 0 1 2 2 v 6.5`,
-    `a 2 2 0 0 1 -2 2 h -14`,
-    `a 2 2 0 0 1 -2 -2 v -6.5`,
-    `a 2 2 0 0 1 2 -2 z`,
-  ].join(' ')
-}
 
 function WeightLineChart({
   entries,
   selectedDate = null,
   onSelect,
+  onPanRange = null,
   photoMarkers = [],
   detail = false,
   range = 'PLAN',
@@ -605,7 +638,9 @@ function WeightLineChart({
   granularity = 'day',
 }) {
   const svgRef = useRef(null)
-  const draggingRef = useRef(false)
+  const pointerStateRef = useRef(null)
+  const longPressTimerRef = useRef(null)
+  const lastWheelPanRef = useRef(0)
   const width = 620
   const height = detail ? 280 : 210
   const geometry = buildChartGeometry(entries, width, height, {
@@ -614,20 +649,28 @@ function WeightLineChart({
     detail,
   })
 
-  if (!geometry.points.length) {
-    return <div className="progress-weight-chart-empty">Log a weight to start your trend.</div>
-  }
-
   const firstDate = rangeStart ?? entries[0]?.checkinDate
   const lastDate = rangeEnd ?? entries.at(-1)?.checkinDate
   const rangeStartMs = dateKeyToMs(firstDate)
   const rangeEndMs = dateKeyToMs(lastDate)
-  const rangeSpan = Math.max(86400000, rangeEndMs - rangeStartMs)
+  const rangeSpan = Math.max(86400000, (rangeEndMs ?? 0) - (rangeStartMs ?? 0))
+
+  if (!geometry.points.length) {
+    return <div className="progress-weight-chart-empty">No weight data in this range.</div>
+  }
+
   const photoDates = new Set((photoMarkers ?? []).map((marker) => marker?.checkinDate).filter(Boolean))
   const selectedPoint = geometry.points.find((point) => point.checkinDate === selectedDate) ?? null
   const axisTicks = detail
     ? buildAxisTicks(range, firstDate, lastDate, granularity)
     : []
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
 
   function pointForClientX(clientX) {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -641,38 +684,121 @@ function WeightLineChart({
     }, null)
   }
 
-  function selectFromPointer(event) {
-    const point = pointForClientX(event.clientX)
+  function selectFromClientX(clientX) {
+    const point = pointForClientX(clientX)
     if (point) onSelect?.(point)
   }
 
   function handlePointerDown(event) {
     if (!detail || !onSelect) return
-    draggingRef.current = true
+
+    const isMouse = event.pointerType === 'mouse'
+    pointerStateRef.current = {
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      startX: event.clientX,
+      lastX: event.clientX,
+      mode: isMouse ? 'scrub' : 'pending',
+    }
+
     svgRef.current?.setPointerCapture?.(event.pointerId)
-    selectFromPointer(event)
+
+    if (isMouse) {
+      selectFromClientX(event.clientX)
+      return
+    }
+
+    longPressTimerRef.current = setTimeout(() => {
+      const state = pointerStateRef.current
+      if (!state || state.mode !== 'pending') return
+      state.mode = 'scrub'
+      selectFromClientX(state.lastX)
+    }, 280)
   }
 
   function handlePointerMove(event) {
-    if (!detail || !draggingRef.current) return
-    selectFromPointer(event)
+    if (!detail) return
+    const state = pointerStateRef.current
+    if (!state || state.pointerId !== event.pointerId) return
+
+    state.lastX = event.clientX
+    const deltaX = event.clientX - state.startX
+
+    if (state.pointerType === 'mouse' || state.mode === 'scrub') {
+      selectFromClientX(event.clientX)
+      return
+    }
+
+    if (state.mode === 'pending' && Math.abs(deltaX) > 12) {
+      clearLongPressTimer()
+      if (onPanRange) {
+        state.mode = 'pan'
+      } else {
+        state.mode = 'scrub'
+        selectFromClientX(event.clientX)
+      }
+    }
   }
 
   function handlePointerEnd(event) {
-    draggingRef.current = false
+    const state = pointerStateRef.current
+    clearLongPressTimer()
+
+    if (state && state.pointerId === event.pointerId && state.pointerType !== 'mouse') {
+      const deltaX = event.clientX - state.startX
+
+      if (state.mode === 'pending' && Math.abs(deltaX) <= 12) {
+        selectFromClientX(event.clientX)
+      } else if (state.mode === 'pan' && Math.abs(deltaX) >= 30) {
+        onPanRange?.(deltaX > 0 ? -1 : 1)
+      }
+    }
+
+    pointerStateRef.current = null
+
     if (svgRef.current?.hasPointerCapture?.(event.pointerId)) {
       svgRef.current.releasePointerCapture(event.pointerId)
     }
   }
 
+  function handleWheel(event) {
+    if (!detail || !onPanRange) return
+    const horizontalDelta = Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+      ? event.deltaX
+      : event.shiftKey
+        ? event.deltaY
+        : 0
+
+    if (Math.abs(horizontalDelta) < 8) return
+
+    const now = Date.now()
+    if (now - lastWheelPanRef.current < 220) return
+    lastWheelPanRef.current = now
+    event.preventDefault()
+    onPanRange(horizontalDelta > 0 ? 1 : -1)
+  }
+
   function handleKeyDown(event) {
     if (!detail || !onSelect || !geometry.points.length) return
+
+    if (event.key === 'PageUp' && onPanRange) {
+      event.preventDefault()
+      onPanRange(-1)
+      return
+    }
+
+    if (event.key === 'PageDown' && onPanRange) {
+      event.preventDefault()
+      onPanRange(1)
+      return
+    }
+
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
     event.preventDefault()
-    const currentIndex = Math.max(
-      0,
-      geometry.points.findIndex((point) => point.checkinDate === selectedDate),
-    )
+
+    const currentIndex = selectedDate
+      ? Math.max(0, geometry.points.findIndex((point) => point.checkinDate === selectedDate))
+      : geometry.points.length - 1
     const nextIndex = event.key === 'ArrowLeft'
       ? Math.max(0, currentIndex - 1)
       : Math.min(geometry.points.length - 1, currentIndex + 1)
@@ -682,7 +808,7 @@ function WeightLineChart({
   function xForDate(date) {
     const milliseconds = dateKeyToMs(date)
     if (milliseconds === null) return geometry.pad.left
-    if (rangeStartMs === rangeEndMs) return width / 2
+    if (rangeStartMs === rangeEndMs) return geometry.pad.left + geometry.plotWidth / 2
     const ratio = Math.min(1, Math.max(0, (milliseconds - rangeStartMs) / rangeSpan))
     return geometry.pad.left + ratio * geometry.plotWidth
   }
@@ -693,8 +819,6 @@ function WeightLineChart({
       )
     : []
 
-
-
   return (
     <div className={`progress-weight-chart-wrap${detail ? ' is-detail' : ''}`}>
       <svg
@@ -702,12 +826,15 @@ function WeightLineChart({
         className="progress-weight-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={detail ? 'Interactive weight trend. Drag left or right to select an entry.' : 'Weight trend'}
+        aria-label={detail
+          ? 'Interactive weight trend. Tap or click to select. Swipe horizontally to browse time ranges, or press and hold to scrub.'
+          : 'Weight trend'}
         tabIndex={detail ? 0 : undefined}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
+        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
       >
         {detail ? (
@@ -721,14 +848,25 @@ function WeightLineChart({
         ) : null}
 
         {geometry.guides.map((guide) => (
-          <line
-            key={guide.y}
-            x1={geometry.pad.left}
-            x2={width - geometry.pad.right}
-            y1={guide.y}
-            y2={guide.y}
-            className="progress-weight-guide"
-          />
+          <g key={`guide-${guide.value}`} className="progress-weight-guide-group">
+            <line
+              x1={geometry.pad.left}
+              x2={width - geometry.pad.right}
+              y1={guide.y}
+              y2={guide.y}
+              className="progress-weight-guide"
+            />
+            {detail ? (
+              <text
+                x={width - 4}
+                y={guide.y + 3.5}
+                textAnchor="end"
+                className="progress-weight-y-label"
+              >
+                {Math.round(guide.value)}
+              </text>
+            ) : null}
+          </g>
         ))}
 
         {detail ? axisTicks.map((tick, index) => {
@@ -772,7 +910,7 @@ function WeightLineChart({
               key={`${point.checkinDate}-${point.index}`}
               cx={point.x}
               cy={point.y}
-              r={selected ? 6.5 : 4.4}
+              r={selected ? 6.2 : 4.4}
               className={pointClassName}
               onClick={() => onSelect?.(point)}
             />
@@ -810,10 +948,27 @@ function WeightLineChart({
                 if (matchingPoint) onSelect?.(matchingPoint)
               }}
             >
-              <line x1={x} x2={x} y1={height - geometry.pad.bottom} y2={markerY - 10} className="progress-photo-marker-line" />
+              <line
+                x1={x}
+                x2={x}
+                y1={height - geometry.pad.bottom}
+                y2={markerY - 10}
+                className="progress-photo-marker-line"
+              />
               <circle cx={x} cy={markerY} r="10" className="progress-photo-marker-dot" />
-              <path d={cameraMarkerPath(x, markerY)} className="progress-photo-marker-camera" />
-              <circle cx={x + 1} cy={markerY + 1.5} r="2.5" className="progress-photo-marker-lens" />
+              <rect
+                x={x - 5.4}
+                y={markerY - 3.2}
+                width="10.8"
+                height="7.4"
+                rx="1.5"
+                className="progress-photo-marker-camera"
+              />
+              <path
+                d={`M ${x - 3.3} ${markerY - 3.3} L ${x - 2.1} ${markerY - 5.3} H ${x + 2.1} L ${x + 3.3} ${markerY - 3.3}`}
+                className="progress-photo-marker-camera-top"
+              />
+              <circle cx={x} cy={markerY + 0.5} r="2.25" className="progress-photo-marker-lens" />
             </g>
           )
         })}
@@ -838,30 +993,11 @@ function WeightLineChart({
             </g>
           )
         }) : null}
-
-        {detail && selectedPoint ? (
-          <g className="progress-weight-selected-axis">
-            <line
-              x1={selectedPoint.x}
-              x2={selectedPoint.x}
-              y1={height - geometry.pad.bottom}
-              y2={height - geometry.pad.bottom + 7}
-            />
-            <text
-              x={selectedPoint.x}
-              y={height - 8}
-              textAnchor="middle"
-            >
-              {selectedAxisLabel(selectedPoint)}
-            </text>
-          </g>
-        ) : null}
-
       </svg>
 
       {detail && selectedPoint ? (
         <div
-          className={`progress-weight-html-tooltip${selectedPoint.x < 105 ? ' is-start' : selectedPoint.x > 515 ? ' is-end' : ''}`}
+          className={`progress-weight-html-tooltip${selectedPoint.x < 105 ? ' is-start' : selectedPoint.x > 500 ? ' is-end' : ''}`}
           style={{ left: `${(selectedPoint.x / width) * 100}%` }}
           role="tooltip"
         >
@@ -943,17 +1079,20 @@ function WeightDashboardCard({ plan, measurements, weightHistory, onOpen }) {
 
 function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHistory, photoMarkers, onBack }) {
   const [range, setRange] = useState('PLAN')
+  const [rangeOffset, setRangeOffset] = useState(0)
+  const [selectedDate, setSelectedDate] = useState(null)
   const planEntries = mergeWeightHistory(weightHistory, measurements)
   const historicalEntries = (allWeightHistory ?? []).length > 0
     ? mergeWeightHistory(allWeightHistory, [])
     : planEntries
-  const rawEntries = ['6M', 'Y', 'ALL'].includes(range)
-    ? historicalEntries
-    : planEntries
-  const series = buildWeightRange(rawEntries, range, plan)
+  const rawEntries = range === 'PLAN'
+    ? planEntries
+    : historicalEntries
+  const series = buildWeightRange(rawEntries, range, plan, rangeOffset)
   const entries = series.entries
-  const [selectedDate, setSelectedDate] = useState(null)
-  const selected = entries.find((entry) => entry.checkinDate === selectedDate) ?? entries.at(-1) ?? null
+  const selected = selectedDate
+    ? entries.find((entry) => entry.checkinDate === selectedDate) ?? null
+    : null
   const start = planEntries[0] ?? null
   const latest = planEntries.at(-1) ?? null
   const planChange = formatWeightChangeFromStart(latest?.weight, start?.weight)
@@ -962,23 +1101,44 @@ function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHist
         marker.checkinDate >= selected.periodStart && marker.checkinDate <= selected.periodEnd,
       ) ?? null
     : null
-
-  function rangeLabel() {
-    if (range === 'D') return 'Day'
-    if (range === 'W') return 'Week'
-    if (range === 'M') return 'Month'
-    if (range === '6M') return '6 Months'
-    if (range === 'Y') return 'Year'
-    if (range === 'PLAN') return 'Current Plan'
-    return 'All Data'
-  }
+  const canPanRange = !['PLAN', 'ALL'].includes(range)
 
   function selectOffset(offset) {
-    if (!entries.length || !selected) return
-    const index = entries.findIndex((entry) => entry.checkinDate === selected.checkinDate)
-    const nextIndex = Math.min(entries.length - 1, Math.max(0, index + offset))
+    if (!entries.length) return
+    const currentIndex = selected
+      ? entries.findIndex((entry) => entry.checkinDate === selected.checkinDate)
+      : entries.length - 1
+    const nextIndex = Math.min(entries.length - 1, Math.max(0, currentIndex + offset))
     setSelectedDate(entries[nextIndex].checkinDate)
   }
+
+  function panRange(direction) {
+    if (!canPanRange || !rawEntries.length) return
+    const step = direction < 0 ? -1 : 1
+    if (step > 0 && rangeOffset >= 0) return
+
+    let candidateOffset = rangeOffset
+    const searchLimit = range === 'D' ? 370 : 30
+
+    for (let attempt = 0; attempt < searchLimit; attempt += 1) {
+      candidateOffset += step
+      if (candidateOffset > 0) return
+
+      const candidate = buildWeightRange(rawEntries, range, plan, candidateOffset)
+      const overlapsHistory = candidate.rangeEnd >= candidate.earliestDate &&
+        candidate.rangeStart <= candidate.latestDate
+
+      if (!overlapsHistory) return
+
+      if (candidate.entries.length > 0) {
+        setRangeOffset(candidateOffset)
+        setSelectedDate(null)
+        return
+      }
+    }
+  }
+
+  const summaryPeriod = formatLongDateRange(series.rangeStart, series.rangeEnd)
 
   return (
     <section className="weight-progress-detail" aria-labelledby="weight-progress-detail-heading">
@@ -1001,6 +1161,7 @@ function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHist
             aria-pressed={range === option}
             onClick={() => {
               setRange(option)
+              setRangeOffset(0)
               setSelectedDate(null)
             }}
           >
@@ -1010,38 +1171,51 @@ function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHist
       </div>
 
       <section className="weight-progress-chart-card">
-        <div className="weight-progress-summary-row">
-          <div>
-            <span className="progress-dashboard-kicker">{rangeLabel()}</span>
-            <strong className="weight-progress-summary-value">
-              {selected ? formatWeight(selected.weight) : '—'}
-              {selected ? <small> lbs</small> : null}
-            </strong>
-            {range === 'PLAN' && planChange ? (
-              <span className={`progress-weight-change is-${planChange.direction}`}>{planChange.text.replace(' from Start', '')}</span>
-            ) : selected ? (
-              <span className="weight-progress-summary-period">{formatSelectedPeriod(selected)}</span>
-            ) : null}
-          </div>
-          {start ? (
-            <div className="weight-progress-start-stat">
-              <span>Start</span>
-              <strong>{formatWeight(start.weight)} lbs</strong>
+        <div className="weight-progress-chart-stage">
+          {!selected ? (
+            <div className="weight-progress-summary-row">
+              <div>
+                <span className="progress-dashboard-kicker">
+                  {range === 'PLAN' ? 'Current Plan' : 'Average'}
+                </span>
+                <strong className="weight-progress-summary-value">
+                  {range === 'PLAN'
+                    ? (latest ? formatWeight(latest.weight) : '—')
+                    : (numeric(series.averageWeight) !== null ? formatWeight(series.averageWeight) : '—')}
+                  {range === 'PLAN'
+                    ? (latest ? <small> lbs</small> : null)
+                    : (numeric(series.averageWeight) !== null ? <small> lbs</small> : null)}
+                </strong>
+                {range === 'PLAN' && planChange ? (
+                  <span className={`progress-weight-change is-${planChange.direction}`}>
+                    {planChange.text.replace(' from Start', '')}
+                  </span>
+                ) : (
+                  <span className="weight-progress-summary-period">{summaryPeriod}</span>
+                )}
+              </div>
+              {range === 'PLAN' && start ? (
+                <div className="weight-progress-start-stat">
+                  <span>Start</span>
+                  <strong>{formatWeight(start.weight)} lbs</strong>
+                </div>
+              ) : null}
             </div>
           ) : null}
-        </div>
 
-        <WeightLineChart
-          entries={entries}
-          selectedDate={selected?.checkinDate ?? null}
-          onSelect={(point) => setSelectedDate(point.checkinDate)}
-          photoMarkers={photoMarkers}
-          detail
-          range={range}
-          rangeStart={series.rangeStart}
-          rangeEnd={series.rangeEnd}
-          granularity={series.granularity}
-        />
+          <WeightLineChart
+            entries={entries}
+            selectedDate={selected?.checkinDate ?? null}
+            onSelect={(point) => setSelectedDate(point.checkinDate)}
+            onPanRange={canPanRange ? panRange : null}
+            photoMarkers={photoMarkers}
+            detail
+            range={range}
+            rangeStart={series.rangeStart}
+            rangeEnd={series.rangeEnd}
+            granularity={series.granularity}
+          />
+        </div>
 
         {photoMarkers?.length && ['D', 'W', 'M', 'PLAN'].includes(range) ? (
           <p className="weight-progress-photo-note">Camera markers show dates with progress photos.</p>

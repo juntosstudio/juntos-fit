@@ -193,10 +193,10 @@ describe('PlanProgressOverview', () => {
     expect(screen.getByRole('heading', { name: 'Weight Progress' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'PLAN' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('Camera markers show dates with progress photos.')).toBeTruthy()
-    expect(screen.getByText('AVERAGE')).toBeTruthy()
+    expect(screen.getByText('CURRENT PLAN')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'W' }))
-    expect(screen.getByText('Week')).toBeTruthy()
+    expect(screen.getByText('AVERAGE')).toBeTruthy()
   })
 
 })

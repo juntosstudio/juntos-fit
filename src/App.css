@@ -2802,3 +2802,87 @@ button.weekly-history-card:hover:not(:disabled) {
   stroke-dasharray: 2.5 3.5;
   pointer-events: none;
 }
+
+/* Weight chart polish 4: brighter chart purple, range averages, y-axis labels, and pan/scrub behavior. */
+.progress-weight-chart-wrap {
+  --progress-chart-purple: #7048ff;
+}
+
+.progress-weight-line {
+  stroke: var(--progress-chart-purple);
+}
+
+.progress-weight-point,
+.progress-weight-point.has-photo {
+  fill: var(--color-surface);
+  stroke: var(--progress-chart-purple);
+}
+
+.progress-weight-point.has-photo {
+  stroke: var(--color-success);
+}
+
+.progress-weight-point.is-selected,
+.progress-weight-point.has-photo.is-selected {
+  fill: var(--progress-chart-purple);
+  stroke: var(--color-surface);
+  stroke-width: 2.6;
+}
+
+.progress-weight-y-label {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.weight-progress-chart-stage {
+  position: relative;
+}
+
+.weight-progress-chart-stage .weight-progress-summary-row {
+  position: absolute;
+  z-index: 3;
+  top: 0.1rem;
+  right: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.weight-progress-chart-stage .progress-weight-chart-wrap.is-detail {
+  margin-top: 0;
+}
+
+.progress-photo-marker-camera {
+  fill: var(--color-surface);
+  stroke: var(--color-success);
+  stroke-width: 1.45;
+}
+
+.progress-photo-marker-camera-top {
+  fill: none;
+  stroke: var(--color-success);
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.progress-photo-marker-lens {
+  fill: var(--color-surface);
+  stroke: var(--color-success);
+  stroke-width: 1.45;
+}
+
+.progress-weight-html-tooltip {
+  min-width: 9.4rem;
+  padding: 0.46rem 0.64rem 0.5rem;
+}
+
+.progress-weight-html-tooltip .progress-weight-tooltip-value {
+  font-size: 1.62rem;
+}
+
+.progress-weight-html-tooltip .progress-weight-tooltip-date {
+  font-size: 0.75rem;
+}

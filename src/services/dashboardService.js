@@ -1157,7 +1157,7 @@ async function loadPlanProgressPhotoMarkers(plan, startCheckIn) {
 
   async function getFrontPhotoUrl(photoRows) {
     const frontPhoto = (photoRows ?? []).find((row) =>
-      row?.pose === 'front' && row?.storage_path,
+      String(row?.pose ?? '').toLowerCase() === 'front' && row?.storage_path,
     )
 
     if (!frontPhoto?.storage_path) {
