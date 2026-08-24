@@ -2437,3 +2437,39 @@ button.weekly-history-card:hover:not(:disabled) {
   background: var(--color-surface) !important;
   color: var(--color-interaction) !important;
 }
+
+
+/* Weight chart polish 2: sparse dashboard dates + distinct photo-linked points. */
+.progress-weight-chart-axis.is-sparse {
+  position: relative;
+  height: 1.25rem;
+  margin: 0 0.15rem;
+}
+
+.progress-weight-chart-axis.is-sparse span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.progress-weight-chart-axis.is-sparse span.is-first {
+  transform: none;
+}
+
+.progress-weight-chart-axis.is-sparse span.is-last {
+  transform: translateX(-100%);
+}
+
+.progress-weight-point.has-photo {
+  fill: var(--color-success);
+  stroke: var(--color-surface);
+  stroke-width: 3;
+}
+
+.progress-weight-point.has-photo.is-selected {
+  fill: var(--color-success);
+  stroke: var(--color-interaction);
+  stroke-width: 4;
+}

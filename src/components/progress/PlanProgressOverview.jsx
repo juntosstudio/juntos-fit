@@ -342,6 +342,7 @@ function WeightLineChart({ entries, selectedDate, onSelect, photoMarkers = [], s
   const rangeSpan = Math.max(86400000, rangeEnd - rangeStart)
   const photoDates = new Set((photoMarkers ?? []).map((marker) => marker?.checkinDate).filter(Boolean))
 
+
   return (
     <div className="progress-weight-chart-wrap">
       <svg
@@ -415,10 +416,27 @@ function WeightLineChart({ entries, selectedDate, onSelect, photoMarkers = [], s
       </svg>
 
       {!showPointDates ? (
-      <div className="progress-weight-chart-axis">
-        <span>{formatDate(firstDate)}</span>
-        <span>{formatDate(lastDate)}</span>
-      </div>
+        <div className="progress-weight-chart-axis is-sparse">
+          {(() => {
+            const labels = []
+            const startMs = dateKeyToMs(firstDate)
+            const endMs = dateKeyToMs(lastDate)
+            const weekMs = 7 * 86400000
+            for (let ms = startMs; ms <= endMs; ms += weekMs) {
+              labels.push(ms)
+            }
+            if (!labels.length || labels.at(-1) !== endMs) labels.push(endMs)
+            return labels.map((ms, index) => (
+              <span
+                key={`axis-${ms}`}
+                className={index === 0 ? 'is-first' : index === labels.length - 1 ? 'is-last' : ''}
+                style={{ left: `${((ms - startMs) / Math.max(86400000, endMs - startMs)) * 100}%` }}
+              >
+                {formatDate(new Date(ms).toISOString().slice(0, 10))}
+              </span>
+            ))
+          })()}
+        </div>
       ) : null}
     </div>
   )
