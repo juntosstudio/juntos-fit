@@ -1886,6 +1886,139 @@ button.plan-progress-row:hover:not(:disabled) {
   }
 }
 
+/* Dedicated Progress weekly history cards */
+.weekly-history-section {
+  padding-bottom: 0.9rem;
+}
+
+.weekly-history-list {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0 1rem;
+}
+
+.weekly-history-card {
+  display: grid;
+  width: 100%;
+  min-height: 4.7rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 0.95rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  text-align: left;
+}
+
+button.weekly-history-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.weekly-history-card:hover:not(:disabled) {
+  border-color: rgb(108 91 212 / 38%);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.weekly-history-card.is-current {
+  border-color: var(--color-interaction);
+  background:
+    linear-gradient(
+      135deg,
+      rgb(238 234 253 / 82%),
+      rgb(247 247 251 / 92%)
+    );
+  box-shadow:
+    0 0 5px rgb(var(--color-interaction-rgb) / 48%),
+    0 0 16px rgb(var(--color-interaction-rgb) / 18%);
+}
+
+.weekly-history-card.is-completed {
+  border-color: rgb(40 122 91 / 28%);
+}
+
+.weekly-history-card.is-recommendation-waiting {
+  border-color: var(--color-interaction);
+  animation: check-in-breathe 2.5s ease-in-out infinite;
+}
+
+.weekly-history-card-content {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.weekly-history-card-topline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.weekly-history-card-topline > strong {
+  color: var(--color-primary-dark);
+  font-size: 0.98rem;
+}
+
+.weekly-history-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.weekly-history-card-stats strong {
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.weekly-history-weight-change {
+  color: var(--color-primary-dark);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.weekly-history-weight-change.is-flat {
+  color: var(--color-text-muted);
+}
+
+.weekly-history-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem 1rem 0;
+}
+
+.weekly-history-toggle {
+  margin: 0;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .weekly-history-list {
+    padding: 0 0.75rem;
+  }
+
+  .weekly-history-card {
+    padding: 0.8rem 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-history-card.is-recommendation-waiting {
+    animation: none;
+    box-shadow:
+      0 0 6px rgb(var(--color-interaction-rgb) / 70%),
+      0 0 14px rgb(var(--color-interaction-rgb) / 30%);
+  }
+}
+
 .plan-progress-weight-change {
   display: block;
   margin-top: 0.3rem;
