@@ -45,14 +45,6 @@ export function ProgressPage({
   return (
     <>
       <main className="container plan-progress-page">
-        <button
-          type="button"
-          className="text-button"
-          onClick={onOpenToday}
-        >
-          ← Back to Today
-        </button>
-
         {!plan ? (
           <section className="plan-progress-empty">
             <h1>Plan Progress</h1>

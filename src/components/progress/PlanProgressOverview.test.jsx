@@ -34,7 +34,10 @@ const startMeasurement = {
   waist: 36.5,
 }
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  window.history.replaceState({}, '', window.location.href)
+})
 
 describe('PlanProgressOverview', () => {
   test('shows weekly history cards through two upcoming weeks and can reveal all weeks', () => {
@@ -191,6 +194,8 @@ describe('PlanProgressOverview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Weight Progress' }))
 
     expect(screen.getByRole('heading', { name: 'Weight Progress' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Back to Plan Progress' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Choose date' })).toBeNull()
     expect(screen.getByRole('button', { name: 'PLAN' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('Camera markers show dates with progress photos.')).toBeTruthy()
     expect(screen.getByText('CURRENT PLAN')).toBeTruthy()

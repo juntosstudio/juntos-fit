@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getReportingWeekRange,
 } from '../../utils/dates'
@@ -655,10 +655,6 @@ function WeightLineChart({
   const rangeEndMs = dateKeyToMs(lastDate)
   const rangeSpan = Math.max(86400000, (rangeEndMs ?? 0) - (rangeStartMs ?? 0))
 
-  if (!geometry.points.length) {
-    return <div className="progress-weight-chart-empty">No weight data in this range.</div>
-  }
-
   const photoDates = new Set((photoMarkers ?? []).map((marker) => marker?.checkinDate).filter(Boolean))
   const selectedPoint = geometry.points.find((point) => point.checkinDate === selectedDate) ?? null
   const axisTicks = detail
@@ -698,22 +694,28 @@ function WeightLineChart({
       pointerType: event.pointerType,
       startX: event.clientX,
       lastX: event.clientX,
-      mode: isMouse ? 'scrub' : 'pending',
+      mode: isMouse
+        ? 'scrub'
+        : geometry.points.length
+          ? 'pending'
+          : 'pan',
     }
 
-    svgRef.current?.setPointerCapture?.(event.pointerId)
+    event.currentTarget?.setPointerCapture?.(event.pointerId)
 
     if (isMouse) {
       selectFromClientX(event.clientX)
       return
     }
 
-    longPressTimerRef.current = setTimeout(() => {
-      const state = pointerStateRef.current
-      if (!state || state.mode !== 'pending') return
-      state.mode = 'scrub'
-      selectFromClientX(state.lastX)
-    }, 280)
+    if (geometry.points.length) {
+      longPressTimerRef.current = setTimeout(() => {
+        const state = pointerStateRef.current
+        if (!state || state.mode !== 'pending') return
+        state.mode = 'scrub'
+        selectFromClientX(state.lastX)
+      }, 280)
+    }
   }
 
   function handlePointerMove(event) {
@@ -756,8 +758,8 @@ function WeightLineChart({
 
     pointerStateRef.current = null
 
-    if (svgRef.current?.hasPointerCapture?.(event.pointerId)) {
-      svgRef.current.releasePointerCapture(event.pointerId)
+    if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
     }
   }
 
@@ -779,7 +781,7 @@ function WeightLineChart({
   }
 
   function handleKeyDown(event) {
-    if (!detail || !onSelect || !geometry.points.length) return
+    if (!detail) return
 
     if (event.key === 'PageUp' && onPanRange) {
       event.preventDefault()
@@ -793,6 +795,7 @@ function WeightLineChart({
       return
     }
 
+    if (!onSelect || !geometry.points.length) return
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
     event.preventDefault()
 
@@ -818,6 +821,30 @@ function WeightLineChart({
         marker?.checkinDate >= firstDate && marker?.checkinDate <= lastDate,
       )
     : []
+
+  if (!geometry.points.length) {
+    return (
+      <div
+        className={`progress-weight-chart-empty${detail ? ' is-detail' : ''}`}
+        role={detail ? 'region' : undefined}
+        aria-label={detail
+          ? 'No weight data in this range. Swipe horizontally to browse another time range.'
+          : undefined}
+        tabIndex={detail ? 0 : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onWheel={handleWheel}
+        onKeyDown={handleKeyDown}
+      >
+        <span>No weight data in this range.</span>
+        {detail && onPanRange ? (
+          <small>Swipe sideways to keep browsing.</small>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className={`progress-weight-chart-wrap${detail ? ' is-detail' : ''}`}>
@@ -1114,42 +1141,45 @@ function WeightProgressDetail({ plan, measurements, weightHistory, allWeightHist
 
   function panRange(direction) {
     if (!canPanRange || !rawEntries.length) return
+
     const step = direction < 0 ? -1 : 1
-    if (step > 0 && rangeOffset >= 0) return
+    const candidateOffset = rangeOffset + step
 
-    let candidateOffset = rangeOffset
-    const searchLimit = range === 'D' ? 370 : 30
+    if (candidateOffset > 0) return
 
-    for (let attempt = 0; attempt < searchLimit; attempt += 1) {
-      candidateOffset += step
-      if (candidateOffset > 0) return
+    const candidate = buildWeightRange(
+      rawEntries,
+      range,
+      plan,
+      candidateOffset,
+    )
 
-      const candidate = buildWeightRange(rawEntries, range, plan, candidateOffset)
-      const overlapsHistory = candidate.rangeEnd >= candidate.earliestDate &&
-        candidate.rangeStart <= candidate.latestDate
+    // Let the user move through empty gaps in their history instead of
+    // jumping over them. Stop only after the entire window is older
+    // than the first weight Juntos actually has.
+    if (candidate.rangeEnd < candidate.earliestDate) return
 
-      if (!overlapsHistory) return
-
-      if (candidate.entries.length > 0) {
-        setRangeOffset(candidateOffset)
-        setSelectedDate(null)
-        return
-      }
-    }
+    setRangeOffset(candidateOffset)
+    setSelectedDate(null)
   }
 
   const summaryPeriod = formatLongDateRange(series.rangeStart, series.rangeEnd)
 
   return (
-    <section className="weight-progress-detail" aria-labelledby="weight-progress-detail-heading">
-      <button type="button" className="text-button" onClick={onBack}>← Back to Plan Progress</button>
-
+    <section
+      className="weight-progress-detail"
+      aria-labelledby="weight-progress-detail-heading"
+    >
       <header className="weight-progress-detail-header">
-        <div>
-          <h1 id="weight-progress-detail-heading">Weight Progress</h1>
-          <p>{series.rangeStart && series.rangeEnd ? formatDateRange(series.rangeStart, series.rangeEnd) : 'No weight data yet'}</p>
-        </div>
-        <button type="button" className="weight-progress-calendar-button" aria-label="Choose date" title="Calendar view coming next">▦</button>
+        <button
+          type="button"
+          className="weight-progress-back-button"
+          aria-label="Back to Plan Progress"
+          onClick={onBack}
+        >
+          ‹
+        </button>
+        <h1 id="weight-progress-detail-heading">Weight Progress</h1>
       </header>
 
       <div className="weight-progress-range-tabs" aria-label="Weight chart range">
@@ -1523,7 +1553,56 @@ export function PlanProgressOverview({
   onOpenWeeklyReview,
   onOpenWeeklyCheckIn,
 }) {
-  const [detailView, setDetailView] = useState(null)
+  const [detailView, setDetailView] = useState(() =>
+    window.history.state?.juntosProgressDetail ?? null,
+  )
+
+  useEffect(() => {
+    function handlePopState(event) {
+      if (event.state?.juntosPage === 'progress') {
+        setDetailView(event.state?.juntosProgressDetail ?? null)
+      } else {
+        setDetailView(null)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  function openWeightDetail() {
+    const currentState = window.history.state ?? {}
+
+    if (currentState.juntosProgressDetail !== 'weight') {
+      const currentDepth = Number(currentState.juntosDepth) || 0
+      window.history.pushState(
+        {
+          ...currentState,
+          juntosApp: true,
+          juntosPage: 'progress',
+          juntosDepth: currentDepth + 1,
+          juntosProgressDetail: 'weight',
+        },
+        '',
+      )
+    }
+
+    setDetailView('weight')
+  }
+
+  function closeDetailView() {
+    const currentState = window.history.state ?? {}
+
+    if (
+      currentState.juntosProgressDetail === 'weight' &&
+      Number(currentState.juntosDepth) > 0
+    ) {
+      window.history.back()
+      return
+    }
+
+    setDetailView(null)
+  }
 
   if (detailView === 'weight') {
     return (
@@ -1533,7 +1612,7 @@ export function PlanProgressOverview({
         weightHistory={weightHistory}
         allWeightHistory={allWeightHistory}
         photoMarkers={photoMarkers}
-        onBack={() => setDetailView(null)}
+        onBack={closeDetailView}
       />
     )
   }
@@ -1555,7 +1634,7 @@ export function PlanProgressOverview({
           plan={plan}
           measurements={measurements}
           weightHistory={weightHistory}
-          onOpen={() => setDetailView('weight')}
+          onOpen={openWeightDetail}
         />
       </section>
 

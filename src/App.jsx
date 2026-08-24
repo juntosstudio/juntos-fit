@@ -159,11 +159,116 @@ function App() {
     refreshDashboard,
   ])
 
+  useEffect(() => {
+    const existingState = window.history.state ?? {}
+
+    window.history.replaceState(
+      {
+        ...existingState,
+        juntosApp: true,
+        juntosPage: PAGE_DASHBOARD,
+        juntosDepth: 0,
+        juntosProgressDetail: null,
+        juntosRoute: null,
+      },
+      '',
+    )
+
+    function handlePopState(event) {
+      const nextPage = event.state?.juntosPage
+      const route = event.state?.juntosRoute ?? {}
+
+      if (!event.state?.juntosApp || !nextPage) {
+        return
+      }
+
+      if (nextPage === PAGE_WEEKLY_SUMMARY) {
+        setWeeklyReviewWeek(
+          Number.isFinite(Number(route.weeklyReviewWeek))
+            ? Number(route.weeklyReviewWeek)
+            : null,
+        )
+      }
+
+      if ([PAGE_WEEKLY_PREFLIGHT, PAGE_WEEKLY_CHECK_IN].includes(nextPage)) {
+        setWeeklyCheckInDate(route.weeklyCheckInDate ?? null)
+      }
+
+      if (nextPage === PAGE_DAILY_CHECK_IN) {
+        setDailyCheckInDate(route.dailyCheckInDate ?? null)
+        setDailyCheckInReturnPage(
+          route.dailyCheckInReturnPage ?? PAGE_DASHBOARD,
+        )
+      }
+
+      if (nextPage === PAGE_CATCH_UP_DAILY) {
+        setCatchUpDate(route.catchUpDate ?? null)
+        setCatchUpReturnPage(
+          route.catchUpReturnPage ?? PAGE_PROGRESS,
+        )
+      }
+
+      if (nextPage === PAGE_PLAN_ADJUSTMENT) {
+        setPlanAdjustmentContext(route.planAdjustmentContext ?? null)
+      }
+
+      setCurrentPage(nextPage)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  function navigateToPage(nextPage, { replace = false, routeState = null } = {}) {
+    if (!nextPage || nextPage === currentPage) {
+      return
+    }
+
+    const currentState = window.history.state ?? {}
+    const currentDepth = Number(currentState.juntosDepth) || 0
+    const nextState = {
+      ...currentState,
+      juntosApp: true,
+      juntosPage: nextPage,
+      juntosDepth: replace ? currentDepth : currentDepth + 1,
+      juntosProgressDetail: null,
+      juntosRoute: routeState,
+    }
+
+    if (replace) {
+      window.history.replaceState(nextState, '')
+    } else {
+      window.history.pushState(nextState, '')
+    }
+
+    setCurrentPage(nextPage)
+  }
+
+  function goBackPage(fallbackPage = PAGE_DASHBOARD) {
+    const currentState = window.history.state ?? {}
+    const currentDepth = Number(currentState.juntosDepth) || 0
+
+    if (currentState.juntosApp && currentDepth > 0) {
+      window.history.back()
+      return true
+    }
+
+    if (fallbackPage && fallbackPage !== currentPage) {
+      navigateToPage(fallbackPage, { replace: true })
+      return true
+    }
+
+    return false
+  }
+
   function returnToDashboard() {
     setWeeklyReviewJustCompleted(false)
     setPlanAdjustmentContext(null)
     setWeeklyCheckInDate(null)
-    setCurrentPage(PAGE_DASHBOARD)
+    navigateToPage(PAGE_DASHBOARD)
   }
 
   function openWeeklyReview(weekNumber = null) {
@@ -173,7 +278,13 @@ function App() {
         ? Number(weekNumber)
         : null,
     )
-    setCurrentPage(PAGE_WEEKLY_SUMMARY)
+    navigateToPage(PAGE_WEEKLY_SUMMARY, {
+      routeState: {
+        weeklyReviewWeek: Number.isFinite(Number(weekNumber))
+          ? Number(weekNumber)
+          : null,
+      },
+    })
   }
 
   function openPlanAdjustment({
@@ -199,11 +310,23 @@ function App() {
       setWeeklyReviewWeek(Number(weekNumber))
     }
 
-    setCurrentPage(PAGE_PLAN_ADJUSTMENT)
+    navigateToPage(PAGE_PLAN_ADJUSTMENT, {
+      routeState: {
+        planAdjustmentContext: {
+          weeklyCheckInId,
+          weekNumber:
+            Number.isFinite(Number(weekNumber))
+              ? Number(weekNumber)
+              : null,
+          weeklySubmittedAt:
+            weeklySubmittedAt ?? null,
+        },
+      },
+    })
   }
 
   function returnFromPlanAdjustment() {
-    setCurrentPage(PAGE_WEEKLY_SUMMARY)
+    goBackPage(PAGE_WEEKLY_SUMMARY)
   }
 
   function openWeeklyCheckIn(
@@ -212,8 +335,13 @@ function App() {
     setWeeklyCheckInDate(
       checkinDate ?? activeDate,
     )
-    setCurrentPage(
+    navigateToPage(
       PAGE_WEEKLY_PREFLIGHT,
+      {
+        routeState: {
+          weeklyCheckInDate: checkinDate ?? activeDate,
+        },
+      },
     )
   }
 
@@ -250,8 +378,14 @@ function App() {
         ),
       )
       setWeeklyReviewJustCompleted(true)
-      setCurrentPage(
+      navigateToPage(
         PAGE_WEEKLY_SUMMARY,
+        {
+          replace: true,
+          routeState: {
+            weeklyReviewWeek: Number(completedWeekly.week_number),
+          },
+        },
       )
     }
 
@@ -267,7 +401,7 @@ function App() {
       return
     }
 
-    returnToDashboard()
+    goBackPage(PAGE_DASHBOARD)
   }
 
   function openDailyCheckIn(
@@ -278,16 +412,20 @@ function App() {
     setDailyCheckInReturnPage(
       returnPage,
     )
-    setCurrentPage(
+    navigateToPage(
       PAGE_DAILY_CHECK_IN,
+      {
+        routeState: {
+          dailyCheckInDate: date,
+          dailyCheckInReturnPage: returnPage,
+        },
+      },
     )
   }
 
   function returnFromDailyCheckIn() {
     setDailyCheckInDate(null)
-    setCurrentPage(
-      dailyCheckInReturnPage,
-    )
+    goBackPage(dailyCheckInReturnPage)
   }
 
   function openCatchUpDaily(
@@ -296,12 +434,17 @@ function App() {
   ) {
     setCatchUpDate(date)
     setCatchUpReturnPage(returnPage)
-    setCurrentPage(PAGE_CATCH_UP_DAILY)
+    navigateToPage(PAGE_CATCH_UP_DAILY, {
+      routeState: {
+        catchUpDate: date,
+        catchUpReturnPage: returnPage,
+      },
+    })
   }
 
   function returnFromCatchUp() {
     setCatchUpDate(null)
-    setCurrentPage(catchUpReturnPage)
+    goBackPage(catchUpReturnPage)
   }
 
   async function handleSignOut() {
@@ -338,7 +481,7 @@ function App() {
           dashboard?.plan,
         )}
         onSaved={refreshDashboard}
-        onBack={returnToDashboard}
+        onBack={() => goBackPage(PAGE_DASHBOARD)}
       />
     )
   }
@@ -410,11 +553,17 @@ function App() {
           )
         }
         onContinue={() =>
-          setCurrentPage(
+          navigateToPage(
             PAGE_WEEKLY_CHECK_IN,
+            {
+              routeState: {
+                weeklyCheckInDate:
+                  weeklyCheckInDate ?? activeDate,
+              },
+            },
           )
         }
-        onBack={returnToDashboard}
+        onBack={() => goBackPage(PAGE_DASHBOARD)}
       />
     )
   }
@@ -448,7 +597,7 @@ function App() {
         key={`${activeDate}-${dashboard?.plan?.id ?? 'no-plan'}`}
         plan={dashboard?.plan}
         onSaved={refreshDashboard}
-        onBack={returnToDashboard}
+        onBack={() => goBackPage(PAGE_DASHBOARD)}
       />
     )
   }
@@ -469,13 +618,13 @@ function App() {
         onResolved={refreshDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_PROGRESS)
+          navigateToPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
-          setCurrentPage(PAGE_PLAN)
+          navigateToPage(PAGE_PLAN)
         }
         onOpenSettings={() =>
-          setCurrentPage(PAGE_SETTINGS)
+          navigateToPage(PAGE_SETTINGS)
         }
       />
     )
@@ -490,16 +639,16 @@ function App() {
         justCompleted={
           weeklyReviewJustCompleted
         }
-        onBack={returnToDashboard}
+        onBack={() => goBackPage(PAGE_DASHBOARD)}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_PROGRESS)
+          navigateToPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
-          setCurrentPage(PAGE_PLAN)
+          navigateToPage(PAGE_PLAN)
         }
         onOpenSettings={() =>
-          setCurrentPage(PAGE_SETTINGS)
+          navigateToPage(PAGE_SETTINGS)
         }
         onOpenPlanAdjustment={openPlanAdjustment}
         onPlanAdjustmentResolved={refreshDashboard}
@@ -518,10 +667,10 @@ function App() {
         onSaved={refreshDashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_PROGRESS)
+          navigateToPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
-          setCurrentPage(PAGE_PLAN)
+          navigateToPage(PAGE_PLAN)
         }
       />
     )
@@ -533,13 +682,13 @@ function App() {
         dashboard={dashboard}
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_PROGRESS)
+          navigateToPage(PAGE_PROGRESS)
         }
         onOpenSettings={() =>
-          setCurrentPage(PAGE_SETTINGS)
+          navigateToPage(PAGE_SETTINGS)
         }
         onCreatePlan={() =>
-          setCurrentPage(PAGE_CREATE_PLAN)
+          navigateToPage(PAGE_CREATE_PLAN)
         }
       />
     )
@@ -574,13 +723,13 @@ function App() {
         }
         onOpenToday={returnToDashboard}
         onOpenHistory={() =>
-          setCurrentPage(PAGE_PROGRESS)
+          navigateToPage(PAGE_PROGRESS)
         }
         onOpenPlan={() =>
-          setCurrentPage(PAGE_PLAN)
+          navigateToPage(PAGE_PLAN)
         }
         onOpenSettings={() =>
-          setCurrentPage(PAGE_SETTINGS)
+          navigateToPage(PAGE_SETTINGS)
         }
       />
     )
@@ -592,7 +741,7 @@ function App() {
         dashboard={dashboard}
         onOpenToday={returnToDashboard}
         onOpenCurrentWeek={() =>
-          setCurrentPage(
+          navigateToPage(
             PAGE_CURRENT_WEEK,
           )
         }
@@ -603,10 +752,10 @@ function App() {
           openWeeklyCheckIn
         }
         onOpenPlan={() =>
-          setCurrentPage(PAGE_PLAN)
+          navigateToPage(PAGE_PLAN)
         }
         onOpenSettings={() =>
-          setCurrentPage(
+          navigateToPage(
             PAGE_SETTINGS,
           )
         }
@@ -621,7 +770,7 @@ function App() {
       error={dashboardError}
       signingOut={submitting}
       onCreatePlan={() =>
-        setCurrentPage(PAGE_CREATE_PLAN)
+        navigateToPage(PAGE_CREATE_PLAN)
       }
       onOpenDailyCheckIn={() =>
         openDailyCheckIn()
@@ -630,20 +779,20 @@ function App() {
         openWeeklyCheckIn
       }
       onOpenCurrentWeek={() =>
-        setCurrentPage(PAGE_CURRENT_WEEK)
+        navigateToPage(PAGE_CURRENT_WEEK)
       }
       onOpenWeeklyReview={openWeeklyReview}
       onOpenStartCheckIn={() =>
-        setCurrentPage(PAGE_START_CHECK_IN)
+        navigateToPage(PAGE_START_CHECK_IN)
       }
       onOpenHistory={() =>
-        setCurrentPage(PAGE_PROGRESS)
+        navigateToPage(PAGE_PROGRESS)
       }
       onOpenPlan={() =>
-        setCurrentPage(PAGE_PLAN)
+        navigateToPage(PAGE_PLAN)
       }
       onOpenSettings={() =>
-        setCurrentPage(PAGE_SETTINGS)
+        navigateToPage(PAGE_SETTINGS)
       }
       onSignOut={handleSignOut}
     />

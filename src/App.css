@@ -2886,3 +2886,83 @@ button.weekly-history-card:hover:not(:disabled) {
 .progress-weight-html-tooltip .progress-weight-tooltip-date {
   font-size: 0.75rem;
 }
+
+/* Progress polish 5: native history navigation + cleaner weight drill-down header. */
+.plan-progress-overview {
+  margin-top: 0;
+}
+
+.weight-progress-detail-header {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3rem;
+}
+
+.weight-progress-detail-header::after {
+  width: 2.75rem;
+  height: 2.75rem;
+  content: '';
+}
+
+.weight-progress-detail-header h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 5vw, 1.8rem);
+  text-align: center;
+}
+
+.weight-progress-back-button {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0 0.12rem;
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: none;
+  font-size: 2rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.weight-progress-back-button:hover:not(:disabled),
+.weight-progress-back-button:active:not(:disabled),
+.weight-progress-back-button:focus-visible {
+  border-color: var(--color-interaction);
+  background: var(--color-surface);
+  color: var(--color-interaction);
+}
+
+.progress-weight-chart-wrap.is-detail .progress-weight-chart,
+.progress-weight-chart-empty.is-detail {
+  overscroll-behavior-x: contain;
+  touch-action: pan-y;
+}
+
+.progress-weight-chart-empty.is-detail {
+  display: flex;
+  min-height: 17.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  outline: none;
+}
+
+.progress-weight-chart-empty.is-detail small {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.progress-weight-chart-empty.is-detail:focus-visible {
+  border-radius: 0.75rem;
+  outline: 2px solid rgb(var(--color-interaction-rgb) / 45%);
+  outline-offset: 2px;
+}
