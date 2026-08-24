@@ -1,4 +1,7 @@
 import {
+  useEffect,
+} from 'react'
+import {
   PlanProgressOverview,
 } from '../components/progress/PlanProgressOverview'
 import {
@@ -17,6 +20,15 @@ export function ProgressPage({
   onOpenPlan,
   onOpenSettings,
 }) {
+  useEffect(() => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    } catch {
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+  }, [])
+
   const plan =
     dashboard?.plan ?? null
 

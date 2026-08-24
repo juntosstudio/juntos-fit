@@ -1145,7 +1145,7 @@ async function loadPlanProgressPhotoMarkers(plan, startCheckIn) {
 
   const { data: photos, error } = await supabase
     .from('progress_photos')
-    .select('start_checkin_id, weekly_checkin_id, photo_context')
+    .select('id, start_checkin_id, weekly_checkin_id, photo_context, pose, storage_path')
     .eq('coaching_plan_id', plan.id)
 
   if (error) {
@@ -1155,16 +1155,41 @@ async function loadPlanProgressPhotoMarkers(plan, startCheckIn) {
   const rows = photos ?? []
   const markers = []
 
-  if (
-    startCheckIn?.id &&
-    rows.some((row) => row.start_checkin_id === startCheckIn.id)
-  ) {
-    markers.push({
-      key: `start-${startCheckIn.id}`,
-      label: 'Start',
-      checkinDate: startCheckIn.checkin_date,
-      checkpoint: 'Start',
-    })
+  async function getFrontPhotoUrl(photoRows) {
+    const frontPhoto = (photoRows ?? []).find((row) =>
+      row?.pose === 'front' && row?.storage_path,
+    )
+
+    if (!frontPhoto?.storage_path) {
+      return null
+    }
+
+    const { data, error: signedUrlError } = await supabase.storage
+      .from('progress-photos')
+      .createSignedUrl(frontPhoto.storage_path, 60 * 60)
+
+    if (signedUrlError) {
+      debug('Could not create a progress-photo thumbnail URL.', signedUrlError)
+      return null
+    }
+
+    return data?.signedUrl ?? null
+  }
+
+  if (startCheckIn?.id) {
+    const startPhotoRows = rows.filter(
+      (row) => row.start_checkin_id === startCheckIn.id,
+    )
+
+    if (startPhotoRows.length > 0) {
+      markers.push({
+        key: `start-${startCheckIn.id}`,
+        label: 'Start',
+        checkinDate: startCheckIn.checkin_date,
+        checkpoint: 'Start',
+        frontPhotoUrl: await getFrontPhotoUrl(startPhotoRows),
+      })
+    }
   }
 
   const weeklyIds = [
@@ -1190,11 +1215,16 @@ async function loadPlanProgressPhotoMarkers(plan, startCheckIn) {
   }
 
   for (const row of weeklyRows ?? []) {
+    const weeklyPhotoRows = rows.filter(
+      (photo) => photo.weekly_checkin_id === row.id,
+    )
+
     markers.push({
       key: `week-${row.id}`,
       label: `Week ${row.week_number}`,
       checkinDate: row.checkin_date,
       checkpoint: `Week ${row.week_number}`,
+      frontPhotoUrl: await getFrontPhotoUrl(weeklyPhotoRows),
     })
   }
 
